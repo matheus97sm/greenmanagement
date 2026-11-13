@@ -72,8 +72,8 @@ export function TicketList({ me, selectedId, onSelect }: Props) {
           (requester?.empresa ?? "").toLowerCase().includes(term)
         );
       })
-      .sort(compareBySla);
-  }, [tab, mine, queue, statusFilter, search, state.people]);
+      .sort(compareBySla(now));
+  }, [tab, mine, queue, statusFilter, search, state.people, now]);
 
   const parentRef = useRef<HTMLDivElement>(null);
   const virtualizer = useVirtualizer({

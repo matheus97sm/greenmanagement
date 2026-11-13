@@ -1,4 +1,13 @@
-import type { HistoryEntry, Message, Person, Status, Ticket } from "./types";
+import type {
+  HistoryEntry,
+  Message,
+  Person,
+  SlaPolicy,
+  Status,
+  Ticket,
+} from "./types";
+
+const HOUR = 3_600_000;
 
 const later = (a: string, b: string) => (a > b ? a : b);
 
@@ -33,10 +42,32 @@ export function applyAssignment(
   };
 }
 
+export function renewSla(
+  ticket: Ticket,
+  from: string,
+  policies: SlaPolicy[],
+  firstResponseAt: string | null = null,
+): Ticket {
+  const policy = policies.find((p) => p.prioridade === ticket.prioridade);
+  if (!policy) return ticket;
+  const start = Date.parse(from);
+  return {
+    ...ticket,
+    primeira_resposta_em: firstResponseAt,
+    prazo_primeira_resposta: new Date(
+      start + policy.primeira_resposta_horas * HOUR,
+    ).toISOString(),
+    prazo_resolucao: new Date(
+      start + policy.resolucao_horas * HOUR,
+    ).toISOString(),
+  };
+}
+
 export function applyStatusChange(
   ticket: Ticket,
-  change: { para: Status; ocorrido_em: string },
+  change: { de: Status; para: Status; ocorrido_em: string },
   history: HistoryEntry[] | undefined,
+  policies: SlaPolicy[],
 ): Ticket {
   const next: Ticket = {
     ...ticket,
@@ -57,7 +88,12 @@ export function applyStatusChange(
 
   if (change.para === "resolvido") next.resolvido_em = change.ocorrido_em;
   if (change.para === "fechado") next.fechado_em = change.ocorrido_em;
-  return next;
+
+  const reopenedFromClosed =
+    change.de === "fechado" && change.para === "em_atendimento";
+  return reopenedFromClosed
+    ? renewSla(next, change.ocorrido_em, policies)
+    : next;
 }
 
 export function applyMessage(

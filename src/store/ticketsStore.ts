@@ -12,6 +12,7 @@ import type {
   Message,
   Person,
   Snapshot,
+  SlaPolicy,
   Ticket,
 } from "../domain/types";
 import { anchorClock, nowIso } from "../lib/clock";
@@ -24,7 +25,7 @@ export interface TicketsState {
   people: Record<string, Person>;
   groups: Record<string, Group>;
   categories: Record<string, Category>;
-
+  sla: SlaPolicy[];
   lastRead: Record<string, string>;
   loadedAt: string;
 
@@ -41,6 +42,7 @@ function emptyState(): TicketsState {
     people: {},
     groups: {},
     categories: {},
+    sla: [],
     lastRead: {},
     loadedAt: nowIso(),
     statusAt: {},
@@ -202,8 +204,9 @@ function reduce(
               ...state.tickets,
               [p.chamado_id]: applyStatusChange(
                 ticket,
-                { para: p.para, ocorrido_em: event.ocorrido_em },
+                { de: p.de, para: p.para, ocorrido_em: event.ocorrido_em },
                 before,
+                state.sla,
               ),
             },
         statusAt: stale
@@ -270,6 +273,7 @@ export function createTicketsStore() {
             sortedBy(list, byOccurred),
           ]),
         ),
+        sla: snapshot.sla,
         statusAt: {},
         assignedAt: {},
         loadedAt: nowIso(),

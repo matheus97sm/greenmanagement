@@ -4,8 +4,9 @@ import {
   applyMessage,
   applyStatusChange,
   pausedSince,
+  renewSla,
 } from "./rules";
-import type { HistoryEntry, Message, Ticket } from "./types";
+import type { HistoryEntry, Message, SlaPolicy, Ticket } from "./types";
 
 const HOUR = 3_600_000;
 const T0 = Date.parse("2026-11-03T10:00:00.000Z");
@@ -32,6 +33,10 @@ const base: Ticket = {
   fechado_em: null,
 };
 
+const policies: SlaPolicy[] = [
+  { prioridade: "media", primeira_resposta_horas: 8, resolucao_horas: 24 },
+];
+
 const waiting: HistoryEntry = {
   id: "h1",
   chamado_id: "t",
@@ -47,8 +52,9 @@ describe("applyStatusChange", () => {
   it("stops the SLA clock when the ticket starts waiting for the customer", () => {
     const next = applyStatusChange(
       base,
-      { para: "aguardando_cliente", ocorrido_em: at(1) },
+      { de: "em_atendimento", para: "aguardando_cliente", ocorrido_em: at(1) },
       [],
+      policies,
     );
     expect(next.status).toBe("aguardando_cliente");
     expect(next.sla_pausado).toBe(true);
@@ -63,25 +69,27 @@ describe("applyStatusChange", () => {
     } as Ticket;
     const next = applyStatusChange(
       paused,
-      { para: "em_atendimento", ocorrido_em: at(6) },
+      { de: "aguardando_cliente", para: "em_atendimento", ocorrido_em: at(6) },
       [waiting],
+      policies,
     );
     expect(next.sla_pausado).toBe(false);
-
     expect(next.prazo_resolucao).toBe(at(25));
   });
 
   it("records when a ticket is resolved or closed", () => {
     const resolved = applyStatusChange(
       base,
-      { para: "resolvido", ocorrido_em: at(2) },
+      { de: "em_atendimento", para: "resolvido", ocorrido_em: at(2) },
       [],
+      policies,
     );
     expect(resolved.resolvido_em).toBe(at(2));
     const closed = applyStatusChange(
       resolved,
-      { para: "fechado", ocorrido_em: at(3) },
+      { de: "resolvido", para: "fechado", ocorrido_em: at(3) },
       [],
+      policies,
     );
     expect(closed.fechado_em).toBe(at(3));
   });
@@ -89,10 +97,79 @@ describe("applyStatusChange", () => {
   it("never moves the last-activity date backwards", () => {
     const next = applyStatusChange(
       base,
-      { para: "resolvido", ocorrido_em: at(-3) },
+      { de: "em_atendimento", para: "resolvido", ocorrido_em: at(-3) },
       [],
+      policies,
     );
     expect(next.atualizado_em).toBe(base.atualizado_em);
+  });
+});
+
+describe("reopening", () => {
+  const answered = { ...base, primeira_resposta_em: at(-4) };
+  const closed = {
+    ...answered,
+    status: "fechado",
+    fechado_em: at(-2),
+  } as Ticket;
+  const resolved = {
+    ...answered,
+    status: "resolvido",
+    resolvido_em: at(-2),
+  } as Ticket;
+
+  it("renews the SLA when a closed ticket is reopened", () => {
+    const next = applyStatusChange(
+      closed,
+      { de: "fechado", para: "em_atendimento", ocorrido_em: at(2) },
+      [],
+      policies,
+    );
+    expect(next.status).toBe("em_atendimento");
+    expect(next.prazo_primeira_resposta).toBe(at(10));
+    expect(next.prazo_resolucao).toBe(at(26));
+    expect(next.primeira_resposta_em).toBeNull();
+  });
+
+  it("keeps the SLA when a resolved ticket is reopened", () => {
+    const next = applyStatusChange(
+      resolved,
+      { de: "resolvido", para: "em_atendimento", ocorrido_em: at(2) },
+      [],
+      policies,
+    );
+    expect(next.status).toBe("em_atendimento");
+    expect(next.prazo_primeira_resposta).toBe(answered.prazo_primeira_resposta);
+    expect(next.prazo_resolucao).toBe(answered.prazo_resolucao);
+    expect(next.primeira_resposta_em).toBe(answered.primeira_resposta_em);
+  });
+
+  it("does not touch the SLA on other transitions", () => {
+    const next = applyStatusChange(
+      answered,
+      { de: "em_atendimento", para: "resolvido", ocorrido_em: at(2) },
+      [],
+      policies,
+    );
+    expect(next.prazo_resolucao).toBe(answered.prazo_resolucao);
+  });
+});
+
+describe("renewSla", () => {
+  it("counts the deadlines from the given instant, by priority", () => {
+    const next = renewSla(base, at(0), policies);
+    expect(next.prazo_primeira_resposta).toBe(at(8));
+    expect(next.prazo_resolucao).toBe(at(24));
+  });
+
+  it("keeps the ticket as it is when its priority has no policy", () => {
+    expect(renewSla(base, at(0), [])).toBe(base);
+  });
+
+  it("can carry a first response that already happened after the reopening", () => {
+    expect(renewSla(base, at(0), policies, at(3)).primeira_resposta_em).toBe(
+      at(3),
+    );
   });
 });
 

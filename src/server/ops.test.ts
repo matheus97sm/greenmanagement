@@ -249,3 +249,80 @@ describe("openTicket", () => {
     ).toThrow(ApiError);
   });
 });
+
+describe("reopening and the SLA", () => {
+  const HOUR = 3_600_000;
+  const hoursFor = (priority: string) =>
+    getDb().sla.find((s) => s.prioridade === priority)!;
+
+  it("renews the SLA when a closed ticket is reopened", () => {
+    const ticket = find((t) => t.status === "fechado");
+    const policy = hoursFor(ticket.prioridade);
+    changeStatus({
+      ticketId: ticket.id,
+      to: "em_atendimento",
+      reason: "O problema voltou",
+      userId: RICARDO_ID,
+    });
+    const reopenedAt = Date.parse(getDb().historico.at(-1)!.ocorrido_em);
+    expect(Date.parse(ticket.prazo_resolucao)).toBe(
+      reopenedAt + policy.resolucao_horas * HOUR,
+    );
+    expect(Date.parse(ticket.prazo_primeira_resposta)).toBe(
+      reopenedAt + policy.primeira_resposta_horas * HOUR,
+    );
+    expect(ticket.primeira_resposta_em).toBeNull();
+  });
+
+  it("keeps the SLA when a resolved ticket is reopened", () => {
+    const ticket = find((t) => t.status === "resolvido");
+    const before = {
+      resolution: ticket.prazo_resolucao,
+      firstResponse: ticket.prazo_primeira_resposta,
+      answeredAt: ticket.primeira_resposta_em,
+    };
+    changeStatus({
+      ticketId: ticket.id,
+      to: "em_atendimento",
+      reason: "O cliente nao confirmou",
+      userId: RICARDO_ID,
+    });
+    expect(ticket.status).toBe("em_atendimento");
+    expect(ticket.prazo_resolucao).toBe(before.resolution);
+    expect(ticket.prazo_primeira_resposta).toBe(before.firstResponse);
+    expect(ticket.primeira_resposta_em).toBe(before.answeredAt);
+  });
+
+  it("renews, when loading, the ticket that was reopened in the data", () => {
+    const original = rawData.chamados.find((t) => t.numero === 10611)!;
+    const loaded = find((t) => t.numero === 10611);
+    const reopenedAt = Date.parse(
+      getDb()
+        .historico.filter(
+          (h) =>
+            h.chamado_id === loaded.id &&
+            h.de === "fechado" &&
+            h.para === "em_atendimento",
+        )
+        .at(-1)!.ocorrido_em,
+    );
+    const policy = hoursFor(loaded.prioridade);
+
+    expect(Date.parse(original.prazo_resolucao)).toBeLessThan(reopenedAt);
+    expect(Date.parse(loaded.prazo_resolucao)).toBe(
+      reopenedAt + policy.resolucao_horas * HOUR,
+    );
+    expect(loaded.primeira_resposta_em).toBeNull();
+  });
+
+  it("does not change tickets that were never reopened from closed", () => {
+    const untouched = rawData.chamados.filter((t) => t.numero !== 10611);
+    for (const original of untouched) {
+      const loaded = getDb().chamados.find((t) => t.id === original.id)!;
+      expect(loaded.prazo_resolucao).toBe(original.prazo_resolucao);
+      expect(loaded.prazo_primeira_resposta).toBe(
+        original.prazo_primeira_resposta,
+      );
+    }
+  });
+});

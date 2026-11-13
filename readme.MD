@@ -77,7 +77,7 @@ Para trocar de perfil, clique no ícone de sair no cabeçalho e entre com outro 
 
 ### Visão da Marina (`marina.almeida@suporte.example`, em `/consultant/tickets`)
 
-1. **Lista:** a aba "Meus" mostra os 42 chamados dela, ordenados pelo prazo mais próximo (estourados primeiro). A aba "Fila do grupo" mostra os 35 chamados abertos e sem responsável da Infraestrutura. Há busca (número, título, cliente ou empresa) e filtro de status. O prazo mostra o relógio que vence primeiro: a primeira resposta, enquanto ninguém respondeu, ou a resolução.
+1. **Lista:** a aba "Meus" mostra os 42 chamados dela e a aba "Fila do grupo" mostra os 35 chamados abertos e sem responsável da Infraestrutura. Há busca (número, título, cliente ou empresa) e filtro de status. A ordem segue três faixas, e dentro de cada uma vale a prioridade (crítica, alta, média, baixa) e depois o prazo mais antigo: (1) **estourados**; (2) **vencem em menos de 4h**; (3) **o resto**. Chamados com o relógio pausado (aguardando cliente) vêm depois, e os resolvidos ou fechados por último. Assim, um chamado crítico estourado há 1h aparece antes de um de prioridade baixa estourado há 300h, e um de prioridade baixa que vence em 1h não fica atrás de um médio que só vence amanhã. O prazo exibido é o relógio que vence primeiro: a primeira resposta, enquanto ninguém respondeu, ou a resolução. A ordem é recalculada a cada 30 segundos, então um chamado sobe sozinho quando entra em uma faixa mais urgente.
 2. **Pegar um chamado:** na fila, abra um chamado e clique em "Pegar chamado". Ele passa para "Meus".
 3. **Responder:** em um chamado seu, escreva e envie (Ctrl+Enter). Ligue "Nota interna" para uma nota que o cliente não vê (fica em amarelo).
 4. **Rascunho:** comece a escrever, troque de chamado e volte: o texto continua lá.
@@ -107,6 +107,7 @@ O `dados.json` está congelado em `meta.agora` (03/11/2026 13:00 UTC). A tela pa
 - Cada chamado tem dois prazos: **primeira resposta** (`prazo_primeira_resposta`, até a equipe responder ao cliente) e **resolução** (`prazo_resolucao`). O prazo exibido e usado na ordenação é o que vence primeiro entre os pendentes;
 - `aguardando_cliente` pausa o relógio (`sla_pausado`): o tempo restante fica congelado. Quando o cliente responde, o chamado volta a "em atendimento" e o prazo de resolução é empurrado pelo tempo que ficou parado;
 - resolvido e fechado encerram o SLA. O que vale é o `status`, não `resolvido_em`/`fechado_em`, que continuam preenchidos em chamados reabertos;
+- **reabertura:** reabrir um chamado **fechado** renova o SLA, e os dois prazos passam a contar da reabertura (e a primeira resposta volta a ser exigida). Reabrir um chamado **resolvido** não renova nada, porque o cliente nunca confirmou que o problema acabou, e os prazos originais continuam valendo. O `dados.json` traz um chamado reaberto a partir de fechado (#10611) com os prazos antigos; ao carregar, ele é recalculado pela mesma regra;
 - o estado é crítico abaixo de 1h e de atenção abaixo de 4h (limites escolhidos por nós).
 
 ### Pontos do `dados.json` que merecem atenção

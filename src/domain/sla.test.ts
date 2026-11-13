@@ -91,40 +91,183 @@ describe("slaInfo", () => {
 });
 
 describe("compareBySla", () => {
-  it("puts the earliest deadline first, then paused, then finished", () => {
-    const list = [
-      ticket({
-        id: "finished",
-        status: "fechado",
-        prazo_resolucao: at(-9 * HOUR),
-      }),
-      ticket({
-        id: "paused",
-        status: "aguardando_cliente",
-        sla_pausado: true,
-        prazo_resolucao: at(-5 * HOUR),
-      }),
-      ticket({ id: "later", prazo_resolucao: at(5 * HOUR) }),
-      ticket({ id: "overdue", prazo_resolucao: at(-2 * HOUR) }),
-    ].sort(compareBySla);
-    expect(list.map((t) => t.id)).toEqual([
-      "overdue",
-      "later",
-      "paused",
-      "finished",
-    ]);
+  const order = (tickets: Ticket[], now = NOW) =>
+    [...tickets].sort(compareBySla(now)).map((t) => t.id);
+
+  it("puts breached tickets first, whatever their priority", () => {
+    expect(
+      order([
+        ticket({
+          id: "ok-critical",
+          prioridade: "critica",
+          prazo_resolucao: at(30 * HOUR),
+        }),
+        ticket({
+          id: "breached-low",
+          prioridade: "baixa",
+          prazo_resolucao: at(-HOUR),
+        }),
+      ]),
+    ).toEqual(["breached-low", "ok-critical"]);
   });
 
-  it("lets a pending first response outrank a later resolution deadline", () => {
-    const list = [
-      ticket({ id: "resolution", prazo_resolucao: at(2 * HOUR) }),
-      ticket({
-        id: "first-response",
-        primeira_resposta_em: null,
-        prazo_primeira_resposta: at(HOUR),
-        prazo_resolucao: at(20 * HOUR),
-      }),
-    ].sort(compareBySla);
-    expect(list[0].id).toBe("first-response");
+  it("ranks breached tickets by priority before how late they are", () => {
+    expect(
+      order([
+        ticket({
+          id: "low-very-late",
+          prioridade: "baixa",
+          prazo_resolucao: at(-300 * HOUR),
+        }),
+        ticket({
+          id: "high-a-bit-late",
+          prioridade: "alta",
+          prazo_resolucao: at(-HOUR),
+        }),
+        ticket({
+          id: "critical",
+          prioridade: "critica",
+          prazo_resolucao: at(-2 * HOUR),
+        }),
+      ]),
+    ).toEqual(["critical", "high-a-bit-late", "low-very-late"]);
+  });
+
+  it("serves the most overdue first within the same priority", () => {
+    expect(
+      order([
+        ticket({
+          id: "recent",
+          prioridade: "media",
+          prazo_resolucao: at(-HOUR),
+        }),
+        ticket({
+          id: "old",
+          prioridade: "media",
+          prazo_resolucao: at(-50 * HOUR),
+        }),
+      ]),
+    ).toEqual(["old", "recent"]);
+  });
+
+  it("puts tickets about to breach before the rest, whatever their priority", () => {
+    expect(
+      order([
+        ticket({
+          id: "critical-far",
+          prioridade: "critica",
+          prazo_resolucao: at(30 * HOUR),
+        }),
+        ticket({
+          id: "low-soon",
+          prioridade: "baixa",
+          prazo_resolucao: at(HOUR + 60_000),
+        }),
+      ]),
+    ).toEqual(["low-soon", "critical-far"]);
+  });
+
+  it("ranks by priority, then deadline, inside the about-to-breach tier", () => {
+    expect(
+      order([
+        ticket({
+          id: "medium-sooner",
+          prioridade: "media",
+          prazo_resolucao: at(HOUR),
+        }),
+        ticket({
+          id: "high-later",
+          prioridade: "alta",
+          prazo_resolucao: at(3 * HOUR),
+        }),
+        ticket({
+          id: "high-sooner",
+          prioridade: "alta",
+          prazo_resolucao: at(2 * HOUR),
+        }),
+      ]),
+    ).toEqual(["high-sooner", "high-later", "medium-sooner"]);
+  });
+
+  it("ranks by priority, then deadline, in the comfortable tier", () => {
+    expect(
+      order([
+        ticket({
+          id: "low",
+          prioridade: "baixa",
+          prazo_resolucao: at(10 * HOUR),
+        }),
+        ticket({
+          id: "high-later",
+          prioridade: "alta",
+          prazo_resolucao: at(40 * HOUR),
+        }),
+        ticket({
+          id: "high-sooner",
+          prioridade: "alta",
+          prazo_resolucao: at(20 * HOUR),
+        }),
+      ]),
+    ).toEqual(["high-sooner", "high-later", "low"]);
+  });
+
+  it("keeps paused tickets after running ones, and finished tickets last", () => {
+    expect(
+      order([
+        ticket({
+          id: "finished",
+          status: "fechado",
+          prioridade: "critica",
+          prazo_resolucao: at(-9 * HOUR),
+        }),
+        ticket({
+          id: "paused",
+          status: "aguardando_cliente",
+          sla_pausado: true,
+          prioridade: "critica",
+          prazo_resolucao: at(-5 * HOUR),
+        }),
+        ticket({
+          id: "running",
+          prioridade: "baixa",
+          prazo_resolucao: at(60 * HOUR),
+        }),
+      ]),
+    ).toEqual(["running", "paused", "finished"]);
+  });
+
+  it("counts a pending first response as the deadline that matters", () => {
+    expect(
+      order([
+        ticket({
+          id: "resolution-soon",
+          prioridade: "media",
+          prazo_resolucao: at(2 * HOUR),
+        }),
+        ticket({
+          id: "first-response-breached",
+          prioridade: "media",
+          primeira_resposta_em: null,
+          prazo_primeira_resposta: at(-HOUR),
+          prazo_resolucao: at(20 * HOUR),
+        }),
+      ]),
+    ).toEqual(["first-response-breached", "resolution-soon"]);
+  });
+
+  it("moves a ticket up as time brings its deadline closer", () => {
+    const low = ticket({
+      id: "low",
+      prioridade: "baixa",
+      prazo_resolucao: at(5 * HOUR),
+    });
+    const high = ticket({
+      id: "high",
+      prioridade: "alta",
+      prazo_resolucao: at(20 * HOUR),
+    });
+    expect(order([low, high])).toEqual(["high", "low"]);
+    expect(order([low, high], NOW + 2 * HOUR)).toEqual(["low", "high"]);
+    expect(order([low, high], NOW + 6 * HOUR)).toEqual(["low", "high"]);
   });
 });

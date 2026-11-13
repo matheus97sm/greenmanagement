@@ -59,8 +59,9 @@ function commitStatus(
     ticket,
     applyStatusChange(
       ticket,
-      { para: to, ocorrido_em: at },
+      { de: from, para: to, ocorrido_em: at },
       historyOf(ticket.id),
+      db.sla,
     ),
   );
   db.historico.push({

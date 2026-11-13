@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { DomainEvent, Snapshot, Ticket } from "../domain/types";
+import type { DomainEvent, Snapshot, Status, Ticket } from "../domain/types";
 import { createTicketsStore, unreadCount } from "./ticketsStore";
 
 const HOUR = 3_600_000;
@@ -32,7 +32,9 @@ const snapshot: Snapshot = {
   agora: NOW,
   grupos: [],
   categorias: [],
-  sla: [],
+  sla: [
+    { prioridade: "media", primeira_resposta_horas: 8, resolucao_horas: 24 },
+  ],
   usuarios: [
     {
       id: "cons",
@@ -79,9 +81,9 @@ function message(
 
 function statusEvent(
   eventId: string,
-  to: "em_atendimento" | "aguardando_cliente" | "resolvido",
+  to: Status,
   when: string,
-  from: "em_atendimento" | "aguardando_cliente" = "em_atendimento",
+  from: Status = "em_atendimento",
 ): DomainEvent {
   return {
     id: eventId,
@@ -199,6 +201,35 @@ describe("ticketsStore", () => {
     store.markRead("ch-1");
     store.applyEvent(message("m3", at(-5), "cli"));
     expect(unreadCount(store.getState(), "ch-1", "cons")).toBe(1);
+  });
+
+  it("renews the SLA when a closed ticket is reopened", () => {
+    const store = createTicketsStore();
+    store.loadSnapshot({
+      ...snapshot,
+      chamados: [{ ...ticket, status: "fechado", fechado_em: at(-3) }],
+    });
+    store.applyEvent(statusEvent("reopen", "em_atendimento", at(2), "fechado"));
+    const reopened = store.getState().tickets["ch-1"];
+    expect(reopened.status).toBe("em_atendimento");
+    expect(reopened.prazo_primeira_resposta).toBe(at(10));
+    expect(reopened.prazo_resolucao).toBe(at(26));
+    expect(reopened.primeira_resposta_em).toBeNull();
+  });
+
+  it("keeps the SLA when a resolved ticket is reopened", () => {
+    const store = createTicketsStore();
+    store.loadSnapshot({
+      ...snapshot,
+      chamados: [{ ...ticket, status: "resolvido", resolvido_em: at(-3) }],
+    });
+    store.applyEvent(
+      statusEvent("reopen", "em_atendimento", at(2), "resolvido"),
+    );
+    const reopened = store.getState().tickets["ch-1"];
+    expect(reopened.status).toBe("em_atendimento");
+    expect(reopened.prazo_resolucao).toBe(ticket.prazo_resolucao);
+    expect(reopened.primeira_resposta_em).toBe(ticket.primeira_resposta_em);
   });
 
   it("forgets everything on reset", () => {
