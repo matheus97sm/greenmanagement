@@ -1,5 +1,3 @@
-Material disponível em: https://we.tl/t-U60rZz5bQaTjUbAr
-
 Estamos reescrevendo do zero o nosso sistema de gestão de serviços de TI (ITSM). O sistema atual tem muitos anos; o novo é um projeto greenfield, com melhorias de produto e de arquitetura, e está em fase de homologação.
 O novo sistema vai para produção no começo do ano que vem e será mantido e evoluído por este time ao longo dos próximos anos. Leve isso em conta ao escolher versões de frameworks e bibliotecas: preferimos o que terá suporte durante esse período ao que acabou de ser lançado.
 Este teste pede uma fatia pequena desse sistema: a área de chamados, vista por quem a usa. O objetivo não é cobrir funcionalidade nem produzir identidade visual; é ver como você decide o que aparece na tela, quando, e para quem.
