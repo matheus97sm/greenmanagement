@@ -8,11 +8,18 @@ import {
   Tooltip,
 } from "@mantine/core";
 import { IconLeaf, IconLogout } from "@tabler/icons-react";
+import { useNavigate } from "react-router";
 import { useAuth } from "../auth/auth-context";
 import { ROLE_LABEL } from "../auth/users";
 
 export function AppHeader() {
   const { user, signOut } = useAuth();
+  const navigate = useNavigate();
+
+  const handleSignOut = () => {
+    signOut();
+    navigate("/", { replace: true });
+  };
 
   return (
     <Group h="100%" px="md" justify="space-between">
@@ -39,7 +46,7 @@ export function AppHeader() {
               variant="subtle"
               color="gray"
               aria-label="Sair"
-              onClick={signOut}
+              onClick={handleSignOut}
             >
               <IconLogout size={18} />
             </ActionIcon>

@@ -1,11 +1,20 @@
+import { useEffect } from "react";
 import { AppShell } from "@mantine/core";
-import { Navigate, Outlet } from "react-router";
+import { Outlet } from "react-router";
 import { useAuth } from "../auth/auth-context";
+import { startRealtime } from "../store/realtime";
 import { AppHeader } from "./AppHeader";
 
 export function AppLayout() {
   const { user } = useAuth();
-  if (!user) return <Navigate to="/" replace />;
+  const userId = user?.id;
+
+  useEffect(() => {
+    if (!userId) return;
+    return startRealtime(userId);
+  }, [userId]);
+
+  if (!user) return null;
 
   return (
     <AppShell header={{ height: 60 }} padding="md">

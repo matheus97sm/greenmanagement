@@ -16,23 +16,23 @@ import {
   UnstyledButton,
 } from "@mantine/core";
 import { IconAlertCircle, IconLeaf } from "@tabler/icons-react";
-import { Navigate, useNavigate } from "react-router";
-import { useAuth } from "../auth/auth-context";
-import { DEMO_PASSWORD, ROLE_LABEL, USERS } from "../auth/users";
+import { useNavigate } from "react-router";
+import { useAuth } from "../../auth/auth-context";
+import { homePath } from "../../paths";
+import { DEMO_PASSWORD, ROLE_LABEL, USERS } from "../../auth/users";
 
 export function LoginPage() {
-  const { user, signIn } = useAuth();
+  const { signIn } = useAuth();
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState(false);
 
-  if (user) return <Navigate to="/chamados" replace />;
-
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (signIn(email, password)) {
-      navigate("/chamados", { replace: true });
+    const user = signIn(email, password);
+    if (user) {
+      navigate(homePath(user.role), { replace: true });
     } else {
       setError(true);
     }

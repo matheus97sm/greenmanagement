@@ -2,7 +2,7 @@
 
 Reescrita do sistema de gestão de serviços de TI (ITSM), focada na área de chamados. É um projeto de estudo: roda 100% no navegador, **sem backend**. A API e os eventos em tempo real (WebSocket) serão simulados no próprio front-end.
 
-> **Estado atual:** estrutura do projeto, tela de login e layout autenticado (cabeçalho com saída). A área de chamados (`/chamados`) ainda é um espaço reservado.
+> **Estado atual:** login, API/WebSocket simulados com o `dados.json` real e a visão da **Marina (consultora)**. As visões do Ricardo (gestor) e da Helena (cliente) ainda não foram feitas.
 
 ## Tecnologias
 
@@ -44,7 +44,7 @@ Abra o endereço mostrado no terminal (normalmente <http://localhost:5173>).
 | `npm run format`       | Formata o código com o Prettier                    |
 | `npm run format:check` | Verifica a formatação sem alterar arquivos         |
 
-Para rodar os testes uma única vez (por exemplo, em CI): `npx vitest run`. Ainda não há testes escritos.
+Para rodar os testes uma única vez (por exemplo, em CI): `npx vitest run`.
 
 ## Como ver a tela como cada perfil
 
@@ -52,24 +52,70 @@ O login é **simulado** (não há backend nem segurança real). Os três usuári
 
 **Senha de todos: `senha123`**
 
-| Perfil              | E-mail                         | Papel     |
-| ------------------- | ------------------------------ | --------- |
-| Marina (consultora) | `marina@greenmanagement.test`  | consultor |
-| Ricardo (gestor)    | `ricardo@greenmanagement.test` | gestor    |
-| Helena (cliente)    | `helena@cliente.test`          | cliente   |
+| Perfil                      | E-mail                               | Perfil nos dados |
+| --------------------------- | ------------------------------------ | ---------------- |
+| Marina Almeida (consultora) | `marina.almeida@suporte.example`     | consultor        |
+| Ricardo Monteiro (gestor)   | `ricardo.monteiro@suporte.example`   | gestor           |
+| Helena Fernandes (cliente)  | `helena.fernandes@lusitania.example` | cliente          |
+
+São as pessoas do brief, como aparecem no `dados.json`.
 
 Na tela de login, clicar em um dos usuários da seção "Usuários de demonstração" preenche e-mail e senha automaticamente.
 
 Para trocar de perfil, clique no ícone de sair no cabeçalho e entre com outro usuário.
 
-## Como testar manualmente o que existe hoje
+## Como testar manualmente
+
+### Login
 
 1. Acesse `/`: deve aparecer a tela de login.
 2. Entre com uma senha errada: deve aparecer "E-mail ou senha inválidos."
-3. Entre com um dos usuários acima: você é levado a `/chamados` e o cabeçalho mostra seu nome e perfil.
+3. Entre com um dos usuários acima: você é levado à página do seu perfil (`/consultant/tickets`, `/manager/tickets` ou `/customer/tickets`).
 4. Recarregue a página: a sessão continua (fica salva no `localStorage`).
-5. Acesse `/` estando logado: você é redirecionado para `/chamados`.
-6. Clique em sair: volta ao login. Acessar `/chamados` deslogado também redireciona para `/`.
+5. Clique em sair: volta ao login. Acessar qualquer página deslogado também redireciona para `/`.
+6. Logado como um perfil, tente abrir a página de outro (por exemplo, a Marina em `/manager/tickets`): você é redirecionado para a página do seu próprio perfil, sem a outra página chegar a aparecer.
+
+### Visão da Marina (`marina.almeida@suporte.example`, em `/consultant/tickets`)
+
+1. **Lista:** a aba "Meus" mostra os 42 chamados dela, ordenados pelo prazo mais próximo (estourados primeiro). A aba "Fila do grupo" mostra os 35 chamados abertos e sem responsável da Infraestrutura. Há busca (número, título, cliente ou empresa) e filtro de status. O prazo mostra o relógio que vence primeiro: a primeira resposta, enquanto ninguém respondeu, ou a resolução.
+2. **Pegar um chamado:** na fila, abra um chamado e clique em "Pegar chamado". Ele passa para "Meus".
+3. **Responder:** em um chamado seu, escreva e envie (Ctrl+Enter). Ligue "Nota interna" para uma nota que o cliente não vê (fica em amarelo).
+4. **Rascunho:** comece a escrever, troque de chamado e volte: o texto continua lá.
+5. **Mudar status:** "Alterar status" exige um motivo, que aparece na conversa. Em chamado resolvido ou fechado, "Reabrir" também exige motivo.
+6. **Tempo real:** deixe a tela aberta. A cada poucos segundos chegam respostas de clientes (aparece um contador de não lidas na lista), chamados novos na fila, colegas pegando chamados da fila e notas internas. Se você tentar pegar um chamado que um colega acabou de pegar, aparece um aviso de erro.
+7. **Eventos repetidos:** o socket simulado reenvia alguns eventos; nada deve aparecer duplicado.
+
+## Como funciona o "backend" simulado
+
+Não existe backend. O que seria o servidor fica em `src/server` e roda no navegador:
+
+- `db.ts` carrega o `dados.json` (como um primeiro `GET` da API; o arquivo é servido como asset separado, fora do bundle) e o mantém em memória;
+- `visibility.ts` decide **o que cada perfil pode ver**: o cliente só recebe os próprios chamados e nunca as notas internas; o consultor recebe o grupo dele e o que lhe foi atribuído; o gestor recebe os grupos que gere. Vale para o carregamento inicial e para cada evento;
+- `ops.ts` tem as regras de negócio (permissões, transições de status, relógio do SLA) e publica eventos;
+- `api.ts` expõe essas operações como chamadas assíncronas com latência;
+- `socket.ts` simula o WebSocket: atraso variável e entrega duplicada de alguns eventos, filtrando por quem está ouvindo;
+- `simulator.ts` gera a atividade de outras pessoas, usando textos reais do arquivo.
+
+No lado da tela, `src/store/ticketsStore.ts` aplica os eventos (`chamado.aberto`, `chamado.atribuido`, `mensagem.adicionada`, `status.alterado`) de forma idempotente: ignora eventos repetidos e não deixa um evento antigo sobrescrever um mais novo. As regras que alteram o chamado (`src/domain/rules.ts`) são as mesmas no servidor e na tela. Para trocar o simulador por um backend real, basta substituir `src/server` e a ligação em `src/store/realtime.ts`.
+
+### Relógio simulado
+
+O `dados.json` está congelado em `meta.agora` (03/11/2026 13:00 UTC). A tela parte desse instante e o relógio segue em tempo real a partir dele (`src/lib/clock.ts`). Sem isso, qualquer prazo pareceria estourado há dias. Datas são exibidas no fuso e no idioma do usuário (`zoneinfo`/`locale` do cadastro).
+
+### Regras de SLA
+
+- Cada chamado tem dois prazos: **primeira resposta** (`prazo_primeira_resposta`, até a equipe responder ao cliente) e **resolução** (`prazo_resolucao`). O prazo exibido e usado na ordenação é o que vence primeiro entre os pendentes;
+- `aguardando_cliente` pausa o relógio (`sla_pausado`): o tempo restante fica congelado. Quando o cliente responde, o chamado volta a "em atendimento" e o prazo de resolução é empurrado pelo tempo que ficou parado;
+- resolvido e fechado encerram o SLA. O que vale é o `status`, não `resolvido_em`/`fechado_em`, que continuam preenchidos em chamados reabertos;
+- o estado é crítico abaixo de 1h e de atenção abaixo de 4h (limites escolhidos por nós).
+
+### Pontos do `dados.json` que merecem atenção
+
+- um chamado (#10609) tem 1500 mensagens; a conversa mostra só as 100 mais recentes e permite carregar as anteriores;
+- o histórico pode estar incompleto (#10265): o `status` do chamado é a fonte da verdade;
+- há um chamado atribuído a um consultor de outro grupo (#10608): ele aparece em "Meus" da Marina;
+- há clientes com o mesmo nome em empresas diferentes (e um e-mail repetido): a empresa é exibida junto do nome;
+- mensagens internas só existem de consultores, e nunca são enviadas a clientes.
 
 ## Padrão de código
 
@@ -87,13 +133,36 @@ Rode `npm run format` antes de commitar e `npm run format:check` para validar. N
 
 ```
 src/
-  auth/         usuários de demonstração, contexto e provedor de autenticação
-  components/   cabeçalho e layout das páginas autenticadas
-  pages/        LoginPage e ChamadosPage
-  App.tsx       definição das rotas
-  main.tsx      providers (Mantine, Router, Auth)
+  main.tsx      providers (Mantine, Auth) e o roteador
+  routes.tsx    rotas e guardas (loaders) por perfil
+  paths.ts      página inicial de cada perfil
+  auth/         usuários de demonstração, sessão e contexto de autenticação
+  pages/        uma pasta por perfil e, dentro dela, uma pasta por página
+    login/                 tela de login (única página sem perfil)
+    consultant/tickets/    visão da Marina: lista, detalhe, composer e modal de status
+    manager/tickets/       visão do Ricardo (a fazer)
+    customer/tickets/      visão da Helena (a fazer)
+  components/   cabeçalho, layout autenticado e badges (usados por mais de um perfil)
+  domain/       tipos, status, SLA e regras que alteram o chamado (sem React)
+  lib/          relógio simulado e formatação
+  server/       "backend" simulado (dados, regras, API, socket, simulador)
+  store/        estado da tela, ações e ligação em tempo real
 ```
+
+### Convenção para páginas
+
+Cada página fica em `pages/<perfil>/<página>/`, com a página e os componentes que só ela usa dentro da própria pasta (por exemplo, `pages/consultant/tickets/`). Assim, quando um perfil ganhar outra página (`pages/consultant/reports/`), nada se mistura. Só o que mais de uma página usa sobe para `components/`.
+
+### Rotas e guardas
+
+As URLs seguem `/<perfil>/tickets` (`consultant`, `manager`, `customer`). As guardas rodam como `loader` do React Router, **antes** de a página renderizar:
+
+- sem sessão, qualquer rota redireciona para `/`;
+- logado, `/` e rotas desconhecidas redirecionam para a página do próprio perfil;
+- um perfil que abre a área de outro é redirecionado para a sua.
+
+Isso é conveniência de interface: o controle de acesso de verdade pertence ao servidor.
 
 ## Dados
 
-O brief prevê um arquivo `dados.json` (chamados, mensagens, histórico de status, usuários, grupos e SLAs). Ele ainda não foi adicionado ao projeto. Quando for, ficará versionado dentro do repositório e alimentará a API simulada.
+O `dados.json` (620 chamados, 3381 mensagens, 1558 entradas de histórico, 48 usuários, 2 grupos, 8 categorias e a tabela de SLA) fica na raiz do repositório e é carregado pela API simulada. As mudanças feitas na tela (e a atividade simulada) vivem só em memória: recarregar a página volta ao estado original do arquivo.
