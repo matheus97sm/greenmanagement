@@ -1,22 +1,27 @@
-import { isReopen, TRANSITIONS } from "../domain/status";
+import { isReopen, TRANSITIONS } from "@/domain/status";
 import {
   applyAssignment,
   applyMessage,
   applyStatusChange,
   isStaff,
-} from "../domain/rules";
+} from "@/domain/rules";
 import type {
   DomainEvent,
   HistoryEntry,
   Message,
   Person,
-  Priority,
-  Status,
   Ticket,
-} from "../domain/types";
-import { nowIso } from "../lib/clock";
+} from "@/domain/types";
+import { nowIso } from "@/lib/clock";
 import { getDb, nextTicketNumber } from "./db";
 import { publish } from "./socket";
+import {
+  Status,
+  Priority,
+  Profile,
+  EventType,
+  HistoryType,
+} from "@/domain/enums";
 
 export class ApiError extends Error {}
 
@@ -67,7 +72,7 @@ function commitStatus(
   db.historico.push({
     id,
     chamado_id: ticket.id,
-    tipo: "status",
+    tipo: HistoryType.Status,
     de: from,
     para: to,
     usuario_id: userId,
@@ -76,7 +81,7 @@ function commitStatus(
   });
   return emit({
     id,
-    tipo: "status.alterado",
+    tipo: EventType.StatusChanged,
     ocorrido_em: at,
     payload: {
       chamado_id: ticket.id,
@@ -97,7 +102,7 @@ export function openTicket(input: {
 }): DomainEvent[] {
   const db = getDb();
   const requester = person(input.requesterId);
-  if (requester?.perfil !== "cliente") {
+  if (requester?.perfil !== Profile.Customer) {
     throw new ApiError("Só clientes abrem chamados.");
   }
   const category = db.categorias.find((c) => c.id === input.categoryId);
@@ -120,7 +125,7 @@ export function openTicket(input: {
     categoria_id: category.id,
     grupo_id: category.grupo_id,
     prioridade: input.priority,
-    status: "aberto",
+    status: Status.Open,
     solicitante_id: requester.id,
     responsavel_id: null,
     aberto_em: at,
@@ -140,7 +145,7 @@ export function openTicket(input: {
   return [
     emit({
       id: crypto.randomUUID(),
-      tipo: "chamado.aberto",
+      tipo: EventType.TicketOpened,
       ocorrido_em: at,
       payload: structuredClone(ticket),
     }),
@@ -154,7 +159,7 @@ export function assumeTicket(
   const db = getDb();
   const ticket = findTicket(ticketId);
   const consultant = person(consultantId);
-  if (consultant?.perfil !== "consultor") {
+  if (consultant?.perfil !== Profile.Consultant) {
     throw new ApiError("Só consultores pegam chamados.");
   }
   if (ticket.responsavel_id === consultantId) return [];
@@ -173,7 +178,7 @@ export function assumeTicket(
   db.historico.push({
     id,
     chamado_id: ticket.id,
-    tipo: "atribuicao",
+    tipo: HistoryType.Assignment,
     de: null,
     para: null,
     usuario_id: consultantId,
@@ -183,16 +188,16 @@ export function assumeTicket(
   const events: DomainEvent[] = [
     emit({
       id,
-      tipo: "chamado.atribuido",
+      tipo: EventType.TicketAssigned,
       ocorrido_em: at,
       payload: { chamado_id: ticket.id, consultor_id: consultantId },
     }),
   ];
-  if (ticket.status === "aberto") {
+  if (ticket.status === Status.Open) {
     events.push(
       commitStatus(
         ticket,
-        "em_atendimento",
+        Status.InProgress,
         "Assumido para atendimento",
         consultantId,
       ),
@@ -214,7 +219,7 @@ export function addMessage(input: {
   if (!author) throw new ApiError("Autor desconhecido.");
   if (!text) throw new ApiError("A mensagem está vazia.");
 
-  if (author.perfil === "cliente") {
+  if (author.perfil === Profile.Customer) {
     if (ticket.solicitante_id !== author.id) {
       throw new ApiError("Este chamado não é seu.");
     }
@@ -223,7 +228,7 @@ export function addMessage(input: {
     }
   } else if (
     !input.internal &&
-    author.perfil === "consultor" &&
+    author.perfil === Profile.Consultant &&
     ticket.responsavel_id !== author.id
   ) {
     throw new ApiError("Só quem atende o chamado responde ao cliente.");
@@ -243,15 +248,18 @@ export function addMessage(input: {
   const events: DomainEvent[] = [
     emit({
       id: crypto.randomUUID(),
-      tipo: "mensagem.adicionada",
+      tipo: EventType.MessageAdded,
       ocorrido_em: message.criada_em,
       payload: structuredClone(message),
     }),
   ];
 
-  if (author.perfil === "cliente" && ticket.status === "aguardando_cliente") {
+  if (
+    author.perfil === Profile.Customer &&
+    ticket.status === Status.WaitingCustomer
+  ) {
     events.push(
-      commitStatus(ticket, "em_atendimento", "Cliente respondeu", author.id),
+      commitStatus(ticket, Status.InProgress, "Cliente respondeu", author.id),
     );
   }
   return events;
@@ -266,10 +274,10 @@ export function changeStatus(input: {
   const ticket = findTicket(input.ticketId);
   const user = person(input.userId);
   const reason = input.reason.trim();
-  if (!user || user.perfil === "cliente") {
+  if (!user || user.perfil === Profile.Customer) {
     throw new ApiError("Você não pode alterar o status deste chamado.");
   }
-  if (user.perfil === "consultor" && ticket.responsavel_id !== user.id) {
+  if (user.perfil === Profile.Consultant && ticket.responsavel_id !== user.id) {
     throw new ApiError("Só quem atende o chamado altera o status.");
   }
   if (!reason) throw new ApiError("Informe o motivo da mudança.");

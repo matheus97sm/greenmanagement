@@ -7,6 +7,7 @@ import {
   renewSla,
 } from "./rules";
 import type { HistoryEntry, Message, SlaPolicy, Ticket } from "./types";
+import { Status, Priority, HistoryType } from "./enums";
 
 const HOUR = 3_600_000;
 const T0 = Date.parse("2026-11-03T10:00:00.000Z");
@@ -19,8 +20,8 @@ const base: Ticket = {
   descricao: "",
   categoria_id: "c",
   grupo_id: "g",
-  prioridade: "media",
-  status: "em_atendimento",
+  prioridade: Priority.Medium,
+  status: Status.InProgress,
   solicitante_id: "s",
   responsavel_id: "r",
   aberto_em: at(-5),
@@ -34,15 +35,19 @@ const base: Ticket = {
 };
 
 const policies: SlaPolicy[] = [
-  { prioridade: "media", primeira_resposta_horas: 8, resolucao_horas: 24 },
+  {
+    prioridade: Priority.Medium,
+    primeira_resposta_horas: 8,
+    resolucao_horas: 24,
+  },
 ];
 
 const waiting: HistoryEntry = {
   id: "h1",
   chamado_id: "t",
-  tipo: "status",
-  de: "em_atendimento",
-  para: "aguardando_cliente",
+  tipo: HistoryType.Status,
+  de: Status.InProgress,
+  para: Status.WaitingCustomer,
   usuario_id: "r",
   motivo: "Aguardando retorno",
   ocorrido_em: at(1),
@@ -52,11 +57,15 @@ describe("applyStatusChange", () => {
   it("stops the SLA clock when the ticket starts waiting for the customer", () => {
     const next = applyStatusChange(
       base,
-      { de: "em_atendimento", para: "aguardando_cliente", ocorrido_em: at(1) },
+      {
+        de: Status.InProgress,
+        para: Status.WaitingCustomer,
+        ocorrido_em: at(1),
+      },
       [],
       policies,
     );
-    expect(next.status).toBe("aguardando_cliente");
+    expect(next.status).toBe(Status.WaitingCustomer);
     expect(next.sla_pausado).toBe(true);
     expect(next.prazo_resolucao).toBe(base.prazo_resolucao);
   });
@@ -64,12 +73,16 @@ describe("applyStatusChange", () => {
   it("pushes the resolution deadline by however long the clock was stopped", () => {
     const paused = {
       ...base,
-      status: "aguardando_cliente",
+      status: Status.WaitingCustomer,
       sla_pausado: true,
     } as Ticket;
     const next = applyStatusChange(
       paused,
-      { de: "aguardando_cliente", para: "em_atendimento", ocorrido_em: at(6) },
+      {
+        de: Status.WaitingCustomer,
+        para: Status.InProgress,
+        ocorrido_em: at(6),
+      },
       [waiting],
       policies,
     );
@@ -80,14 +93,14 @@ describe("applyStatusChange", () => {
   it("records when a ticket is resolved or closed", () => {
     const resolved = applyStatusChange(
       base,
-      { de: "em_atendimento", para: "resolvido", ocorrido_em: at(2) },
+      { de: Status.InProgress, para: Status.Resolved, ocorrido_em: at(2) },
       [],
       policies,
     );
     expect(resolved.resolvido_em).toBe(at(2));
     const closed = applyStatusChange(
       resolved,
-      { de: "resolvido", para: "fechado", ocorrido_em: at(3) },
+      { de: Status.Resolved, para: Status.Closed, ocorrido_em: at(3) },
       [],
       policies,
     );
@@ -97,7 +110,7 @@ describe("applyStatusChange", () => {
   it("never moves the last-activity date backwards", () => {
     const next = applyStatusChange(
       base,
-      { de: "em_atendimento", para: "resolvido", ocorrido_em: at(-3) },
+      { de: Status.InProgress, para: Status.Resolved, ocorrido_em: at(-3) },
       [],
       policies,
     );
@@ -109,23 +122,23 @@ describe("reopening", () => {
   const answered = { ...base, primeira_resposta_em: at(-4) };
   const closed = {
     ...answered,
-    status: "fechado",
+    status: Status.Closed,
     fechado_em: at(-2),
   } as Ticket;
   const resolved = {
     ...answered,
-    status: "resolvido",
+    status: Status.Resolved,
     resolvido_em: at(-2),
   } as Ticket;
 
   it("renews the SLA when a closed ticket is reopened", () => {
     const next = applyStatusChange(
       closed,
-      { de: "fechado", para: "em_atendimento", ocorrido_em: at(2) },
+      { de: Status.Closed, para: Status.InProgress, ocorrido_em: at(2) },
       [],
       policies,
     );
-    expect(next.status).toBe("em_atendimento");
+    expect(next.status).toBe(Status.InProgress);
     expect(next.prazo_primeira_resposta).toBe(at(10));
     expect(next.prazo_resolucao).toBe(at(26));
     expect(next.primeira_resposta_em).toBeNull();
@@ -134,11 +147,11 @@ describe("reopening", () => {
   it("keeps the SLA when a resolved ticket is reopened", () => {
     const next = applyStatusChange(
       resolved,
-      { de: "resolvido", para: "em_atendimento", ocorrido_em: at(2) },
+      { de: Status.Resolved, para: Status.InProgress, ocorrido_em: at(2) },
       [],
       policies,
     );
-    expect(next.status).toBe("em_atendimento");
+    expect(next.status).toBe(Status.InProgress);
     expect(next.prazo_primeira_resposta).toBe(answered.prazo_primeira_resposta);
     expect(next.prazo_resolucao).toBe(answered.prazo_resolucao);
     expect(next.primeira_resposta_em).toBe(answered.primeira_resposta_em);
@@ -147,7 +160,7 @@ describe("reopening", () => {
   it("does not touch the SLA on other transitions", () => {
     const next = applyStatusChange(
       answered,
-      { de: "em_atendimento", para: "resolvido", ocorrido_em: at(2) },
+      { de: Status.InProgress, para: Status.Resolved, ocorrido_em: at(2) },
       [],
       policies,
     );

@@ -1,13 +1,14 @@
 import { redirect } from "react-router";
 import type { RouteObject } from "react-router";
 import { getSessionUser } from "./auth/session";
-import type { Role, User } from "./auth/users";
+import type { User } from "./auth/users";
 import { AppLayout } from "./components/AppLayout";
-import { TicketsPage as ConsultantTicketsPage } from "./pages/consultant/tickets/TicketsPage";
-import { TicketsPage as CustomerTicketsPage } from "./pages/customer/tickets/TicketsPage";
-import { LoginPage } from "./pages/login/LoginPage";
-import { TicketsPage as ManagerTicketsPage } from "./pages/manager/tickets/TicketsPage";
+import { TicketsPage as ConsultantTicketsPage } from "./pages/consultant/tickets";
+import { TicketsPage as CustomerTicketsPage } from "./pages/customer/tickets";
+import { LoginPage } from "./pages/login";
+import { TicketsPage as ManagerTicketsPage } from "./pages/manager/tickets";
 import { homePath } from "./paths";
+import { Role } from "./auth/enums";
 
 function requireUser(): User {
   const user = getSessionUser();
@@ -54,15 +55,15 @@ export const routes: RouteObject[] = [
     loader: authenticatedLoader,
     Component: AppLayout,
     children: [
-      profileRoute("consultant", {
+      profileRoute(Role.Consultant, {
         path: "tickets/:id?",
         Component: ConsultantTicketsPage,
       }),
-      profileRoute("manager", {
+      profileRoute(Role.Manager, {
         path: "tickets",
         Component: ManagerTicketsPage,
       }),
-      profileRoute("customer", {
+      profileRoute(Role.Customer, {
         path: "tickets",
         Component: CustomerTicketsPage,
       }),

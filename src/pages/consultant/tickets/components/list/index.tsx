@@ -11,76 +11,54 @@ import {
 } from "@mantine/core";
 import { IconSearch } from "@tabler/icons-react";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { SlaBadge, StatusBadge } from "../../../components/Badges";
-import { pausedSince } from "../../../domain/rules";
-import { isActive, STATUS_LABEL } from "../../../domain/status";
-import { compareBySla, slaInfo } from "../../../domain/sla";
-import { STATUSES } from "../../../domain/types";
-import type { User } from "../../../auth/users";
-import { useNow } from "../../../hooks/useNow";
-import { unreadCount } from "../../../store/ticketsStore";
-import { useTickets } from "../../../store/useTickets";
-
-const ROW_HEIGHT = 76;
-
-type Tab = "mine" | "queue";
-type StatusFilter = "active" | "all" | (typeof STATUSES)[number];
-
-interface Props {
-  me: User;
-  selectedId: string | undefined;
-  onSelect: (id: string) => void;
-}
+import { SlaBadge, StatusBadge } from "@/components/Badges";
+import { pausedSince } from "@/domain/rules";
+import { slaInfo } from "@/domain/sla";
+import { isActive } from "@/domain/status";
+import { useNow } from "@/hooks/useNow";
+import { unreadCount } from "@/store/ticketsStore";
+import { useTickets } from "@/store/useTickets";
+import { ROW_HEIGHT, ROW_OVERSCAN } from "./constants";
+import { StatusOption, Tab } from "./enums";
+import type { Props, StatusFilter } from "./types";
+import { selectRows, splitTickets, statusFilterOptions } from "./utils";
 
 export function TicketList({ me, selectedId, onSelect }: Props) {
   const state = useTickets();
   const now = useNow();
-  const [tab, setTab] = useState<Tab>("mine");
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("active");
+  const [tab, setTab] = useState<Tab>(Tab.Mine);
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>(
+    StatusOption.Active,
+  );
   const [search, setSearch] = useState("");
 
   const myGroupId = state.people[me.id]?.grupo_id;
 
-  const { mine, queue } = useMemo(() => {
-    const all = Object.values(state.tickets);
-    return {
-      mine: all.filter((t) => t.responsavel_id === me.id),
-      queue: all.filter(
-        (t) =>
-          !t.responsavel_id &&
-          t.status === "aberto" &&
-          t.grupo_id === myGroupId,
-      ),
-    };
-  }, [state.tickets, me.id, myGroupId]);
+  const { mine, queue } = useMemo(
+    () => splitTickets(Object.values(state.tickets), me.id, myGroupId),
+    [state.tickets, me.id, myGroupId],
+  );
 
-  const rows = useMemo(() => {
-    const term = search.trim().toLowerCase();
-    return (tab === "mine" ? mine : queue)
-      .filter((t) => {
-        if (statusFilter === "active") return isActive(t.status);
-        if (statusFilter !== "all") return t.status === statusFilter;
-        return true;
-      })
-      .filter((t) => {
-        if (!term) return true;
-        const requester = state.people[t.solicitante_id];
-        return (
-          String(t.numero).includes(term) ||
-          t.titulo.toLowerCase().includes(term) ||
-          (requester?.nome ?? "").toLowerCase().includes(term) ||
-          (requester?.empresa ?? "").toLowerCase().includes(term)
-        );
-      })
-      .sort(compareBySla(now));
-  }, [tab, mine, queue, statusFilter, search, state.people, now]);
+  const rows = useMemo(
+    () =>
+      selectRows({
+        mine,
+        queue,
+        tab,
+        statusFilter,
+        search,
+        people: state.people,
+        now,
+      }),
+    [mine, queue, tab, statusFilter, search, state.people, now],
+  );
 
   const parentRef = useRef<HTMLDivElement>(null);
   const virtualizer = useVirtualizer({
     count: rows.length,
     getScrollElement: () => parentRef.current,
     estimateSize: () => ROW_HEIGHT,
-    overscan: 8,
+    overscan: ROW_OVERSCAN,
   });
 
   const myActiveCount = mine.filter((t) => isActive(t.status)).length;
@@ -90,10 +68,10 @@ export function TicketList({ me, selectedId, onSelect }: Props) {
       <SegmentedControl
         fullWidth
         value={tab}
-        onChange={(v) => setTab(v as Tab)}
+        onChange={(value) => setTab(value as Tab)}
         data={[
-          { value: "mine", label: `Meus (${myActiveCount})` },
-          { value: "queue", label: `Fila do grupo (${queue.length})` },
+          { value: Tab.Mine, label: `Meus (${myActiveCount})` },
+          { value: Tab.Queue, label: `Fila do grupo (${queue.length})` },
         ]}
       />
       <Group gap="xs" wrap="nowrap">
@@ -110,12 +88,10 @@ export function TicketList({ me, selectedId, onSelect }: Props) {
           w={150}
           allowDeselect={false}
           value={statusFilter}
-          onChange={(v) => setStatusFilter((v as StatusFilter) ?? "active")}
-          data={[
-            { value: "active", label: "Em andamento" },
-            { value: "all", label: "Todos" },
-            ...STATUSES.map((s) => ({ value: s, label: STATUS_LABEL[s] })),
-          ]}
+          onChange={(value) =>
+            setStatusFilter((value as StatusFilter) ?? StatusOption.Active)
+          }
+          data={statusFilterOptions()}
         />
       </Group>
 

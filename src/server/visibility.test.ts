@@ -1,9 +1,10 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import type { DomainEvent } from "../domain/types";
+import type { DomainEvent } from "@/domain/types";
 import { getDb, initDb } from "./db";
 import { addMessage, assumeTicket } from "./ops";
 import { canSeeTicket, eventFor, scopedSnapshot } from "./visibility";
-import { HELENA_ID, MARINA_ID, rawData, RICARDO_ID } from "../test-data";
+import { HELENA_ID, MARINA_ID, rawData, RICARDO_ID } from "@/test-data";
+import { Status, Profile, EventType } from "@/domain/enums";
 
 const person = (id: string) => getDb().usuarios.find((u) => u.id === id)!;
 
@@ -28,7 +29,9 @@ describe("scopedSnapshot", () => {
 
     expect(snap.mensagens.some((m) => m.interna)).toBe(false);
     expect(snap.mensagens.some((m) => m.id === withNote.id)).toBe(false);
-    const customers = snap.usuarios.filter((u) => u.perfil === "cliente");
+    const customers = snap.usuarios.filter(
+      (u) => u.perfil === Profile.Customer,
+    );
     expect(customers.map((u) => u.id)).toEqual([owner.solicitante_id]);
 
     expect(snap.mensagens.length).toBeGreaterThan(0);
@@ -67,7 +70,7 @@ describe("eventFor", () => {
     )!;
     const note: DomainEvent = {
       id: "e",
-      tipo: "mensagem.adicionada",
+      tipo: EventType.MessageAdded,
       ocorrido_em: "2026-11-03T13:00:00.000Z",
       payload: {
         id: "m",
@@ -87,7 +90,7 @@ describe("eventFor", () => {
     const strangers = db.chamados.find((t) => t.solicitante_id !== HELENA_ID)!;
     const event: DomainEvent = {
       id: "e",
-      tipo: "chamado.atribuido",
+      tipo: EventType.TicketAssigned,
       ocorrido_em: "2026-11-03T13:00:00.000Z",
       payload: { chamado_id: strangers.id, consultor_id: MARINA_ID },
     };
@@ -102,7 +105,7 @@ describe("eventFor", () => {
     )!;
     const colleague = db.usuarios.find(
       (u) =>
-        u.perfil === "consultor" &&
+        u.perfil === Profile.Consultant &&
         u.id !== MARINA_ID &&
         u.grupo_id === queued.grupo_id,
     )!;
@@ -123,7 +126,7 @@ describe("canSeeTicket", () => {
 
   it("follows a message to the customer who owns the ticket", () => {
     const ticket = getDb().chamados.find(
-      (t) => t.responsavel_id && t.status === "em_atendimento",
+      (t) => t.responsavel_id && t.status === Status.InProgress,
     )!;
     const [event] = addMessage({
       ticketId: ticket.id,

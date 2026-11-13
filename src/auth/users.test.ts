@@ -1,11 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { rawData } from "../test-data";
+import { rawData } from "@/test-data";
 import { USERS } from "./users";
+import { Profile } from "@/domain/enums";
+import { Role } from "./enums";
 
 const PROFILE = {
-  consultant: "consultor",
-  manager: "gestor",
-  customer: "cliente",
+  [Role.Consultant]: Profile.Consultant,
+  [Role.Manager]: Profile.Manager,
+  [Role.Customer]: Profile.Customer,
 } as const;
 
 describe("demo users", () => {
@@ -21,9 +23,9 @@ describe("demo users", () => {
 
   it("cover the three profiles", () => {
     expect(USERS.map((u) => u.role).sort()).toEqual([
-      "consultant",
-      "customer",
-      "manager",
+      Role.Consultant,
+      Role.Customer,
+      Role.Manager,
     ]);
   });
 });

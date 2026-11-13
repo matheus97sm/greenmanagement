@@ -9,8 +9,8 @@ import {
 } from "@mantine/core";
 import { IconLeaf, IconLogout } from "@tabler/icons-react";
 import { useNavigate } from "react-router";
-import { useAuth } from "../auth/auth-context";
-import { ROLE_LABEL } from "../auth/users";
+import { useAuth } from "@/auth/auth-context";
+import { ROLE_LABEL } from "@/auth/users";
 
 export function AppHeader() {
   const { user, signOut } = useAuth();

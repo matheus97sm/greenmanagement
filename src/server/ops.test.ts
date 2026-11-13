@@ -7,7 +7,8 @@ import {
   changeStatus,
   openTicket,
 } from "./ops";
-import { HELENA_ID, MARINA_ID, rawData, RICARDO_ID } from "../test-data";
+import { HELENA_ID, MARINA_ID, rawData, RICARDO_ID } from "@/test-data";
+import { Status, Priority, Profile, EventType } from "@/domain/enums";
 
 const person = (id: string) => getDb().usuarios.find((u) => u.id === id)!;
 const ticketOf = (id: string) => getDb().chamados.find((t) => t.id === id)!;
@@ -41,11 +42,11 @@ describe("assumeTicket", () => {
     );
     const events = assumeTicket(queued.id, MARINA_ID);
     expect(events.map((e) => e.tipo)).toEqual([
-      "chamado.atribuido",
-      "status.alterado",
+      EventType.TicketAssigned,
+      EventType.StatusChanged,
     ]);
     expect(queued.responsavel_id).toBe(MARINA_ID);
-    expect(queued.status).toBe("em_atendimento");
+    expect(queued.status).toBe(Status.InProgress);
   });
 
   it("refuses a ticket someone else already took", () => {
@@ -54,7 +55,7 @@ describe("assumeTicket", () => {
     );
     const colleague = getDb().usuarios.find(
       (u) =>
-        u.perfil === "consultor" &&
+        u.perfil === Profile.Consultant &&
         u.id !== MARINA_ID &&
         u.grupo_id === queued.grupo_id,
     )!;
@@ -74,29 +75,29 @@ describe("assumeTicket", () => {
 describe("changeStatus", () => {
   const marinas = () =>
     find(
-      (t) => t.responsavel_id === MARINA_ID && t.status === "em_atendimento",
+      (t) => t.responsavel_id === MARINA_ID && t.status === Status.InProgress,
     );
 
   it("requires a reason and an allowed transition", () => {
     const ticket = marinas();
     const base = { ticketId: ticket.id, userId: MARINA_ID };
     expect(() =>
-      changeStatus({ ...base, to: "resolvido", reason: " " }),
+      changeStatus({ ...base, to: Status.Resolved, reason: " " }),
     ).toThrow(ApiError);
-    expect(() => changeStatus({ ...base, to: "aberto", reason: "x" })).toThrow(
-      ApiError,
-    );
+    expect(() =>
+      changeStatus({ ...base, to: Status.Open, reason: "x" }),
+    ).toThrow(ApiError);
   });
 
   it("lets only the assignee (or a manager) change the status", () => {
     const ticket = marinas();
     const colleague = getDb().usuarios.find(
-      (u) => u.perfil === "consultor" && u.id !== MARINA_ID,
+      (u) => u.perfil === Profile.Consultant && u.id !== MARINA_ID,
     )!;
     const attempt = (userId: string) =>
       changeStatus({
         ticketId: ticket.id,
-        to: "resolvido",
+        to: Status.Resolved,
         reason: "ok",
         userId,
       });
@@ -108,9 +109,9 @@ describe("changeStatus", () => {
   it("marks reopened tickets in the reason and keeps the status as the truth", () => {
     const ticket = marinas();
     const base = { ticketId: ticket.id, userId: MARINA_ID };
-    changeStatus({ ...base, to: "resolvido", reason: "Resolvido" });
-    changeStatus({ ...base, to: "em_atendimento", reason: "Voltou" });
-    expect(ticket.status).toBe("em_atendimento");
+    changeStatus({ ...base, to: Status.Resolved, reason: "Resolvido" });
+    changeStatus({ ...base, to: Status.InProgress, reason: "Voltou" });
+    expect(ticket.status).toBe(Status.InProgress);
     expect(getDb().historico.at(-1)?.motivo).toBe("Reaberto: Voltou");
   });
 });
@@ -118,7 +119,7 @@ describe("changeStatus", () => {
 describe("addMessage", () => {
   const marinas = () =>
     find(
-      (t) => t.responsavel_id === MARINA_ID && t.status === "em_atendimento",
+      (t) => t.responsavel_id === MARINA_ID && t.status === Status.InProgress,
     );
 
   it("refuses an empty message", () => {
@@ -143,7 +144,7 @@ describe("addMessage", () => {
       }),
     ).toThrow(ApiError);
     const stranger = getDb().usuarios.find(
-      (u) => u.perfil === "cliente" && u.id !== ticket.solicitante_id,
+      (u) => u.perfil === Profile.Customer && u.id !== ticket.solicitante_id,
     )!;
     expect(() =>
       addMessage({
@@ -159,7 +160,7 @@ describe("addMessage", () => {
     const ticket = marinas();
     const colleague = getDb().usuarios.find(
       (u) =>
-        u.perfil === "consultor" &&
+        u.perfil === Profile.Consultant &&
         u.id !== MARINA_ID &&
         u.grupo_id === ticket.grupo_id,
     )!;
@@ -176,7 +177,7 @@ describe("addMessage", () => {
 
   it("registers the first response on the first public staff reply", () => {
     const ticket = find(
-      (t) => t.status === "em_atendimento" && t.primeira_resposta_em === null,
+      (t) => t.status === Status.InProgress && t.primeira_resposta_em === null,
     );
     addMessage({
       ticketId: ticket.id,
@@ -195,7 +196,7 @@ describe("addMessage", () => {
   });
 
   it("resumes a ticket that was waiting when the customer answers", () => {
-    const ticket = find((t) => t.status === "aguardando_cliente");
+    const ticket = find((t) => t.status === Status.WaitingCustomer);
     const deadlineBefore = ticket.prazo_resolucao;
     const events = addMessage({
       ticketId: ticket.id,
@@ -204,10 +205,10 @@ describe("addMessage", () => {
       internal: false,
     });
     expect(events.map((e) => e.tipo)).toEqual([
-      "mensagem.adicionada",
-      "status.alterado",
+      EventType.MessageAdded,
+      EventType.StatusChanged,
     ]);
-    expect(ticket.status).toBe("em_atendimento");
+    expect(ticket.status).toBe(Status.InProgress);
     expect(ticket.sla_pausado).toBe(false);
     expect(Date.parse(ticket.prazo_resolucao)).toBeGreaterThan(
       Date.parse(deadlineBefore),
@@ -221,14 +222,15 @@ describe("openTicket", () => {
     const [event] = openTicket({
       requesterId: HELENA_ID,
       categoryId: category.id,
-      priority: "critica",
+      priority: Priority.Critical,
       title: "Sem acesso",
       description: "Não consigo entrar.",
     });
-    if (event.tipo !== "chamado.aberto") throw new Error("unexpected event");
+    if (event.tipo !== EventType.TicketOpened)
+      throw new Error("unexpected event");
     const created = ticketOf(event.payload.id);
     expect(created.grupo_id).toBe(category.grupo_id);
-    expect(created.status).toBe("aberto");
+    expect(created.status).toBe(Status.Open);
 
     const opened = Date.parse(created.aberto_em);
     expect(Date.parse(created.prazo_primeira_resposta) - opened).toBe(
@@ -242,7 +244,7 @@ describe("openTicket", () => {
       openTicket({
         requesterId: MARINA_ID,
         categoryId: getDb().categorias[0].id,
-        priority: "baixa",
+        priority: Priority.Low,
         title: "x",
         description: "y",
       }),
@@ -256,11 +258,11 @@ describe("reopening and the SLA", () => {
     getDb().sla.find((s) => s.prioridade === priority)!;
 
   it("renews the SLA when a closed ticket is reopened", () => {
-    const ticket = find((t) => t.status === "fechado");
+    const ticket = find((t) => t.status === Status.Closed);
     const policy = hoursFor(ticket.prioridade);
     changeStatus({
       ticketId: ticket.id,
-      to: "em_atendimento",
+      to: Status.InProgress,
       reason: "O problema voltou",
       userId: RICARDO_ID,
     });
@@ -275,7 +277,7 @@ describe("reopening and the SLA", () => {
   });
 
   it("keeps the SLA when a resolved ticket is reopened", () => {
-    const ticket = find((t) => t.status === "resolvido");
+    const ticket = find((t) => t.status === Status.Resolved);
     const before = {
       resolution: ticket.prazo_resolucao,
       firstResponse: ticket.prazo_primeira_resposta,
@@ -283,11 +285,11 @@ describe("reopening and the SLA", () => {
     };
     changeStatus({
       ticketId: ticket.id,
-      to: "em_atendimento",
+      to: Status.InProgress,
       reason: "O cliente nao confirmou",
       userId: RICARDO_ID,
     });
-    expect(ticket.status).toBe("em_atendimento");
+    expect(ticket.status).toBe(Status.InProgress);
     expect(ticket.prazo_resolucao).toBe(before.resolution);
     expect(ticket.prazo_primeira_resposta).toBe(before.firstResponse);
     expect(ticket.primeira_resposta_em).toBe(before.answeredAt);
@@ -301,8 +303,8 @@ describe("reopening and the SLA", () => {
         .historico.filter(
           (h) =>
             h.chamado_id === loaded.id &&
-            h.de === "fechado" &&
-            h.para === "em_atendimento",
+            h.de === Status.Closed &&
+            h.para === Status.InProgress,
         )
         .at(-1)!.ocorrido_em,
     );

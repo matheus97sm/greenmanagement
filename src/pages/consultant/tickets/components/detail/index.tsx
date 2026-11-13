@@ -1,56 +1,32 @@
 import { useLayoutEffect, useMemo, useRef, useState } from "react";
+import { Badge, Box, Button, Group, Stack, Text, Title } from "@mantine/core";
+import { SlaBadge, StatusBadge } from "@/components/Badges";
+import { pausedSince } from "@/domain/rules";
+import { slaInfo } from "@/domain/sla";
+import { useNow } from "@/hooks/useNow";
+import { formatDateTime } from "@/lib/format";
+import { takeTicket } from "@/store/actions";
+import { useTickets } from "@/store/useTickets";
+import { Composer } from "../composer";
+import { MessageBubble } from "../message-bubble";
+import { StatusModal } from "../status-modal";
+import { PAGE_SIZE, STICK_TO_BOTTOM_THRESHOLD } from "./constants";
+import { ModalKind, TimelineKind } from "./enums";
+import type { Props } from "./types";
 import {
-  Badge,
-  Box,
-  Button,
-  Group,
-  Paper,
-  Stack,
-  Text,
-  Title,
-} from "@mantine/core";
-import { SlaBadge, StatusBadge } from "../../../components/Badges";
-import { pausedSince } from "../../../domain/rules";
-import { isReopen, STATUS_LABEL, TRANSITIONS } from "../../../domain/status";
-import { slaInfo } from "../../../domain/sla";
-import type { User } from "../../../auth/users";
-import type { Person } from "../../../domain/types";
-import { useNow } from "../../../hooks/useNow";
-import { formatDateTime } from "../../../lib/format";
-import { takeTicket } from "../../../store/actions";
-import { useTickets } from "../../../store/useTickets";
-import { Composer } from "./Composer";
-import { StatusModal } from "./StatusModal";
-
-const PAGE_SIZE = 100;
-
-interface Props {
-  ticketId: string;
-  me: User;
-  draft: string;
-  onDraftChange: (value: string) => void;
-}
-
-type TimelineItem =
-  | {
-      kind: "msg";
-      at: string;
-      key: string;
-      author: string;
-      text: string;
-      internal: boolean;
-    }
-  | { kind: "event"; at: string; key: string; text: string };
-
-function personName(people: Record<string, Person>, id: string | null): string {
-  return (id && people[id]?.nome) || "Desconhecido";
-}
+  availableActions,
+  buildTimeline,
+  footerHint,
+  isClosedStatus,
+  lastItems,
+  personName,
+} from "./utils";
 
 export function TicketDetail({ ticketId, me, draft, onDraftChange }: Props) {
   const state = useTickets();
   const now = useNow();
   const ticket = state.tickets[ticketId];
-  const [modal, setModal] = useState<"status" | "reopen" | null>(null);
+  const [modal, setModal] = useState<ModalKind | null>(null);
   const [taking, setTaking] = useState(false);
   const [shown, setShown] = useState(PAGE_SIZE);
 
@@ -62,58 +38,13 @@ export function TicketDetail({ ticketId, me, draft, onDraftChange }: Props) {
   const messages = state.messages[ticketId];
   const history = state.history[ticketId];
 
-  const items = useMemo<TimelineItem[]>(() => {
-    if (!ticket) return [];
-
-    const takenAt = new Set(
-      (history ?? [])
-        .filter((h) => h.tipo === "status" && h.de === "aberto")
-        .map((h) => `${h.usuario_id}|${h.ocorrido_em}`),
-    );
-
-    const out: TimelineItem[] = [
-      {
-        kind: "msg",
-        key: "description",
-        at: ticket.aberto_em,
-        author: ticket.solicitante_id,
-        text: ticket.descricao,
-        internal: false,
-      },
-      ...(messages ?? []).map((m): TimelineItem => ({
-        kind: "msg",
-        key: m.id,
-        at: m.criada_em,
-        author: m.autor_id,
-        text: m.texto,
-        internal: m.interna,
-      })),
-      ...(history ?? []).flatMap((h): TimelineItem[] => {
-        const who = personName(state.people, h.usuario_id);
-        if (h.tipo === "atribuicao") {
-          if (takenAt.has(`${h.usuario_id}|${h.ocorrido_em}`)) return [];
-          return [
-            {
-              kind: "event",
-              key: h.id,
-              at: h.ocorrido_em,
-              text: `${who} assumiu o chamado.`,
-            },
-          ];
-        }
-        if (!h.de || !h.para) return [];
-        return [
-          {
-            kind: "event",
-            key: h.id,
-            at: h.ocorrido_em,
-            text: `${who} alterou o status de ${STATUS_LABEL[h.de]} para ${STATUS_LABEL[h.para]}. Motivo: ${h.motivo ?? "não informado"}`,
-          },
-        ];
-      }),
-    ];
-    return out.sort((a, b) => a.at.localeCompare(b.at));
-  }, [ticket, messages, history, state.people]);
+  const items = useMemo(
+    () =>
+      ticket
+        ? buildTimeline({ ticket, messages, history, people: state.people })
+        : [],
+    [ticket, messages, history, state.people],
+  );
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const stickToBottom = useRef(true);
@@ -137,16 +68,9 @@ export function TicketDetail({ ticketId, me, draft, onDraftChange }: Props) {
   const isMine = ticket.responsavel_id === me.id;
   const canTake =
     !ticket.responsavel_id && ticket.grupo_id === viewer?.grupo_id;
-  const isClosed = ticket.status === "resolvido" || ticket.status === "fechado";
-  const canAdvance = TRANSITIONS[ticket.status].some(
-    (s) => !isReopen(ticket.status, s),
-  );
-  const canReopen = TRANSITIONS[ticket.status].some((s) =>
-    isReopen(ticket.status, s),
-  );
-
-  const hidden = Math.max(0, items.length - shown);
-  const visibleItems = hidden ? items.slice(-shown) : items;
+  const isClosed = isClosedStatus(ticket.status);
+  const { canAdvance, canReopen } = availableActions(ticket.status);
+  const { hidden, visible } = lastItems(items, shown);
 
   const take = async () => {
     setTaking(true);
@@ -181,12 +105,18 @@ export function TicketDetail({ ticketId, me, draft, onDraftChange }: Props) {
               </Button>
             )}
             {isMine && canAdvance && (
-              <Button variant="default" onClick={() => setModal("status")}>
+              <Button
+                variant="default"
+                onClick={() => setModal(ModalKind.Status)}
+              >
                 Alterar status
               </Button>
             )}
             {isMine && canReopen && (
-              <Button variant="default" onClick={() => setModal("reopen")}>
+              <Button
+                variant="default"
+                onClick={() => setModal(ModalKind.Reopen)}
+              >
                 Reabrir
               </Button>
             )}
@@ -215,7 +145,8 @@ export function TicketDetail({ ticketId, me, draft, onDraftChange }: Props) {
         onScroll={(e) => {
           const el = e.currentTarget;
           stickToBottom.current =
-            el.scrollHeight - el.scrollTop - el.clientHeight < 120;
+            el.scrollHeight - el.scrollTop - el.clientHeight <
+            STICK_TO_BOTTOM_THRESHOLD;
         }}
         style={{ flex: 1, minHeight: 0, overflowY: "auto" }}
         p="md"
@@ -233,8 +164,8 @@ export function TicketDetail({ ticketId, me, draft, onDraftChange }: Props) {
               Mostrar mensagens anteriores ({hidden})
             </Button>
           )}
-          {visibleItems.map((item) =>
-            item.kind === "event" ? (
+          {visible.map((item) =>
+            item.kind === TimelineKind.Event ? (
               <Text key={item.key} size="xs" c="dimmed" ta="center">
                 {item.text} · {formatDate(item.at)}
               </Text>
@@ -268,15 +199,7 @@ export function TicketDetail({ ticketId, me, draft, onDraftChange }: Props) {
           p="sm"
           style={{ borderTop: "1px solid var(--mantine-color-default-border)" }}
         >
-          {!ticket.responsavel_id
-            ? canTake
-              ? "Pegue o chamado para responder."
-              : "Este chamado ainda não tem responsável."
-            : isClosed
-              ? isMine
-                ? "Chamado encerrado. Reabra para voltar a responder."
-                : `Chamado encerrado (atendido por ${nameOf(ticket.responsavel_id)}).`
-              : `Atendido por ${nameOf(ticket.responsavel_id)}.`}
+          {footerHint({ ticket, isMine, isClosed, canTake, nameOf })}
         </Text>
       )}
 
@@ -284,53 +207,10 @@ export function TicketDetail({ ticketId, me, draft, onDraftChange }: Props) {
         <StatusModal
           ticket={ticket}
           userId={me.id}
-          reopen={modal === "reopen"}
+          reopen={modal === ModalKind.Reopen}
           onClose={() => setModal(null)}
         />
       )}
     </Stack>
-  );
-}
-
-function MessageBubble(props: {
-  author: string;
-  isOwn: boolean;
-  internal: boolean;
-  text: string;
-
-  at: string;
-}) {
-  return (
-    <Paper
-      withBorder
-      p="sm"
-      radius="md"
-      maw="80%"
-      ml={props.isOwn ? "auto" : undefined}
-      bg={
-        props.internal
-          ? "var(--mantine-color-yellow-light)"
-          : props.isOwn
-            ? "var(--mantine-color-green-light)"
-            : undefined
-      }
-    >
-      <Group gap="xs" mb={2}>
-        <Text size="xs" fw={600}>
-          {props.isOwn ? "Você" : props.author}
-        </Text>
-        {props.internal && (
-          <Badge size="xs" color="yellow" variant="filled">
-            Nota interna
-          </Badge>
-        )}
-        <Text size="xs" c="dimmed">
-          {props.at}
-        </Text>
-      </Group>
-      <Text size="sm" style={{ whiteSpace: "pre-wrap" }}>
-        {props.text}
-      </Text>
-    </Paper>
   );
 }

@@ -1,7 +1,8 @@
-import { isActive } from "../domain/status";
-import type { Person, Ticket } from "../domain/types";
+import { isActive } from "@/domain/status";
+import type { Person, Ticket } from "@/domain/types";
 import { getDb } from "./db";
 import * as ops from "./ops";
+import { Status, Profile } from "@/domain/enums";
 
 const pick = <T>(items: T[]): T | undefined =>
   items[Math.floor(Math.random() * items.length)];
@@ -15,9 +16,9 @@ function pickFor(
 }
 
 const concernsOf = (focus: Person) => (ticket: Ticket) =>
-  focus.perfil === "cliente"
+  focus.perfil === Profile.Customer
     ? ticket.solicitante_id === focus.id
-    : focus.perfil === "consultor"
+    : focus.perfil === Profile.Consultant
       ? ticket.responsavel_id === focus.id
       : true;
 
@@ -31,14 +32,16 @@ export function startSimulator(focus: Person): () => void {
     customer: [
       ...new Set(
         db.mensagens
-          .filter((m) => role.get(m.autor_id) === "cliente")
+          .filter((m) => role.get(m.autor_id) === Profile.Customer)
           .map((m) => m.texto),
       ),
     ],
     staff: [
       ...new Set(
         db.mensagens
-          .filter((m) => role.get(m.autor_id) === "consultor" && !m.interna)
+          .filter(
+            (m) => role.get(m.autor_id) === Profile.Consultant && !m.interna,
+          )
           .map((m) => m.texto),
       ),
     ],
@@ -53,7 +56,8 @@ export function startSimulator(focus: Person): () => void {
       db.chamados.filter(
         (t) =>
           t.responsavel_id &&
-          (t.status === "em_atendimento" || t.status === "aguardando_cliente"),
+          (t.status === Status.InProgress ||
+            t.status === Status.WaitingCustomer),
       ),
       concerns,
     );
@@ -70,7 +74,7 @@ export function startSimulator(focus: Person): () => void {
   function consultantReplies() {
     const ticket = pickFor(
       db.chamados.filter(
-        (t) => t.responsavel_id && t.status === "em_atendimento",
+        (t) => t.responsavel_id && t.status === Status.InProgress,
       ),
       concerns,
     );
@@ -85,7 +89,7 @@ export function startSimulator(focus: Person): () => void {
   }
 
   function newTicket() {
-    const customer = pick(people("cliente"));
+    const customer = pick(people(Profile.Customer));
 
     const groupId = focus.grupo_id ?? pick(db.grupos)?.id;
     const category = pick(
@@ -110,12 +114,12 @@ export function startSimulator(focus: Person): () => void {
     const queue = db.chamados.filter(
       (t) =>
         !t.responsavel_id &&
-        t.status === "aberto" &&
+        t.status === Status.Open &&
         (focus.grupo_id ? t.grupo_id === focus.grupo_id : true),
     );
     const ticket = pick(queue);
     const colleague = pick(
-      people("consultor").filter(
+      people(Profile.Consultant).filter(
         (p) => p.id !== focus.id && p.grupo_id === ticket?.grupo_id,
       ),
     );
@@ -128,7 +132,7 @@ export function startSimulator(focus: Person): () => void {
       concerns,
     );
     const colleague = pick(
-      people("consultor").filter(
+      people(Profile.Consultant).filter(
         (p) => p.id !== focus.id && p.grupo_id === ticket?.grupo_id,
       ),
     );

@@ -1,7 +1,8 @@
-import type { DomainEvent, Snapshot, Status } from "../domain/types";
+import type { DomainEvent, Snapshot } from "@/domain/types";
 import { ensureDb } from "./db";
 import * as ops from "./ops";
 import { scopedSnapshot } from "./visibility";
+import { Status } from "@/domain/enums";
 
 export { ApiError } from "./ops";
 

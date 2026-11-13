@@ -1,7 +1,8 @@
 import { notifications } from "@mantine/notifications";
-import type { DomainEvent, Status } from "../domain/types";
-import * as api from "../server/api";
+import type { DomainEvent } from "@/domain/types";
+import * as api from "@/server/api";
 import { ticketsStore } from "./ticketsStore";
+import { Status } from "@/domain/enums";
 
 async function run(call: () => Promise<DomainEvent[]>): Promise<boolean> {
   try {

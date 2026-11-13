@@ -134,25 +134,49 @@ Rode `npm run format` antes de commitar e `npm run format:check` para validar. N
 
 ```
 src/
-  main.tsx      providers (Mantine, Auth) e o roteador
-  routes.tsx    rotas e guardas (loaders) por perfil
-  paths.ts      página inicial de cada perfil
-  auth/         usuários de demonstração, sessão e contexto de autenticação
-  pages/        uma pasta por perfil e, dentro dela, uma pasta por página
-    login/                 tela de login (única página sem perfil)
-    consultant/tickets/    visão da Marina: lista, detalhe, composer e modal de status
-    manager/tickets/       visão do Ricardo (a fazer)
-    customer/tickets/      visão da Helena (a fazer)
-  components/   cabeçalho, layout autenticado e badges (usados por mais de um perfil)
-  domain/       tipos, status, SLA e regras que alteram o chamado (sem React)
-  lib/          relógio simulado e formatação
-  server/       "backend" simulado (dados, regras, API, socket, simulador)
-  store/        estado da tela, ações e ligação em tempo real
+  main.tsx       providers (Mantine, Auth) e o roteador
+  routes.tsx     rotas e guardas (loaders) por perfil
+  paths.ts       página inicial de cada perfil
+  auth/          usuários de demonstração, sessão, contexto e o enum Role
+  pages/         uma pasta por perfil e, dentro dela, uma pasta por página
+    login/
+    consultant/tickets/   visão da Marina (a página e seus components/)
+    manager/tickets/      visão do Ricardo (a fazer)
+    customer/tickets/     visão da Helena (a fazer)
+  components/    cabeçalho, layout autenticado e badges (usados por mais de um perfil)
+  domain/        enums, tipos, status, SLA e regras que alteram o chamado (sem React)
+  lib/           relógio simulado e formatação
+  server/        "backend" simulado (dados, regras, API, socket, simulador)
+  store/         estado da tela, ações, ligação em tempo real e o enum LoadStatus
+  test-*.ts(x)   configuração e utilitários de teste
 ```
 
 ### Convenção para páginas
 
-Cada página fica em `pages/<perfil>/<página>/`, com a página e os componentes que só ela usa dentro da própria pasta (por exemplo, `pages/consultant/tickets/`). Assim, quando um perfil ganhar outra página (`pages/consultant/reports/`), nada se mistura. Só o que mais de uma página usa sobe para `components/`.
+Cada página é uma pasta em `pages/<perfil>/<página>/`, e o `index.tsx` é a própria página. O que só ela usa vive dentro dela, e **cada componente é uma pasta** dentro de `components/`:
+
+```
+pages/consultant/tickets/
+  index.tsx                  a página
+  index.unit.test.tsx
+  components/
+    list/
+      index.tsx              o componente (só a interface)
+      types.ts               props e tipos
+      enums.ts               enums que só este componente usa
+      constants.ts           constantes
+      utils.ts               funções puras, testáveis sem renderizar nada
+      index.unit.test.tsx
+      utils.unit.test.ts
+```
+
+Só entram os arquivos que o componente precisa. Quando um perfil ganhar outra página (`pages/consultant/reports/`), nada se mistura. O que mais de uma página usa sobe para `components/`.
+
+### Enums, imports e testes
+
+- **Enums no lugar de textos soltos:** todo conjunto fechado de valores (status, prioridade, perfis, tipos de evento, abas, estados de carregamento...) é um `enum`, para um erro de digitação virar erro de compilação e o editor completar o nome. Os enums de domínio ficam em `src/domain/enums.ts` e mantêm o valor que vem da API (por exemplo, `Status.InProgress` vale `"em_atendimento"`), então os dados e os eventos continuam iguais. Enums de um componente ficam no `enums.ts` dele. Por causa dos enums, o `erasableSyntaxOnly` do template do Vite está desligado no `tsconfig.app.json`.
+- **Imports:** dentro da mesma página, caminhos relativos (`./types`, `../composer`). Para qualquer outro módulo de `src/`, o alias `@/` (por exemplo, `@/domain/enums`).
+- **Testes:** ficam ao lado do que testam, com o sufixo `.unit.test.ts` (ou `.tsx`, quando renderizam). Rodam com Vitest em jsdom e Testing Library. `src/test-utils.tsx` tem `renderWithProviders`/`renderRoutes` (Mantine, autenticação e roteador) e `loadStoreAs(usuário)`, que carrega o store com os dados reais como aquele usuário os veria. Os componentes que chamam a API simulada têm `@/store/actions` substituído por um mock.
 
 ### Rotas e guardas
 

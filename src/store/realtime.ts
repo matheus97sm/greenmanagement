@@ -1,8 +1,9 @@
-import { fetchSnapshot } from "../server/api";
-import { ensureDb } from "../server/db";
-import { startSimulator } from "../server/simulator";
-import { subscribe } from "../server/socket";
-import { eventFor } from "../server/visibility";
+import { fetchSnapshot } from "@/server/api";
+import { ensureDb } from "@/server/db";
+import { startSimulator } from "@/server/simulator";
+import { subscribe } from "@/server/socket";
+import { eventFor } from "@/server/visibility";
+import { LoadStatus } from "./enums";
 import { ticketsStore } from "./ticketsStore";
 
 let loadedFor: string | null = null;
@@ -25,7 +26,7 @@ export function startRealtime(userId: string): () => void {
     stopSimulator = startSimulator(viewer);
   });
 
-  if (ticketsStore.getState().status === "idle") {
+  if (ticketsStore.getState().status === LoadStatus.Idle) {
     void ticketsStore.load(() => fetchSnapshot(userId));
   }
 

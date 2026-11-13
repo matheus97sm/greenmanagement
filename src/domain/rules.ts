@@ -1,11 +1,5 @@
-import type {
-  HistoryEntry,
-  Message,
-  Person,
-  SlaPolicy,
-  Status,
-  Ticket,
-} from "./types";
+import type { HistoryEntry, Message, Person, SlaPolicy, Ticket } from "./types";
+import { Status, Profile, HistoryType } from "./enums";
 
 const HOUR = 3_600_000;
 
@@ -16,7 +10,9 @@ export function groupIdsOf(person: Person): string[] {
 }
 
 export function isStaff(person: Person | undefined): boolean {
-  return person?.perfil === "consultor" || person?.perfil === "gestor";
+  return (
+    person?.perfil === Profile.Consultant || person?.perfil === Profile.Manager
+  );
 }
 
 export function pausedSince(
@@ -25,7 +21,9 @@ export function pausedSince(
 ): string {
   const entry = [...(history ?? [])]
     .reverse()
-    .find((h) => h.tipo === "status" && h.para === "aguardando_cliente");
+    .find(
+      (h) => h.tipo === HistoryType.Status && h.para === Status.WaitingCustomer,
+    );
 
   return entry?.ocorrido_em ?? ticket.atualizado_em;
 }
@@ -75,7 +73,7 @@ export function applyStatusChange(
     atualizado_em: later(ticket.atualizado_em, change.ocorrido_em),
   };
 
-  if (change.para === "aguardando_cliente") {
+  if (change.para === Status.WaitingCustomer) {
     next.sla_pausado = true;
   } else if (ticket.sla_pausado) {
     const stoppedMs =
@@ -86,11 +84,11 @@ export function applyStatusChange(
     next.sla_pausado = false;
   }
 
-  if (change.para === "resolvido") next.resolvido_em = change.ocorrido_em;
-  if (change.para === "fechado") next.fechado_em = change.ocorrido_em;
+  if (change.para === Status.Resolved) next.resolvido_em = change.ocorrido_em;
+  if (change.para === Status.Closed) next.fechado_em = change.ocorrido_em;
 
   const reopenedFromClosed =
-    change.de === "fechado" && change.para === "em_atendimento";
+    change.de === Status.Closed && change.para === Status.InProgress;
   return reopenedFromClosed
     ? renewSla(next, change.ocorrido_em, policies)
     : next;

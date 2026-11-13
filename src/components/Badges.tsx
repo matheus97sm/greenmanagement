@@ -1,8 +1,8 @@
 import { Badge } from "@mantine/core";
-import { STATUS_COLOR, STATUS_LABEL } from "../domain/status";
-import type { SlaInfo } from "../domain/sla";
-import type { Status } from "../domain/types";
-import { formatDuration } from "../lib/format";
+import { STATUS_COLOR, STATUS_LABEL } from "@/domain/status";
+import type { SlaInfo } from "@/domain/sla";
+import { formatDuration } from "@/lib/format";
+import { Status, SlaKind, SlaClock } from "@/domain/enums";
 
 export function StatusBadge({ status }: { status: Status }) {
   return (
@@ -14,10 +14,10 @@ export function StatusBadge({ status }: { status: Status }) {
 
 export function SlaBadge({ sla }: { sla: SlaInfo }) {
   const duration = formatDuration(sla.remainingMs);
-  const firstResponse = sla.clock === "primeira_resposta";
+  const firstResponse = sla.clock === SlaClock.FirstResponse;
 
   switch (sla.kind) {
-    case "breached":
+    case SlaKind.Breached:
       return (
         <Badge color="red" variant="filled" size="sm">
           {firstResponse
@@ -25,16 +25,16 @@ export function SlaBadge({ sla }: { sla: SlaInfo }) {
             : `Estourado há ${duration}`}
         </Badge>
       );
-    case "critical":
-    case "warning":
-    case "ok":
+    case SlaKind.Critical:
+    case SlaKind.Warning:
+    case SlaKind.Ok:
       return (
         <Badge
           size="sm"
           color={
-            sla.kind === "critical"
+            sla.kind === SlaKind.Critical
               ? "red"
-              : sla.kind === "warning"
+              : sla.kind === SlaKind.Warning
                 ? "orange"
                 : "gray"
           }
@@ -43,13 +43,13 @@ export function SlaBadge({ sla }: { sla: SlaInfo }) {
           {firstResponse ? `1ª resposta em ${duration}` : duration}
         </Badge>
       );
-    case "paused":
+    case SlaKind.Paused:
       return (
         <Badge color="blue" variant="outline" size="sm">
           Prazo pausado
         </Badge>
       );
-    case "finished":
+    case SlaKind.Finished:
       return (
         <Badge color="gray" variant="outline" size="sm">
           Encerrado

@@ -1,8 +1,8 @@
 import { useEffect } from "react";
 import { AppShell } from "@mantine/core";
 import { Outlet } from "react-router";
-import { useAuth } from "../auth/auth-context";
-import { startRealtime } from "../store/realtime";
+import { useAuth } from "@/auth/auth-context";
+import { startRealtime } from "@/store/realtime";
 import { AppHeader } from "./AppHeader";
 
 export function AppLayout() {

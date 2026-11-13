@@ -1,7 +1,8 @@
 import dadosUrl from "../../dados.json?url";
-import { isStaff, renewSla } from "../domain/rules";
-import type { RawData } from "../domain/types";
-import { anchorClock } from "../lib/clock";
+import { isStaff, renewSla } from "@/domain/rules";
+import type { RawData } from "@/domain/types";
+import { anchorClock } from "@/lib/clock";
+import { Status, HistoryType } from "@/domain/enums";
 
 export type Db = Omit<RawData, "meta"> & { agora: string };
 
@@ -16,9 +17,9 @@ function renewReopenedTickets(db: Db): void {
       .filter(
         (h) =>
           h.chamado_id === ticket.id &&
-          h.tipo === "status" &&
-          h.de === "fechado" &&
-          h.para === "em_atendimento",
+          h.tipo === HistoryType.Status &&
+          h.de === Status.Closed &&
+          h.para === Status.InProgress,
       )
       .map((h) => h.ocorrido_em)
       .sort()

@@ -17,9 +17,9 @@ import {
 } from "@mantine/core";
 import { IconAlertCircle, IconLeaf } from "@tabler/icons-react";
 import { useNavigate } from "react-router";
-import { useAuth } from "../../auth/auth-context";
-import { homePath } from "../../paths";
-import { DEMO_PASSWORD, ROLE_LABEL, USERS } from "../../auth/users";
+import { useAuth } from "@/auth/auth-context";
+import { homePath } from "@/paths";
+import { DEMO_PASSWORD, ROLE_LABEL, USERS } from "@/auth/users";
 
 export function LoginPage() {
   const { signIn } = useAuth();

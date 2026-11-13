@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { compareBySla, slaInfo } from "./sla";
 import type { Ticket } from "./types";
+import { Status, Priority, SlaKind, SlaClock } from "./enums";
 
 const NOW = Date.parse("2026-11-03T13:00:00.000Z");
 const HOUR = 3_600_000;
@@ -14,8 +15,8 @@ function ticket(overrides: Partial<Ticket> = {}): Ticket {
     descricao: "",
     categoria_id: "c",
     grupo_id: "g",
-    prioridade: "media",
-    status: "em_atendimento",
+    prioridade: Priority.Medium,
+    status: Status.InProgress,
     solicitante_id: "s",
     responsavel_id: "r",
     aberto_em: at(-10 * HOUR),
@@ -34,10 +35,10 @@ describe("slaInfo", () => {
   it("classifies by the remaining resolution time", () => {
     const kind = (ms: number) =>
       slaInfo(ticket({ prazo_resolucao: at(ms) }), NOW).kind;
-    expect(kind(-1)).toBe("breached");
-    expect(kind(30 * 60_000)).toBe("critical");
-    expect(kind(2 * HOUR)).toBe("warning");
-    expect(kind(10 * HOUR)).toBe("ok");
+    expect(kind(-1)).toBe(SlaKind.Breached);
+    expect(kind(30 * 60_000)).toBe(SlaKind.Critical);
+    expect(kind(2 * HOUR)).toBe(SlaKind.Warning);
+    expect(kind(10 * HOUR)).toBe(SlaKind.Ok);
   });
 
   it("counts down the first response while it is pending and closer", () => {
@@ -49,8 +50,8 @@ describe("slaInfo", () => {
       }),
       NOW,
     );
-    expect(info.clock).toBe("primeira_resposta");
-    expect(info.kind).toBe("critical");
+    expect(info.clock).toBe(SlaClock.FirstResponse);
+    expect(info.kind).toBe(SlaKind.Critical);
   });
 
   it("ignores the first-response deadline once it was answered", () => {
@@ -61,32 +62,32 @@ describe("slaInfo", () => {
       }),
       NOW,
     );
-    expect(info.clock).toBe("resolucao");
-    expect(info.kind).toBe("ok");
+    expect(info.clock).toBe(SlaClock.Resolution);
+    expect(info.kind).toBe(SlaKind.Ok);
   });
 
   it("freezes the remaining time while the clock is paused", () => {
     const info = slaInfo(
       ticket({
-        status: "aguardando_cliente",
+        status: Status.WaitingCustomer,
         sla_pausado: true,
         prazo_resolucao: at(5 * HOUR),
       }),
       NOW,
       at(-3 * HOUR),
     );
-    expect(info.kind).toBe("paused");
+    expect(info.kind).toBe(SlaKind.Paused);
     expect(info.remainingMs).toBe(8 * HOUR);
   });
 
   it("is finished for resolved and closed tickets, whatever the dates say", () => {
     const resolved = ticket({
-      status: "resolvido",
+      status: Status.Resolved,
       prazo_resolucao: at(-HOUR),
     });
-    const closed = ticket({ status: "fechado", fechado_em: at(-HOUR) });
-    expect(slaInfo(resolved, NOW).kind).toBe("finished");
-    expect(slaInfo(closed, NOW).kind).toBe("finished");
+    const closed = ticket({ status: Status.Closed, fechado_em: at(-HOUR) });
+    expect(slaInfo(resolved, NOW).kind).toBe(SlaKind.Finished);
+    expect(slaInfo(closed, NOW).kind).toBe(SlaKind.Finished);
   });
 });
 
@@ -99,12 +100,12 @@ describe("compareBySla", () => {
       order([
         ticket({
           id: "ok-critical",
-          prioridade: "critica",
+          prioridade: Priority.Critical,
           prazo_resolucao: at(30 * HOUR),
         }),
         ticket({
           id: "breached-low",
-          prioridade: "baixa",
+          prioridade: Priority.Low,
           prazo_resolucao: at(-HOUR),
         }),
       ]),
@@ -116,21 +117,21 @@ describe("compareBySla", () => {
       order([
         ticket({
           id: "low-very-late",
-          prioridade: "baixa",
+          prioridade: Priority.Low,
           prazo_resolucao: at(-300 * HOUR),
         }),
         ticket({
           id: "high-a-bit-late",
-          prioridade: "alta",
+          prioridade: Priority.High,
           prazo_resolucao: at(-HOUR),
         }),
         ticket({
-          id: "critical",
-          prioridade: "critica",
+          id: SlaKind.Critical,
+          prioridade: Priority.Critical,
           prazo_resolucao: at(-2 * HOUR),
         }),
       ]),
-    ).toEqual(["critical", "high-a-bit-late", "low-very-late"]);
+    ).toEqual([SlaKind.Critical, "high-a-bit-late", "low-very-late"]);
   });
 
   it("serves the most overdue first within the same priority", () => {
@@ -138,12 +139,12 @@ describe("compareBySla", () => {
       order([
         ticket({
           id: "recent",
-          prioridade: "media",
+          prioridade: Priority.Medium,
           prazo_resolucao: at(-HOUR),
         }),
         ticket({
           id: "old",
-          prioridade: "media",
+          prioridade: Priority.Medium,
           prazo_resolucao: at(-50 * HOUR),
         }),
       ]),
@@ -155,12 +156,12 @@ describe("compareBySla", () => {
       order([
         ticket({
           id: "critical-far",
-          prioridade: "critica",
+          prioridade: Priority.Critical,
           prazo_resolucao: at(30 * HOUR),
         }),
         ticket({
           id: "low-soon",
-          prioridade: "baixa",
+          prioridade: Priority.Low,
           prazo_resolucao: at(HOUR + 60_000),
         }),
       ]),
@@ -172,17 +173,17 @@ describe("compareBySla", () => {
       order([
         ticket({
           id: "medium-sooner",
-          prioridade: "media",
+          prioridade: Priority.Medium,
           prazo_resolucao: at(HOUR),
         }),
         ticket({
           id: "high-later",
-          prioridade: "alta",
+          prioridade: Priority.High,
           prazo_resolucao: at(3 * HOUR),
         }),
         ticket({
           id: "high-sooner",
-          prioridade: "alta",
+          prioridade: Priority.High,
           prazo_resolucao: at(2 * HOUR),
         }),
       ]),
@@ -194,17 +195,17 @@ describe("compareBySla", () => {
       order([
         ticket({
           id: "low",
-          prioridade: "baixa",
+          prioridade: Priority.Low,
           prazo_resolucao: at(10 * HOUR),
         }),
         ticket({
           id: "high-later",
-          prioridade: "alta",
+          prioridade: Priority.High,
           prazo_resolucao: at(40 * HOUR),
         }),
         ticket({
           id: "high-sooner",
-          prioridade: "alta",
+          prioridade: Priority.High,
           prazo_resolucao: at(20 * HOUR),
         }),
       ]),
@@ -215,25 +216,25 @@ describe("compareBySla", () => {
     expect(
       order([
         ticket({
-          id: "finished",
-          status: "fechado",
-          prioridade: "critica",
+          id: SlaKind.Finished,
+          status: Status.Closed,
+          prioridade: Priority.Critical,
           prazo_resolucao: at(-9 * HOUR),
         }),
         ticket({
-          id: "paused",
-          status: "aguardando_cliente",
+          id: SlaKind.Paused,
+          status: Status.WaitingCustomer,
           sla_pausado: true,
-          prioridade: "critica",
+          prioridade: Priority.Critical,
           prazo_resolucao: at(-5 * HOUR),
         }),
         ticket({
           id: "running",
-          prioridade: "baixa",
+          prioridade: Priority.Low,
           prazo_resolucao: at(60 * HOUR),
         }),
       ]),
-    ).toEqual(["running", "paused", "finished"]);
+    ).toEqual(["running", SlaKind.Paused, SlaKind.Finished]);
   });
 
   it("counts a pending first response as the deadline that matters", () => {
@@ -241,12 +242,12 @@ describe("compareBySla", () => {
       order([
         ticket({
           id: "resolution-soon",
-          prioridade: "media",
+          prioridade: Priority.Medium,
           prazo_resolucao: at(2 * HOUR),
         }),
         ticket({
           id: "first-response-breached",
-          prioridade: "media",
+          prioridade: Priority.Medium,
           primeira_resposta_em: null,
           prazo_primeira_resposta: at(-HOUR),
           prazo_resolucao: at(20 * HOUR),
@@ -258,12 +259,12 @@ describe("compareBySla", () => {
   it("moves a ticket up as time brings its deadline closer", () => {
     const low = ticket({
       id: "low",
-      prioridade: "baixa",
+      prioridade: Priority.Low,
       prazo_resolucao: at(5 * HOUR),
     });
     const high = ticket({
       id: "high",
-      prioridade: "alta",
+      prioridade: Priority.High,
       prazo_resolucao: at(20 * HOUR),
     });
     expect(order([low, high])).toEqual(["high", "low"]);

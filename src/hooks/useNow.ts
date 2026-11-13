@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { now } from "../lib/clock";
+import { now } from "@/lib/clock";
 
 export function useNow(intervalMs = 30_000): number {
   const [current, setCurrent] = useState(now);

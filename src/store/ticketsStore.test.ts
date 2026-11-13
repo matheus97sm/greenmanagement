@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
-import type { DomainEvent, Snapshot, Status, Ticket } from "../domain/types";
+import type { DomainEvent, Snapshot, Ticket } from "@/domain/types";
 import { createTicketsStore, unreadCount } from "./ticketsStore";
+import { Status, Priority, Profile, EventType } from "@/domain/enums";
+import { LoadStatus } from "./enums";
 
 const HOUR = 3_600_000;
 const NOW = "2026-11-03T13:00:00.000Z";
@@ -14,8 +16,8 @@ const ticket: Ticket = {
   descricao: "Descrição",
   categoria_id: "cat",
   grupo_id: "g1",
-  prioridade: "media",
-  status: "em_atendimento",
+  prioridade: Priority.Medium,
+  status: Status.InProgress,
   solicitante_id: "cli",
   responsavel_id: "cons",
   aberto_em: at(-10),
@@ -33,14 +35,18 @@ const snapshot: Snapshot = {
   grupos: [],
   categorias: [],
   sla: [
-    { prioridade: "media", primeira_resposta_horas: 8, resolucao_horas: 24 },
+    {
+      prioridade: Priority.Medium,
+      primeira_resposta_horas: 8,
+      resolucao_horas: 24,
+    },
   ],
   usuarios: [
     {
       id: "cons",
       nome: "Consultor",
       email: "c@x",
-      perfil: "consultor",
+      perfil: Profile.Consultant,
       locale: "pt-BR",
       zoneinfo: "America/Sao_Paulo",
     },
@@ -48,7 +54,7 @@ const snapshot: Snapshot = {
       id: "cli",
       nome: "Cliente",
       email: "k@x",
-      perfil: "cliente",
+      perfil: Profile.Customer,
       locale: "pt-PT",
       zoneinfo: "Europe/Lisbon",
     },
@@ -66,7 +72,7 @@ function message(
 ): DomainEvent {
   return {
     id: `e-${id}`,
-    tipo: "mensagem.adicionada",
+    tipo: EventType.MessageAdded,
     ocorrido_em: when,
     payload: {
       id,
@@ -83,11 +89,11 @@ function statusEvent(
   eventId: string,
   to: Status,
   when: string,
-  from: Status = "em_atendimento",
+  from: Status = Status.InProgress,
 ): DomainEvent {
   return {
     id: eventId,
-    tipo: "status.alterado",
+    tipo: EventType.StatusChanged,
     ocorrido_em: when,
     payload: {
       chamado_id: "ch-1",
@@ -133,33 +139,35 @@ describe("ticketsStore", () => {
 
   it("does not let an old status overwrite a newer one", () => {
     const store = newStore();
-    store.applyEvent(statusEvent("s2", "resolvido", at(3)));
-    store.applyEvent(statusEvent("s1", "aguardando_cliente", at(2)));
+    store.applyEvent(statusEvent("s2", Status.Resolved, at(3)));
+    store.applyEvent(statusEvent("s1", Status.WaitingCustomer, at(2)));
     const state = store.getState();
-    expect(state.tickets["ch-1"].status).toBe("resolvido");
+    expect(state.tickets["ch-1"].status).toBe(Status.Resolved);
     expect(state.history["ch-1"]).toHaveLength(2);
   });
 
   it("holds events for an unknown ticket until it arrives", () => {
     const store = createTicketsStore();
     store.loadSnapshot({ ...snapshot, chamados: [] });
-    store.applyEvent(statusEvent("s1", "aguardando_cliente", at(1)));
+    store.applyEvent(statusEvent("s1", Status.WaitingCustomer, at(1)));
     expect(store.getState().tickets["ch-1"]).toBeUndefined();
     store.applyEvent({
       id: "opened",
-      tipo: "chamado.aberto",
+      tipo: EventType.TicketOpened,
       ocorrido_em: ticket.aberto_em,
       payload: ticket,
     });
-    expect(store.getState().tickets["ch-1"].status).toBe("aguardando_cliente");
+    expect(store.getState().tickets["ch-1"].status).toBe(
+      Status.WaitingCustomer,
+    );
   });
 
   it("stops the SLA clock and restarts it, pushing the deadline", () => {
     const store = newStore();
-    store.applyEvent(statusEvent("pause", "aguardando_cliente", at(1)));
+    store.applyEvent(statusEvent("pause", Status.WaitingCustomer, at(1)));
     expect(store.getState().tickets["ch-1"].sla_pausado).toBe(true);
     store.applyEvent(
-      statusEvent("resume", "em_atendimento", at(4), "aguardando_cliente"),
+      statusEvent("resume", Status.InProgress, at(4), Status.WaitingCustomer),
     );
     const resumed = store.getState().tickets["ch-1"];
     expect(resumed.sla_pausado).toBe(false);
@@ -181,11 +189,11 @@ describe("ticketsStore", () => {
     const store = createTicketsStore();
     store.loadSnapshot({
       ...snapshot,
-      chamados: [{ ...ticket, responsavel_id: null, status: "aberto" }],
+      chamados: [{ ...ticket, responsavel_id: null, status: Status.Open }],
     });
     store.applyEvent({
       id: "assign",
-      tipo: "chamado.atribuido",
+      tipo: EventType.TicketAssigned,
       ocorrido_em: at(1),
       payload: { chamado_id: "ch-1", consultor_id: "cons" },
     });
@@ -207,11 +215,13 @@ describe("ticketsStore", () => {
     const store = createTicketsStore();
     store.loadSnapshot({
       ...snapshot,
-      chamados: [{ ...ticket, status: "fechado", fechado_em: at(-3) }],
+      chamados: [{ ...ticket, status: Status.Closed, fechado_em: at(-3) }],
     });
-    store.applyEvent(statusEvent("reopen", "em_atendimento", at(2), "fechado"));
+    store.applyEvent(
+      statusEvent("reopen", Status.InProgress, at(2), Status.Closed),
+    );
     const reopened = store.getState().tickets["ch-1"];
-    expect(reopened.status).toBe("em_atendimento");
+    expect(reopened.status).toBe(Status.InProgress);
     expect(reopened.prazo_primeira_resposta).toBe(at(10));
     expect(reopened.prazo_resolucao).toBe(at(26));
     expect(reopened.primeira_resposta_em).toBeNull();
@@ -221,13 +231,13 @@ describe("ticketsStore", () => {
     const store = createTicketsStore();
     store.loadSnapshot({
       ...snapshot,
-      chamados: [{ ...ticket, status: "resolvido", resolvido_em: at(-3) }],
+      chamados: [{ ...ticket, status: Status.Resolved, resolvido_em: at(-3) }],
     });
     store.applyEvent(
-      statusEvent("reopen", "em_atendimento", at(2), "resolvido"),
+      statusEvent("reopen", Status.InProgress, at(2), Status.Resolved),
     );
     const reopened = store.getState().tickets["ch-1"];
-    expect(reopened.status).toBe("em_atendimento");
+    expect(reopened.status).toBe(Status.InProgress);
     expect(reopened.prazo_resolucao).toBe(ticket.prazo_resolucao);
     expect(reopened.primeira_resposta_em).toBe(ticket.primeira_resposta_em);
   });
@@ -236,7 +246,7 @@ describe("ticketsStore", () => {
     const store = newStore();
     store.applyEvent(message("m1", at(1)));
     store.reset();
-    expect(store.getState().status).toBe("idle");
+    expect(store.getState().status).toBe(LoadStatus.Idle);
     expect(store.getState().tickets).toEqual({});
 
     store.loadSnapshot(snapshot);

@@ -3,7 +3,7 @@ import {
   applyMessage,
   applyStatusChange,
   isStaff,
-} from "../domain/rules";
+} from "@/domain/rules";
 import type {
   Category,
   DomainEvent,
@@ -14,11 +14,13 @@ import type {
   Snapshot,
   SlaPolicy,
   Ticket,
-} from "../domain/types";
-import { anchorClock, nowIso } from "../lib/clock";
+} from "@/domain/types";
+import { anchorClock, nowIso } from "@/lib/clock";
+import { EventType, HistoryType } from "@/domain/enums";
+import { LoadStatus } from "./enums";
 
 export interface TicketsState {
-  status: "idle" | "loading" | "ready" | "error";
+  status: LoadStatus;
   tickets: Record<string, Ticket>;
   messages: Record<string, Message[]>;
   history: Record<string, HistoryEntry[]>;
@@ -35,7 +37,7 @@ export interface TicketsState {
 
 function emptyState(): TicketsState {
   return {
-    status: "idle",
+    status: LoadStatus.Idle,
     tickets: {},
     messages: {},
     history: {},
@@ -88,7 +90,7 @@ function reduce(
     orphans.set(ticketId, [...(orphans.get(ticketId) ?? []), event]);
 
   switch (event.tipo) {
-    case "chamado.aberto": {
+    case EventType.TicketOpened: {
       const ticket = event.payload;
       if (state.tickets[ticket.id]) return state;
       let next: TicketsState = {
@@ -105,7 +107,7 @@ function reduce(
       return next;
     }
 
-    case "chamado.atribuido": {
+    case EventType.TicketAssigned: {
       const { chamado_id, consultor_id } = event.payload;
       const ticket = state.tickets[chamado_id];
       if (!ticket) {
@@ -115,7 +117,7 @@ function reduce(
       const entry: HistoryEntry = {
         id: event.id,
         chamado_id,
-        tipo: "atribuicao",
+        tipo: HistoryType.Assignment,
         de: null,
         para: null,
         usuario_id: consultor_id,
@@ -148,7 +150,7 @@ function reduce(
       };
     }
 
-    case "mensagem.adicionada": {
+    case EventType.MessageAdded: {
       const message = event.payload;
       const list = state.messages[message.chamado_id];
       if (list?.some((m) => m.id === message.id)) return state;
@@ -172,7 +174,7 @@ function reduce(
       };
     }
 
-    case "status.alterado": {
+    case EventType.StatusChanged: {
       const p = event.payload;
       const ticket = state.tickets[p.chamado_id];
       if (!ticket) {
@@ -182,7 +184,7 @@ function reduce(
       const entry: HistoryEntry = {
         id: event.id,
         chamado_id: p.chamado_id,
-        tipo: "status",
+        tipo: HistoryType.Status,
         de: p.de,
         para: p.para,
         usuario_id: p.usuario_id,
@@ -254,7 +256,7 @@ export function createTicketsStore() {
 
       const base: TicketsState = {
         ...emptyState(),
-        status: "ready",
+        status: LoadStatus.Ready,
         tickets: Object.fromEntries(snapshot.chamados.map((t) => [t.id, t])),
         people: Object.fromEntries(snapshot.usuarios.map((p) => [p.id, p])),
         groups: Object.fromEntries(snapshot.grupos.map((g) => [g.id, g])),
@@ -281,8 +283,10 @@ export function createTicketsStore() {
       };
       for (const t of snapshot.chamados) {
         const entries = base.history[t.id] ?? [];
-        base.statusAt[t.id] = latest(entries, "status") ?? t.aberto_em;
-        base.assignedAt[t.id] = latest(entries, "atribuicao") ?? t.aberto_em;
+        base.statusAt[t.id] =
+          latest(entries, HistoryType.Status) ?? t.aberto_em;
+        base.assignedAt[t.id] =
+          latest(entries, HistoryType.Assignment) ?? t.aberto_em;
       }
 
       let next = base;
@@ -308,12 +312,12 @@ export function createTicketsStore() {
 
     load(fetchSnapshot: () => Promise<Snapshot>): Promise<void> {
       if (loadPromise) return loadPromise;
-      set({ ...state, status: "loading" });
+      set({ ...state, status: LoadStatus.Loading });
       loadPromise = fetchSnapshot()
         .then((s) => this.loadSnapshot(s))
         .catch(() => {
           loadPromise = null;
-          set({ ...state, status: "error" });
+          set({ ...state, status: LoadStatus.Error });
         });
       return loadPromise;
     },

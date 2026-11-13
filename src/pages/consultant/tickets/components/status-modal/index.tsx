@@ -1,21 +1,13 @@
 import { useState } from "react";
 import { Button, Group, Modal, Select, Stack, Textarea } from "@mantine/core";
-import { isReopen, STATUS_LABEL, TRANSITIONS } from "../../../domain/status";
-import type { Status, Ticket } from "../../../domain/types";
-import { changeStatus } from "../../../store/actions";
-
-interface Props {
-  ticket: Ticket;
-  userId: string;
-
-  reopen?: boolean;
-  onClose: () => void;
-}
+import type { Status } from "@/domain/enums";
+import { STATUS_LABEL } from "@/domain/status";
+import { changeStatus } from "@/store/actions";
+import type { Props } from "./types";
+import { targetOptions } from "./utils";
 
 export function StatusModal({ ticket, userId, reopen, onClose }: Props) {
-  const options = TRANSITIONS[ticket.status].filter((s) =>
-    reopen ? isReopen(ticket.status, s) : !isReopen(ticket.status, s),
-  );
+  const options = targetOptions(ticket.status, reopen);
   const [to, setTo] = useState<Status | null>(options[0] ?? null);
   const [reason, setReason] = useState("");
   const [saving, setSaving] = useState(false);
@@ -45,7 +37,7 @@ export function StatusModal({ ticket, userId, reopen, onClose }: Props) {
             label="Novo status"
             allowDeselect={false}
             value={to}
-            onChange={(v) => setTo(v as Status | null)}
+            onChange={(value) => setTo(value as Status | null)}
             data={options.map((s) => ({ value: s, label: STATUS_LABEL[s] }))}
           />
         )}

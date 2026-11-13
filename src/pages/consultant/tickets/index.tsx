@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
 import { Alert, Box, Center, Group, Loader, Paper, Text } from "@mantine/core";
 import { useNavigate, useParams } from "react-router";
-import { useCurrentUser } from "../../../auth/auth-context";
-import { homePath } from "../../../paths";
-import { ticketsStore } from "../../../store/ticketsStore";
-import { useTickets } from "../../../store/useTickets";
-import { TicketDetail } from "./TicketDetail";
-import { TicketList } from "./TicketList";
+import { useCurrentUser } from "@/auth/auth-context";
+import { homePath } from "@/paths";
+import { LoadStatus } from "@/store/enums";
+import { ticketsStore } from "@/store/ticketsStore";
+import { useTickets } from "@/store/useTickets";
+import { TicketDetail } from "./components/detail";
+import { TicketList } from "./components/list";
 
 export function TicketsPage() {
   const me = useCurrentUser();
@@ -20,10 +21,11 @@ export function TicketsPage() {
     if (id) ticketsStore.markRead(id);
   }, [id, lastMessageId]);
 
-  if (state.status === "error") {
+  if (state.status === LoadStatus.Error) {
     return <Alert color="red">Não foi possível carregar os chamados.</Alert>;
   }
-  if (state.status !== "ready") {
+
+  if (state.status !== LoadStatus.Ready) {
     return (
       <Center h="60vh">
         <Loader />

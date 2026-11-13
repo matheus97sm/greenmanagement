@@ -1,15 +1,4 @@
-export const STATUSES = [
-  "aberto",
-  "em_atendimento",
-  "aguardando_cliente",
-  "resolvido",
-  "fechado",
-] as const;
-export type Status = (typeof STATUSES)[number];
-
-export type Priority = "baixa" | "media" | "alta" | "critica";
-
-export type Profile = "gestor" | "consultor" | "cliente";
+import { Status, Priority, Profile, EventType, HistoryType } from "./enums";
 
 export interface Person {
   id: string;
@@ -74,7 +63,7 @@ export interface Message {
 export interface HistoryEntry {
   id: string;
   chamado_id: string;
-  tipo: "status" | "atribuicao";
+  tipo: HistoryType;
   de: Status | null;
   para: Status | null;
   usuario_id: string;
@@ -90,11 +79,14 @@ interface EventBase<T extends string, P> {
 }
 
 export type DomainEvent =
-  | EventBase<"chamado.aberto", Ticket>
-  | EventBase<"chamado.atribuido", { chamado_id: string; consultor_id: string }>
-  | EventBase<"mensagem.adicionada", Message>
+  | EventBase<EventType.TicketOpened, Ticket>
   | EventBase<
-      "status.alterado",
+      EventType.TicketAssigned,
+      { chamado_id: string; consultor_id: string }
+    >
+  | EventBase<EventType.MessageAdded, Message>
+  | EventBase<
+      EventType.StatusChanged,
       {
         chamado_id: string;
         de: Status;

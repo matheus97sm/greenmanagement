@@ -1,11 +1,9 @@
-import type { Priority, Ticket } from "./types";
-
-export type SlaKind =
-  "breached" | "critical" | "warning" | "ok" | "paused" | "finished";
+import type { Ticket } from "./types";
+import { Status, Priority, SlaKind, SlaClock } from "./enums";
 
 export interface SlaInfo {
   kind: SlaKind;
-  clock: "primeira_resposta" | "resolucao";
+  clock: SlaClock;
   remainingMs: number;
 }
 
@@ -14,10 +12,10 @@ export const CRITICAL_MS = HOUR;
 export const WARNING_MS = 4 * HOUR;
 
 const PRIORITY_RANK: Record<Priority, number> = {
-  critica: 0,
-  alta: 1,
-  media: 2,
-  baixa: 3,
+  [Priority.Critical]: 0,
+  [Priority.High]: 1,
+  [Priority.Medium]: 2,
+  [Priority.Low]: 3,
 };
 
 function pendingDeadline(ticket: Ticket): number {
@@ -38,21 +36,22 @@ export function slaInfo(
     : Date.parse(ticket.prazo_primeira_resposta);
   const clock =
     firstResponse !== null && firstResponse < resolution
-      ? "primeira_resposta"
-      : "resolucao";
-  const deadline = clock === "primeira_resposta" ? firstResponse! : resolution;
+      ? SlaClock.FirstResponse
+      : SlaClock.Resolution;
+  const deadline =
+    clock === SlaClock.FirstResponse ? firstResponse! : resolution;
 
-  if (ticket.status === "resolvido" || ticket.status === "fechado") {
+  if (ticket.status === Status.Resolved || ticket.status === Status.Closed) {
     return {
-      kind: "finished",
-      clock: "resolucao",
+      kind: SlaKind.Finished,
+      clock: SlaClock.Resolution,
       remainingMs: resolution - now,
     };
   }
   if (ticket.sla_pausado) {
     return {
-      kind: "paused",
-      clock: "resolucao",
+      kind: SlaKind.Paused,
+      clock: SlaClock.Resolution,
       remainingMs: resolution - Date.parse(pausedAt),
     };
   }
@@ -60,17 +59,18 @@ export function slaInfo(
   const remainingMs = deadline - now;
   const kind =
     remainingMs < 0
-      ? "breached"
+      ? SlaKind.Breached
       : remainingMs < CRITICAL_MS
-        ? "critical"
+        ? SlaKind.Critical
         : remainingMs < WARNING_MS
-          ? "warning"
-          : "ok";
+          ? SlaKind.Warning
+          : SlaKind.Ok;
   return { kind, clock, remainingMs };
 }
 
 function clockState(ticket: Ticket): 0 | 1 | 2 {
-  if (ticket.status === "fechado" || ticket.status === "resolvido") return 2;
+  if (ticket.status === Status.Closed || ticket.status === Status.Resolved)
+    return 2;
   return ticket.sla_pausado ? 1 : 0;
 }
 

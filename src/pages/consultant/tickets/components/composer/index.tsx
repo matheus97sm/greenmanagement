@@ -2,14 +2,8 @@ import { useState } from "react";
 import type { KeyboardEvent } from "react";
 import { Button, Group, Stack, Switch, Textarea } from "@mantine/core";
 import { IconSend } from "@tabler/icons-react";
-import { sendMessage } from "../../../store/actions";
-
-interface Props {
-  ticketId: string;
-  userId: string;
-  draft: string;
-  onDraftChange: (value: string) => void;
-}
+import { sendMessage } from "@/store/actions";
+import type { Props } from "./types";
 
 export function Composer({ ticketId, userId, draft, onDraftChange }: Props) {
   const [internal, setInternal] = useState(false);

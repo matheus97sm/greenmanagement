@@ -7,6 +7,7 @@
     "types": ["vite/client"],
     "allowArbitraryExtensions": true,
     "resolveJsonModule": true,
+    "paths": { "@/*": ["./src/*"] },
     "skipLibCheck": true,
 
     /* Bundler mode */
@@ -20,7 +21,6 @@
     /* Linting */
     "noUnusedLocals": true,
     "noUnusedParameters": true,
-    "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true
   },
   "include": ["src"]

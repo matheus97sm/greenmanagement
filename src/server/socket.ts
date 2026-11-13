@@ -1,4 +1,4 @@
-import type { DomainEvent } from "../domain/types";
+import type { DomainEvent } from "@/domain/types";
 
 type Handler = (event: DomainEvent) => void;
 type Filter = (event: DomainEvent) => DomainEvent | null;
