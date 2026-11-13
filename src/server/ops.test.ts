@@ -1,0 +1,251 @@
+import { beforeEach, describe, expect, it } from "vitest";
+import { getDb, initDb } from "./db";
+import {
+  addMessage,
+  ApiError,
+  assumeTicket,
+  changeStatus,
+  openTicket,
+} from "./ops";
+import { HELENA_ID, MARINA_ID, rawData, RICARDO_ID } from "../test-data";
+
+const person = (id: string) => getDb().usuarios.find((u) => u.id === id)!;
+const ticketOf = (id: string) => getDb().chamados.find((t) => t.id === id)!;
+
+const find = (predicate: Parameters<typeof rawData.chamados.find>[0]) =>
+  getDb().chamados.find(predicate)!;
+
+beforeEach(() => {
+  initDb(rawData);
+});
+
+describe("the real data set", () => {
+  it("matches the personas of the brief", () => {
+    const db = getDb();
+    const marina = db.chamados.filter((t) => t.responsavel_id === MARINA_ID);
+    expect(marina).toHaveLength(42);
+    const queue = db.chamados.filter(
+      (t) => !t.responsavel_id && t.grupo_id === person(MARINA_ID).grupo_id,
+    );
+    expect(queue).toHaveLength(35);
+    expect(
+      db.chamados.filter((t) => t.solicitante_id === HELENA_ID),
+    ).toHaveLength(4);
+  });
+});
+
+describe("assumeTicket", () => {
+  it("takes a ticket from the queue of the consultant's own group", () => {
+    const queued = find(
+      (t) => !t.responsavel_id && t.grupo_id === person(MARINA_ID).grupo_id,
+    );
+    const events = assumeTicket(queued.id, MARINA_ID);
+    expect(events.map((e) => e.tipo)).toEqual([
+      "chamado.atribuido",
+      "status.alterado",
+    ]);
+    expect(queued.responsavel_id).toBe(MARINA_ID);
+    expect(queued.status).toBe("em_atendimento");
+  });
+
+  it("refuses a ticket someone else already took", () => {
+    const queued = find(
+      (t) => !t.responsavel_id && t.grupo_id === person(MARINA_ID).grupo_id,
+    );
+    const colleague = getDb().usuarios.find(
+      (u) =>
+        u.perfil === "consultor" &&
+        u.id !== MARINA_ID &&
+        u.grupo_id === queued.grupo_id,
+    )!;
+    assumeTicket(queued.id, colleague.id);
+    expect(() => assumeTicket(queued.id, MARINA_ID)).toThrow(ApiError);
+    expect(queued.responsavel_id).toBe(colleague.id);
+  });
+
+  it("refuses a ticket from another group", () => {
+    const other = find(
+      (t) => !t.responsavel_id && t.grupo_id !== person(MARINA_ID).grupo_id,
+    );
+    expect(() => assumeTicket(other.id, MARINA_ID)).toThrow(ApiError);
+  });
+});
+
+describe("changeStatus", () => {
+  const marinas = () =>
+    find(
+      (t) => t.responsavel_id === MARINA_ID && t.status === "em_atendimento",
+    );
+
+  it("requires a reason and an allowed transition", () => {
+    const ticket = marinas();
+    const base = { ticketId: ticket.id, userId: MARINA_ID };
+    expect(() =>
+      changeStatus({ ...base, to: "resolvido", reason: " " }),
+    ).toThrow(ApiError);
+    expect(() => changeStatus({ ...base, to: "aberto", reason: "x" })).toThrow(
+      ApiError,
+    );
+  });
+
+  it("lets only the assignee (or a manager) change the status", () => {
+    const ticket = marinas();
+    const colleague = getDb().usuarios.find(
+      (u) => u.perfil === "consultor" && u.id !== MARINA_ID,
+    )!;
+    const attempt = (userId: string) =>
+      changeStatus({
+        ticketId: ticket.id,
+        to: "resolvido",
+        reason: "ok",
+        userId,
+      });
+    expect(() => attempt(colleague.id)).toThrow(ApiError);
+    expect(() => attempt(HELENA_ID)).toThrow(ApiError);
+    expect(() => attempt(RICARDO_ID)).not.toThrow();
+  });
+
+  it("marks reopened tickets in the reason and keeps the status as the truth", () => {
+    const ticket = marinas();
+    const base = { ticketId: ticket.id, userId: MARINA_ID };
+    changeStatus({ ...base, to: "resolvido", reason: "Resolvido" });
+    changeStatus({ ...base, to: "em_atendimento", reason: "Voltou" });
+    expect(ticket.status).toBe("em_atendimento");
+    expect(getDb().historico.at(-1)?.motivo).toBe("Reaberto: Voltou");
+  });
+});
+
+describe("addMessage", () => {
+  const marinas = () =>
+    find(
+      (t) => t.responsavel_id === MARINA_ID && t.status === "em_atendimento",
+    );
+
+  it("refuses an empty message", () => {
+    expect(() =>
+      addMessage({
+        ticketId: marinas().id,
+        authorId: MARINA_ID,
+        text: "  ",
+        internal: false,
+      }),
+    ).toThrow(ApiError);
+  });
+
+  it("gives customers only their own tickets and never internal notes", () => {
+    const ticket = marinas();
+    expect(() =>
+      addMessage({
+        ticketId: ticket.id,
+        authorId: ticket.solicitante_id,
+        text: "oi",
+        internal: true,
+      }),
+    ).toThrow(ApiError);
+    const stranger = getDb().usuarios.find(
+      (u) => u.perfil === "cliente" && u.id !== ticket.solicitante_id,
+    )!;
+    expect(() =>
+      addMessage({
+        ticketId: ticket.id,
+        authorId: stranger.id,
+        text: "oi",
+        internal: false,
+      }),
+    ).toThrow(ApiError);
+  });
+
+  it("lets a colleague leave an internal note but not answer the customer", () => {
+    const ticket = marinas();
+    const colleague = getDb().usuarios.find(
+      (u) =>
+        u.perfil === "consultor" &&
+        u.id !== MARINA_ID &&
+        u.grupo_id === ticket.grupo_id,
+    )!;
+    const post = (internal: boolean) =>
+      addMessage({
+        ticketId: ticket.id,
+        authorId: colleague.id,
+        text: "nota",
+        internal,
+      });
+    expect(() => post(true)).not.toThrow();
+    expect(() => post(false)).toThrow(ApiError);
+  });
+
+  it("registers the first response on the first public staff reply", () => {
+    const ticket = find(
+      (t) => t.status === "em_atendimento" && t.primeira_resposta_em === null,
+    );
+    addMessage({
+      ticketId: ticket.id,
+      authorId: ticket.responsavel_id!,
+      text: "Olá!",
+      internal: true,
+    });
+    expect(ticket.primeira_resposta_em).toBeNull();
+    addMessage({
+      ticketId: ticket.id,
+      authorId: ticket.responsavel_id!,
+      text: "Olá!",
+      internal: false,
+    });
+    expect(ticket.primeira_resposta_em).not.toBeNull();
+  });
+
+  it("resumes a ticket that was waiting when the customer answers", () => {
+    const ticket = find((t) => t.status === "aguardando_cliente");
+    const deadlineBefore = ticket.prazo_resolucao;
+    const events = addMessage({
+      ticketId: ticket.id,
+      authorId: ticket.solicitante_id,
+      text: "Segue o que pediram.",
+      internal: false,
+    });
+    expect(events.map((e) => e.tipo)).toEqual([
+      "mensagem.adicionada",
+      "status.alterado",
+    ]);
+    expect(ticket.status).toBe("em_atendimento");
+    expect(ticket.sla_pausado).toBe(false);
+    expect(Date.parse(ticket.prazo_resolucao)).toBeGreaterThan(
+      Date.parse(deadlineBefore),
+    );
+  });
+});
+
+describe("openTicket", () => {
+  it("derives the group and the deadlines from the category and priority", () => {
+    const category = getDb().categorias[0];
+    const [event] = openTicket({
+      requesterId: HELENA_ID,
+      categoryId: category.id,
+      priority: "critica",
+      title: "Sem acesso",
+      description: "Não consigo entrar.",
+    });
+    if (event.tipo !== "chamado.aberto") throw new Error("unexpected event");
+    const created = ticketOf(event.payload.id);
+    expect(created.grupo_id).toBe(category.grupo_id);
+    expect(created.status).toBe("aberto");
+
+    const opened = Date.parse(created.aberto_em);
+    expect(Date.parse(created.prazo_primeira_resposta) - opened).toBe(
+      3_600_000,
+    );
+    expect(Date.parse(created.prazo_resolucao) - opened).toBe(4 * 3_600_000);
+  });
+
+  it("is reserved for customers", () => {
+    expect(() =>
+      openTicket({
+        requesterId: MARINA_ID,
+        categoryId: getDb().categorias[0].id,
+        priority: "baixa",
+        title: "x",
+        description: "y",
+      }),
+    ).toThrow(ApiError);
+  });
+});
