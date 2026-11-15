@@ -11,7 +11,7 @@ import { scopedSnapshot } from "@/server/visibility";
 import { ticketsStore } from "@/store/ticketsStore";
 import { rawData } from "./test-data";
 
-interface RenderOptions {
+export interface RenderOptions {
   userId?: string;
   route?: string;
 }

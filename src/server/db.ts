@@ -63,6 +63,7 @@ export function nextTicketNumber(): number {
 }
 
 export function ensureDb(): Promise<Db> {
+  if (current) return Promise.resolve(current);
   loading ??= fetch(dadosUrl)
     .then((response) => response.json() as Promise<RawData>)
     .then(initDb);

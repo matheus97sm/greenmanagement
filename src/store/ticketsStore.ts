@@ -225,6 +225,7 @@ export function createTicketsStore() {
   const seenEvents = new Set<string>();
   const orphans = new Map<string, DomainEvent[]>();
   let loadPromise: Promise<void> | null = null;
+  let generation = 0;
 
   const set = (next: TicketsState) => {
     if (next === state) return;
@@ -313,9 +314,13 @@ export function createTicketsStore() {
     load(fetchSnapshot: () => Promise<Snapshot>): Promise<void> {
       if (loadPromise) return loadPromise;
       set({ ...state, status: LoadStatus.Loading });
+      const requestedIn = generation;
       loadPromise = fetchSnapshot()
-        .then((s) => this.loadSnapshot(s))
+        .then((s) => {
+          if (requestedIn === generation) this.loadSnapshot(s);
+        })
         .catch(() => {
+          if (requestedIn !== generation) return;
           loadPromise = null;
           set({ ...state, status: LoadStatus.Error });
         });
@@ -323,6 +328,7 @@ export function createTicketsStore() {
     },
 
     reset() {
+      generation += 1;
       seenEvents.clear();
       orphans.clear();
       loadPromise = null;

@@ -6,12 +6,7 @@ import { eventFor } from "@/server/visibility";
 import { LoadStatus } from "./enums";
 import { ticketsStore } from "./ticketsStore";
 
-let loadedFor: string | null = null;
-
 export function startRealtime(userId: string): () => void {
-  if (loadedFor !== userId) ticketsStore.reset();
-  loadedFor = userId;
-
   let stopped = false;
   let unsubscribe = () => {};
   let stopSimulator = () => {};
@@ -34,5 +29,6 @@ export function startRealtime(userId: string): () => void {
     stopped = true;
     unsubscribe();
     stopSimulator();
+    ticketsStore.reset();
   };
 }

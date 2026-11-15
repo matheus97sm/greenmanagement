@@ -242,6 +242,47 @@ describe("ticketsStore", () => {
     expect(reopened.primeira_resposta_em).toBe(ticket.primeira_resposta_em);
   });
 
+  it("ignores a snapshot that was requested before a reset", async () => {
+    const store = createTicketsStore();
+    let deliver!: (value: Snapshot) => void;
+    const slow = new Promise<Snapshot>((resolve) => {
+      deliver = resolve;
+    });
+    const loading = store.load(() => slow);
+    store.reset();
+    deliver(snapshot);
+    await loading;
+
+    expect(store.getState().status).toBe(LoadStatus.Idle);
+    expect(store.getState().tickets).toEqual({});
+  });
+
+  it("ignores a failure from a request made before a reset", async () => {
+    const store = createTicketsStore();
+    let fail!: (error: Error) => void;
+    const slow = new Promise<Snapshot>((_, reject) => {
+      fail = reject;
+    });
+    const loading = store.load(() => slow);
+    store.reset();
+    fail(new Error("offline"));
+    await loading;
+
+    expect(store.getState().status).toBe(LoadStatus.Idle);
+  });
+
+  it("loads again after a reset", async () => {
+    const store = createTicketsStore();
+    await store.load(() => Promise.resolve(snapshot));
+    expect(store.getState().status).toBe(LoadStatus.Ready);
+
+    store.reset();
+    expect(store.getState().status).toBe(LoadStatus.Idle);
+    await store.load(() => Promise.resolve(snapshot));
+    expect(store.getState().status).toBe(LoadStatus.Ready);
+    expect(Object.keys(store.getState().tickets)).toEqual(["ch-1"]);
+  });
+
   it("forgets everything on reset", () => {
     const store = newStore();
     store.applyEvent(message("m1", at(1)));

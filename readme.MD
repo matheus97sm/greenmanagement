@@ -34,15 +34,16 @@ Abra o endereço mostrado no terminal (normalmente <http://localhost:5173>).
 
 ## Scripts
 
-| Comando                | O que faz                                          |
-| ---------------------- | -------------------------------------------------- |
-| `npm run dev`          | Servidor de desenvolvimento com recarga automática |
-| `npm run build`        | Checagem de tipos (`tsc`) e build de produção      |
-| `npm run preview`      | Serve o build de produção localmente               |
-| `npm run lint`         | Executa o oxlint                                   |
-| `npm test`             | Executa os testes com Vitest (modo watch)          |
-| `npm run format`       | Formata o código com o Prettier                    |
-| `npm run format:check` | Verifica a formatação sem alterar arquivos         |
+| Comando                    | O que faz                                          |
+| -------------------------- | -------------------------------------------------- |
+| `npm run dev`              | Servidor de desenvolvimento com recarga automática |
+| `npm run build`            | Checagem de tipos (`tsc`) e build de produção      |
+| `npm run preview`          | Serve o build de produção localmente               |
+| `npm run lint`             | Executa o oxlint                                   |
+| `npm test`                 | Executa os testes com Vitest (modo watch)          |
+| `npm run test:integration` | Executa só os testes de integração                 |
+| `npm run format`           | Formata o código com o Prettier                    |
+| `npm run format:check`     | Verifica a formatação sem alterar arquivos         |
 
 Para rodar os testes uma única vez (por exemplo, em CI): `npx vitest run`.
 
@@ -148,6 +149,7 @@ src/
   lib/           relógio simulado e formatação
   server/        "backend" simulado (dados, regras, API, socket, simulador)
   store/         estado da tela, ações, ligação em tempo real e o enum LoadStatus
+  integration/   testes que exercitam o app inteiro (login, resposta, troca de usuário)
   test-*.ts(x)   configuração e utilitários de teste
 ```
 
@@ -177,6 +179,7 @@ Só entram os arquivos que o componente precisa. Quando um perfil ganhar outra p
 - **Enums no lugar de textos soltos:** todo conjunto fechado de valores (status, prioridade, perfis, tipos de evento, abas, estados de carregamento...) é um `enum`, para um erro de digitação virar erro de compilação e o editor completar o nome. Os enums de domínio ficam em `src/domain/enums.ts` e mantêm o valor que vem da API (por exemplo, `Status.InProgress` vale `"em_atendimento"`), então os dados e os eventos continuam iguais. Enums de um componente ficam no `enums.ts` dele. Por causa dos enums, o `erasableSyntaxOnly` do template do Vite está desligado no `tsconfig.app.json`.
 - **Imports:** dentro da mesma página, caminhos relativos (`./types`, `../composer`). Para qualquer outro módulo de `src/`, o alias `@/` (por exemplo, `@/domain/enums`).
 - **Testes:** ficam ao lado do que testam, com o sufixo `.unit.test.ts` (ou `.tsx`, quando renderizam). Rodam com Vitest em jsdom e Testing Library. `src/test-utils.tsx` tem `renderWithProviders`/`renderRoutes` (Mantine, autenticação e roteador) e `loadStoreAs(usuário)`, que carrega o store com os dados reais como aquele usuário os veria. Os componentes que chamam a API simulada têm `@/store/actions` substituído por um mock.
+- **Testes de integração:** ficam em `src/integration/*.integration.test.tsx` e sobem o app de verdade (roteador com guardas, login, store, API simulada, socket e filtro de visibilidade), trocando só o que atrapalharia: o simulador de atividade fica desligado, o gerador de números aleatórios é determinístico (`resetWorld`) e, nos testes de resposta, o socket entrega cada evento duas vezes, como o brief permite. Cobrem: do login até a página do perfil, a resposta a um chamado sem duplicar a mensagem, e a troca de usuário sem vazar dados. Rodam com `npm run test:integration`; levam de menos de 1 a uns 5 segundos cada, por causa da latência simulada e da espera para o socket entregar tudo (cerca de 11 segundos no total).
 
 ### Rotas e guardas
 

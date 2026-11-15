@@ -9,6 +9,7 @@
     "lint": "oxlint",
     "preview": "vite preview",
     "test": "vitest",
+    "test:integration": "vitest run src/integration",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },
