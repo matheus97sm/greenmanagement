@@ -14,7 +14,7 @@ const router = createBrowserRouter(routes);
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <MantineProvider defaultColorScheme="auto">
+    <MantineProvider defaultColorScheme="light">
       <Notifications position="top-right" />
       <AuthProvider>
         <RouterProvider router={router} />
