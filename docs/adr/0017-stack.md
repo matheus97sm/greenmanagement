@@ -33,14 +33,13 @@ Alguns pontos de comportamento:
 
 ## Pontos em aberto
 
-- **Dependências instaladas e não usadas:** `@tanstack/react-query` e `idb` constam no `package.json` desde o início e nenhum arquivo as importa. Devem ser removidas ou adotadas. O candidato natural para o React Query é a busca de dados quando existir um backend real.
 - **Versões:** são as estáveis mais recentes. Antes de ir para produção, vale conferir o ciclo de suporte de cada uma (React, Vite, TypeScript, Mantine, React Router), já que o enunciado pede preferir o que terá suporte longo.
 
 ## Regras
 
 - Dependência nova de runtime pede uma justificativa e, se mudar a forma de organizar o código, uma ADR.
 - Usar a biblioteca de componentes antes de escrever um componente básico do zero.
-- Não adicionar dependência que não seja usada: se for instalada, é para ser importada.
+- Não adicionar dependência que não seja usada: se for instalada, é para ser importada. `@tanstack/react-query` e `idb` foram instaladas no início, nunca usadas e removidas. O React Query volta quando existir um backend real (ver [ADR 0009](0009-estado-dirigido-por-eventos.md)).
 
 ## Como é verificado
 

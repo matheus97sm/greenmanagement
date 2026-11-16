@@ -149,7 +149,7 @@ O `dados.json` está congelado em `meta.agora` (03/11/2026 13:00 UTC). A tela pa
 
 As decisões que moldam o projeto (camadas, organização de páginas e componentes, rotas, estado em tempo real, visibilidade, testes, estilo) estão registradas como ADRs em [`docs/adr`](docs/adr/README.md). Leia o índice antes de criar uma página, um componente ou uma regra nova, e escreva uma ADR nova quando uma decisão mudar.
 
-Parte das regras é conferida por `src/architecture.test.ts`, que roda com os demais testes: o domínio não importa React nem outras camadas, páginas e componentes não falam com o servidor, uma página não importa outra página, a hora só vem do relógio simulado e o código de produção não tem comentários.
+Parte das regras é conferida por `src/architecture.test.ts`, que roda com os demais testes: o domínio não importa React nem outras camadas, páginas e componentes não falam com o servidor nem usam o objeto do store direto, uma página não importa outra página, cada componente fica em uma pasta com `index.tsx`, `types.ts` para os tipos e um teste unitário, a hora só vem do relógio simulado, os valores dos enums nunca aparecem como texto solto e o código de produção não tem comentários.
 
 ## Padrão de código
 

@@ -224,3 +224,94 @@ describe("code style (ADR 0016)", () => {
     expect(offenders).toEqual([]);
   });
 });
+
+const COMPONENT_FOLDER =
+  /^(\/src\/components\/[^/]+|\/src\/pages\/[^/]+\/[^/]+\/components\/[^/]+)\//;
+
+function componentFolders(): string[] {
+  const folders = new Set<string>();
+  for (const path of Object.keys(modules)) {
+    const match = COMPONENT_FOLDER.exec(path);
+    if (match) folders.add(match[1]);
+  }
+  return [...folders];
+}
+
+describe("components (ADRs 0005 and 0006)", () => {
+  const allPaths = Object.keys(modules);
+
+  it("keeps every shared component in a folder of its own", () => {
+    expect(
+      allPaths.filter((path) => /^\/src\/components\/[^/]+$/.test(path)),
+    ).toEqual([]);
+  });
+
+  it("finds the component folders, so the next rules check something", () => {
+    expect(componentFolders().length).toBeGreaterThan(10);
+  });
+
+  it("gives every component folder an index.tsx", () => {
+    expect(
+      componentFolders().filter(
+        (dir) => !allPaths.includes(`${dir}/index.tsx`),
+      ),
+    ).toEqual([]);
+  });
+
+  it("gives every component folder a unit test", () => {
+    expect(
+      componentFolders().filter(
+        (dir) =>
+          !allPaths.some(
+            (path) =>
+              path.startsWith(`${dir}/`) && /\.unit\.test\.tsx?$/.test(path),
+          ),
+      ),
+    ).toEqual([]);
+  });
+
+  it("keeps type declarations in types.ts, not in the component files", () => {
+    const offenders = sources
+      .filter(
+        (s) =>
+          s.path.endsWith(".tsx") &&
+          (s.path.startsWith("/src/components/") ||
+            s.path.startsWith("/src/pages/")),
+      )
+      .filter((s) => /^(export )?(interface|type) \w/m.test(s.text))
+      .map((s) => s.path);
+    expect(offenders).toEqual([]);
+  });
+});
+
+describe("the store (ADR 0009)", () => {
+  it("is read through hooks and selectors and changed through actions, never touched directly", () => {
+    const offenders = [
+      ...within("/src/pages/"),
+      ...within("/src/components/"),
+    ].filter((file) =>
+      [
+        ...file.text.matchAll(
+          /import\s*\{([^}]*)\}\s*from\s*["']@\/store\/ticketsStore["']/g,
+        ),
+      ].some((match) => /ticketsStore/.test(match[1])),
+    );
+    expect(offenders.map((file) => file.path)).toEqual([]);
+  });
+});
+
+describe("enums (ADR 0008)", () => {
+  it("never writes the value of an enum as a loose string", () => {
+    const loose =
+      /["'`](aberto|em_atendimento|aguardando_cliente|resolvido|fechado|baixa|media|alta|critica|gestor|consultor|cliente|chamado\.aberto|chamado\.atribuido|mensagem\.adicionada|status\.alterado|atribuicao)["'`]/;
+    const offenders = Object.entries(modules)
+      .filter(
+        ([path]) =>
+          path !== "/src/domain/enums.ts" &&
+          path !== "/src/architecture.test.ts",
+      )
+      .filter(([, text]) => loose.test(text))
+      .map(([path]) => path);
+    expect(offenders).toEqual([]);
+  });
+});

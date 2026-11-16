@@ -30,9 +30,10 @@ Um erro encontrado vira um teste que o reproduz, e o teste só vale se falhar se
 - Comportamento novo vem com teste no nível certo: regra no domínio, interface no componente, fluxo entre telas na integração.
 - Todo erro corrigido ganha um teste de regressão que falha sem a correção.
 - Não vale mockar o que o teste quer provar. A integração não mocka o store nem o socket (só duplica os eventos).
+- Todo módulo com lógica tem teste ao lado: `*.test.ts` para funções e hooks, `*.unit.test.tsx` para componentes. Toda pasta de componente tem pelo menos um teste unitário.
 - Nomes de testes em inglês, descrevendo o comportamento (`it("shows ...")`).
 - Para lista longa, testar o que a pessoa vê (busca, contadores), lembrando que só as linhas visíveis estão no DOM ([ADR 0014](0014-listas-grandes.md)).
 
 ## Como é verificado
 
-Por revisão e pela própria suíte: `npm test` (tudo) e `npm run test:integration` (só a integração).
+Pela própria suíte (`npm test` roda tudo e `npm run test:integration` só a integração) e por `src/architecture.test.ts`, que exige um teste unitário em toda pasta de componente. Que um módulo de lógica tenha teste é revisão.

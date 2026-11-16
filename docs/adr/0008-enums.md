@@ -26,11 +26,11 @@ Por causa dos enums, o `erasableSyntaxOnly` do template do Vite está desligado 
 
 ## Regras
 
-- Um valor de um conjunto fechado nunca aparece como string solta no código.
+- Um valor de um conjunto fechado nunca aparece como string solta, nem em testes.
 - O valor do enum é o texto da API.
 - Mapas de rótulo e de cor usam `Record<Enum, ...>`.
 - Enum de componente fica na pasta do componente, enum compartilhado no módulo da camada dele.
 
 ## Como é verificado
 
-Pelo compilador (`tsc`) para o uso de enums e de `Record`. A regra de não usar strings soltas depende de revisão.
+Pelo compilador (`tsc`) para o uso de enums e de `Record`, e por `src/architecture.test.ts` ("enums"), que falha se o valor de um enum de domínio (`"em_atendimento"`, `"gestor"`, `"chamado.aberto"` e os demais) aparecer como string em qualquer arquivo, testes inclusos, fora de `src/domain/enums.ts`.

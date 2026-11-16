@@ -32,4 +32,4 @@ Para servir perfis diferentes, o componente compartilhado segue três regras:
 
 ## Como é verificado
 
-Por `src/architecture.test.ts`: nenhum componente compartilhado importa uma página. O restante é revisão.
+Por `src/architecture.test.ts`: nenhum componente compartilhado importa uma página, e a regra de pasta por componente ([ADR 0005](0005-um-componente-uma-pasta.md)) vale para `src/components`. O restante é revisão.

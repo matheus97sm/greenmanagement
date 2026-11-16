@@ -10,7 +10,7 @@ Cada arquivo desta pasta registra **uma decisão** que moldou o projeto: o probl
 
 ## O que é verificado automaticamente
 
-Parte das regras é conferida por `src/architecture.test.ts`, que roda junto com os outros testes (`npm test`). Ele falha se, por exemplo, o domínio importar React, uma página importar outra página ou aparecer um comentário no código. As ADRs indicam em **Como é verificado** quando a regra está nesse teste e quando depende de revisão.
+Parte das regras é conferida por `src/architecture.test.ts`, que roda junto com os outros testes (`npm test`). Ele falha se, por exemplo, o domínio importar React, uma página importar outra página, aparecer um comentário no código, um componente ficar solto fora de uma pasta ou sem teste, um tipo for declarado dentro de um `.tsx`, uma página importar o objeto `ticketsStore` ou o valor de um enum aparecer como string solta. As ADRs indicam em **Como é verificado** quando a regra está nesse teste e quando depende de revisão.
 
 ## Índice
 

@@ -22,7 +22,7 @@ components/list/
   utils.unit.test.ts     testa as funções puras
 ```
 
-A lógica que não precisa de React (filtrar, ordenar, montar a linha do tempo, calcular permissões) vai para `utils.ts`, e o `index.tsx` fica só com a interface. Quando um componente tem uma peça interna repetida e pesada, ela vira um arquivo irmão (por exemplo `row.tsx`, memorizada).
+A lógica que não precisa de React (filtrar, ordenar, montar a linha do tempo, calcular permissões, juntar dados para uma linha) vai para `utils.ts`, e o `index.tsx` fica só com a interface. Vale também para a página: o `index.tsx` de uma página guarda estado e liga as peças, e as decisões (o que mostrar, qual seleção sobrevive, como um clique muda o foco) ficam no `utils.ts` dela, com teste. Quando um componente tem uma peça interna repetida e pesada, ela vira um arquivo irmão (por exemplo `row.tsx`, memorizada).
 
 ## Consequências
 
@@ -35,8 +35,9 @@ A lógica que não precisa de React (filtrar, ordenar, montar a linha do tempo, 
 - Um componente por pasta, com `index.tsx` como entrada.
 - Tipos em `types.ts`, valores fixos em `enums.ts` e `constants.ts`, funções puras em `utils.ts`.
 - Testes com o sufixo `.unit.test.ts` ou `.unit.test.tsx` (este último quando renderiza).
+- Props e demais tipos nunca são declarados dentro de um arquivo `.tsx`: vão para `types.ts`.
 - Não criar arquivo vazio só para seguir o padrão.
 
 ## Como é verificado
 
-Por revisão. Os componentes soltos que existem em `src/components` (Badges, AppHeader, AppLayout, Stat, ColorSchemeToggle) são uma dívida conhecida e não servem de exemplo. Os novos seguem esta ADR.
+Por `src/architecture.test.ts` ("components"): nenhum componente fica solto em `src/components`, toda pasta de componente tem `index.tsx` e um teste unitário, e nenhum `.tsx` de componente ou página declara `interface` ou `type`. Manter a lógica em `utils.ts` é revisão.

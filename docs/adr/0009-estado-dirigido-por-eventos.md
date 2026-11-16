@@ -29,8 +29,8 @@ As ações do usuário (`store/actions.ts`) aplicam os eventos devolvidos pela A
 - Estado derivado de evento passa pelo redutor, nunca por uma atualização feita direto na tela.
 - Todo evento novo precisa ser idempotente e tratar chamado desconhecido.
 - Ao terminar a sessão, o store é limpo.
-- Componentes leem o store por `useTickets` e disparam ações de `store/actions.ts`.
+- Componentes leem o estado por `useTickets` (e por seletores exportados pelo store, como `unreadCount`) e mudam o estado por `store/actions.ts` (inclusive `markRead`). Nunca importam o objeto `ticketsStore`.
 
 ## Como é verificado
 
-Por `src/store/ticketsStore.test.ts` (repetição, ordem, órfãos, geração) e pelos testes de integração de resposta com evento duplicado e de troca de usuário.
+Por `src/store/ticketsStore.test.ts` (repetição, ordem, órfãos, geração), `src/store/actions.test.ts` e pelos testes de integração de resposta com evento duplicado e de troca de usuário. O teste `src/architecture.test.ts` ("the store") falha se uma página ou um componente importar `ticketsStore`.
