@@ -27,3 +27,20 @@ export function formatDateTime(
     timeZone,
   }).format(new Date(iso));
 }
+
+export function formatHours(ms: number): string {
+  const hours = ms / HOUR;
+  return `${hours.toLocaleString("pt-BR", { maximumFractionDigits: 1 })} h`;
+}
+
+export function formatPercent(share: number): string {
+  return `${Math.round(share * 100)}%`;
+}
+
+export function formatDayMonth(ts: number, timeZone?: string): string {
+  return new Intl.DateTimeFormat("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    timeZone,
+  }).format(new Date(ts));
+}

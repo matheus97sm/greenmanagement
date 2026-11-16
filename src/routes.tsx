@@ -6,6 +6,7 @@ import { AppLayout } from "./components/AppLayout";
 import { TicketsPage as ConsultantTicketsPage } from "./pages/consultant/tickets";
 import { TicketsPage as CustomerTicketsPage } from "./pages/customer/tickets";
 import { LoginPage } from "./pages/login";
+import { DashboardPage as ManagerDashboardPage } from "./pages/manager/dashboard";
 import { TicketsPage as ManagerTicketsPage } from "./pages/manager/tickets";
 import { homePath } from "./paths";
 import { Role } from "./auth/enums";
@@ -59,10 +60,11 @@ export const routes: RouteObject[] = [
         path: "tickets/:id?",
         Component: ConsultantTicketsPage,
       }),
-      profileRoute(Role.Manager, {
-        path: "tickets/:id?",
-        Component: ManagerTicketsPage,
-      }),
+      profileRoute(
+        Role.Manager,
+        { path: "tickets/:id?", Component: ManagerTicketsPage },
+        { path: "dashboard", Component: ManagerDashboardPage },
+      ),
       profileRoute(Role.Customer, {
         path: "tickets",
         Component: CustomerTicketsPage,

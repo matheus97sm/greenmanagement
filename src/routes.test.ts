@@ -56,10 +56,19 @@ describe("route guards", () => {
     expect(await visit("/manager")).toBe("/manager/tickets");
   });
 
-  it("lets the manager open a conversation", async () => {
+  it("lets the manager open a conversation and the weekly dashboard", async () => {
     signInAs(RICARDO_ID);
     expect(await visit("/manager/tickets/ch-1000")).toBe(
       "/manager/tickets/ch-1000",
     );
+    expect(await visit("/manager/dashboard")).toBe("/manager/dashboard");
+  });
+
+  it("keeps the dashboard for the manager only", async () => {
+    expect(await visit("/manager/dashboard")).toBe("/");
+    signInAs(MARINA_ID);
+    expect(await visit("/manager/dashboard")).toBe("/consultant/tickets");
+    signInAs(HELENA_ID);
+    expect(await visit("/manager/dashboard")).toBe("/customer/tickets");
   });
 });
