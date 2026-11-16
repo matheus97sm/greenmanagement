@@ -125,6 +125,10 @@ A Helena abre três ou quatro chamados por ano e não precisa saber como a equip
 7. **Reabrir:** em um chamado resolvido ou encerrado não há caixa de resposta, e sim "O problema continua ou voltou?". Ela conta o que está errado, o chamado volta ao atendimento do mesmo consultor e o texto dela vira a primeira mensagem. Reabrir um chamado fechado renova os prazos, e reabrir um resolvido não;
 8. **Tempo real:** respostas da equipe e mudanças de etapa aparecem sem recarregar.
 
+## Idioma
+
+O cabeçalho tem duas bandeiras (Brasil e EUA) que trocam a interface entre **português do Brasil** (padrão) e **inglês dos EUA**. A escolha fica no navegador. Nenhum texto da interface fica escrito no código: cada componente tem um `locales.ts` com os dois idiomas ao lado dele, e o teste de arquitetura falha se aparecer um texto solto. Os dados do `dados.json` (títulos, mensagens) continuam em português. Ver o [ADR 0021](docs/adr/0021-textos-da-interface-em-i18n.md).
+
 ## Como funciona o "backend" simulado
 
 Não existe backend. O que seria o servidor fica em `src/server` e roda no navegador:
@@ -193,6 +197,7 @@ src/
   components/    cabeçalho, layout, badges, tema claro/escuro e a conversa do chamado (usados por mais de um perfil)
   domain/        enums, tipos, status, SLA, carga da equipe e regras que alteram o chamado (sem React)
   lib/           relógio simulado e formatação
+  i18n/          idiomas (pt-BR e en-US), `useTranslate`, `useLanguage` e a escolha guardada no navegador
   server/        "backend" simulado (dados, regras, API, socket, simulador)
   store/         estado da tela, ações, ligação em tempo real e o enum LoadStatus
   integration/   testes que exercitam o app inteiro (login, resposta, troca de usuário, visão do gestor, conversa escalonada, semana da equipe, visão do cliente)
