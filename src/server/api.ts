@@ -6,18 +6,18 @@ import { Priority, Status } from "@/domain/enums";
 
 export { ApiError } from "./ops";
 
-const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 const latency = async () => {
   await ensureDb();
   await sleep(120 + Math.random() * 280);
 };
 
 export async function fetchSnapshot(userId: string): Promise<Snapshot> {
-  const db = await ensureDb();
+  const database = await ensureDb();
   await sleep(300 + Math.random() * 300);
-  const viewer = db.usuarios.find((u) => u.id === userId);
+  const viewer = database.usuarios.find((person) => person.id === userId);
   if (!viewer) throw new Error("Unknown user.");
-  return scopedSnapshot(db, viewer);
+  return scopedSnapshot(database, viewer);
 }
 
 export async function assumeTicket(

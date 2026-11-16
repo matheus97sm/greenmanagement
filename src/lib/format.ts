@@ -7,13 +7,13 @@ export function formatDuration(ms: number): string {
   if (abs < MIN) return "menos de 1min";
   if (abs < HOUR) return `${Math.floor(abs / MIN)}min`;
   if (abs < DAY) {
-    const h = Math.floor(abs / HOUR);
-    const m = Math.floor((abs % HOUR) / MIN);
-    return m ? `${h}h ${m}min` : `${h}h`;
+    const hours = Math.floor(abs / HOUR);
+    const minutes = Math.floor((abs % HOUR) / MIN);
+    return minutes ? `${hours}h ${minutes}min` : `${hours}h`;
   }
-  const d = Math.floor(abs / DAY);
-  const h = Math.floor((abs % DAY) / HOUR);
-  return h ? `${d}d ${h}h` : `${d}d`;
+  const days = Math.floor(abs / DAY);
+  const hours = Math.floor((abs % DAY) / HOUR);
+  return hours ? `${days}d ${hours}h` : `${days}d`;
 }
 
 export function formatDateTime(
@@ -37,10 +37,10 @@ export function formatPercent(share: number): string {
   return `${Math.round(share * 100)}%`;
 }
 
-export function formatDayMonth(ts: number, timeZone?: string): string {
+export function formatDayMonth(timestamp: number, timeZone?: string): string {
   return new Intl.DateTimeFormat("pt-BR", {
     day: "2-digit",
     month: "2-digit",
     timeZone,
-  }).format(new Date(ts));
+  }).format(new Date(timestamp));
 }

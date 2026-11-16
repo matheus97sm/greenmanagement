@@ -12,12 +12,12 @@ export function startRealtime(userId: string): () => void {
   let unsubscribe = () => {};
   let stopSimulator = () => {};
 
-  void ensureDb().then((db) => {
-    const viewer = db.usuarios.find((u) => u.id === userId);
+  void ensureDb().then((database) => {
+    const viewer = database.usuarios.find((person) => person.id === userId);
     if (stopped || !viewer) return;
     unsubscribe = subscribe(
       (event) => ticketsStore.applyEvent(event),
-      (event) => eventFor(viewer, event, db),
+      (event) => eventFor(viewer, event, database),
     );
     stopSimulator = startSimulator(viewer);
   });

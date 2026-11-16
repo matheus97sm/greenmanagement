@@ -8,7 +8,8 @@ import type { BuildRowsInput, Row, WeekOption } from "./types";
 
 const DAY = 24 * 3_600_000;
 
-const dayMonth = (ts: number) => formatDayMonth(ts, BUSINESS_TIME_ZONE);
+const dayMonth = (timestamp: number) =>
+  formatDayMonth(timestamp, BUSINESS_TIME_ZONE);
 
 export function weekOptions(now: number, count = WEEKS_BACK): WeekOption[] {
   return Array.from({ length: count }, (_, ago) => {
@@ -30,30 +31,33 @@ export function dayHeaders(weekStartTs: number): string[] {
   );
 }
 
-const byName = (a: Row, b: Row) =>
-  a.consultant.nome.localeCompare(b.consultant.nome);
+const byName = (firstRow: Row, row: Row) =>
+  firstRow.consultant.nome.localeCompare(row.consultant.nome);
 
 export function sortRows(rows: Row[], key: SortKey): Row[] {
   const sorted = [...rows];
   switch (key) {
     case SortKey.Idle:
       return sorted.sort(
-        (a, b) =>
-          idleShare(b.week) - idleShare(a.week) ||
-          b.week.idleMs - a.week.idleMs ||
-          byName(a, b),
+        (firstRow, row) =>
+          idleShare(row.week) - idleShare(firstRow.week) ||
+          row.week.idleMs - firstRow.week.idleMs ||
+          byName(firstRow, row),
       );
     case SortKey.Resolved:
       return sorted.sort(
-        (a, b) => b.week.resolved - a.week.resolved || byName(a, b),
+        (firstRow, row) =>
+          row.week.resolved - firstRow.week.resolved || byName(firstRow, row),
       );
     case SortKey.Assigned:
       return sorted.sort(
-        (a, b) => b.week.assigned - a.week.assigned || byName(a, b),
+        (firstRow, row) =>
+          row.week.assigned - firstRow.week.assigned || byName(firstRow, row),
       );
     case SortKey.Replies:
       return sorted.sort(
-        (a, b) => b.week.replies - a.week.replies || byName(a, b),
+        (firstRow, row) =>
+          row.week.replies - firstRow.week.replies || byName(firstRow, row),
       );
     case SortKey.Name:
       return sorted.sort(byName);
@@ -61,7 +65,7 @@ export function sortRows(rows: Row[], key: SortKey): Row[] {
 }
 
 export function mostIdle(rows: Row[]): Row | undefined {
-  return sortRows(rows, SortKey.Idle).find((r) => r.week.idleMs > 0);
+  return sortRows(rows, SortKey.Idle).find((row) => row.week.idleMs > 0);
 }
 
 export function buildRows({
@@ -74,7 +78,7 @@ export function buildRows({
   now,
 }: BuildRowsInput): Row[] {
   const weeks = weekByConsultant({
-    consultantIds: consultants.map((c) => c.id),
+    consultantIds: consultants.map((person) => person.id),
     tickets,
     history,
     messages,

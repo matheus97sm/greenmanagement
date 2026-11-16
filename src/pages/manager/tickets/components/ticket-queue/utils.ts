@@ -30,7 +30,9 @@ export function selectionScope(
   lockedGroupId: string | undefined,
 ): SelectionScope {
   const targetGroupId = lockedGroupId ?? tickets[0]?.grupo_id;
-  const selectable = tickets.filter((t) => t.grupo_id === targetGroupId);
+  const selectable = tickets.filter(
+    (ticket) => ticket.grupo_id === targetGroupId,
+  );
   return {
     targetGroupId,
     selectable,

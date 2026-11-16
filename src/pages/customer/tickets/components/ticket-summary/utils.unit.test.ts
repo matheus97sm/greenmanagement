@@ -11,14 +11,16 @@ import { expectationText, progressEvents, summaryOf } from "./utils";
 
 const NOW = Date.parse(rawData.meta.agora);
 const people: Record<string, Person> = Object.fromEntries(
-  rawData.usuarios.map((u) => [u.id, u]),
+  rawData.usuarios.map((person) => [person.id, person]),
 );
 const byNumber = (numero: number) =>
-  rawData.chamados.find((t) => t.numero === numero) as Ticket;
+  rawData.chamados.find((ticket) => ticket.numero === numero) as Ticket;
 const historyOf = (ticket: Ticket): HistoryEntry[] =>
   rawData.historico
-    .filter((h) => h.chamado_id === ticket.id)
-    .sort((a, b) => a.ocorrido_em.localeCompare(b.ocorrido_em));
+    .filter((historyEntry) => historyEntry.chamado_id === ticket.id)
+    .sort((firstHistoryEntry, historyEntry) =>
+      firstHistoryEntry.ocorrido_em.localeCompare(historyEntry.ocorrido_em),
+    );
 const textsOf = (numero: number, meId = HELENA_ID) => {
   const ticket = byNumber(numero);
   return progressEvents({
@@ -26,7 +28,7 @@ const textsOf = (numero: number, meId = HELENA_ID) => {
     history: historyOf(ticket),
     people,
     meId,
-  }).map((e) => e.text);
+  }).map((progressEvent) => progressEvent.text);
 };
 
 describe("summaryOf", () => {
@@ -171,14 +173,16 @@ describe("progressEvents", () => {
   it("says the customer reopened it when she did", () => {
     const ticket = byNumber(10611);
     const reopening = historyOf(ticket).find(
-      (h) => h.de === Status.Closed && h.para === Status.InProgress,
+      (historyEntry) =>
+        historyEntry.de === Status.Closed &&
+        historyEntry.para === Status.InProgress,
     )!;
     const texts = progressEvents({
       ticket,
       history: [{ ...reopening, usuario_id: HELENA_ID }],
       people,
       meId: HELENA_ID,
-    }).map((e) => e.text);
+    }).map((progressEvent) => progressEvent.text);
     expect(texts).toContain("Você reabriu o chamado");
   });
 
@@ -198,7 +202,7 @@ describe("progressEvents", () => {
     ];
     expect(
       progressEvents({ ticket, history, people, meId: HELENA_ID }).map(
-        (e) => e.text,
+        (progressEvent) => progressEvent.text,
       ),
     ).toContain("Atendimento retomado");
   });
@@ -220,8 +224,8 @@ describe("progressEvents", () => {
       people,
       meId: HELENA_ID,
     });
-    expect(events.map((e) => e.at)).toEqual(
-      [...events.map((e) => e.at)].sort(),
+    expect(events.map((progressEvent) => progressEvent.at)).toEqual(
+      [...events.map((progressEvent) => progressEvent.at)].sort(),
     );
   });
 
@@ -239,7 +243,7 @@ describe("progressEvents", () => {
       history: historyOf(ticket),
       people: {},
       meId: HELENA_ID,
-    }).map((e) => e.text);
+    }).map((progressEvent) => progressEvent.text);
     expect(texts).toContain("A equipe assumiu o chamado");
   });
 });

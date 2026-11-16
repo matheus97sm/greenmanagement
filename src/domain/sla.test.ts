@@ -93,7 +93,9 @@ describe("slaInfo", () => {
 
 describe("compareBySla", () => {
   const order = (tickets: Ticket[], now = NOW) =>
-    [...tickets].sort(compareBySla(now)).map((t) => t.id);
+    [...tickets]
+      .sort(compareBySla(now))
+      .map((currentTicket) => currentTicket.id);
 
   it("puts breached tickets first, whatever their priority", () => {
     expect(

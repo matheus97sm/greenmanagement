@@ -10,7 +10,7 @@ import { TicketDetail } from "@/components/ticket-detail";
 import { TicketList } from "./components/list";
 
 export function TicketsPage() {
-  const me = useCurrentUser();
+  const currentUser = useCurrentUser();
   const state = useTickets();
   const navigate = useNavigate();
   const { id } = useParams();
@@ -42,9 +42,11 @@ export function TicketsPage() {
     >
       <Paper withBorder w={440} style={{ flexShrink: 0, minHeight: 0 }}>
         <TicketList
-          me={me}
+          currentUser={currentUser}
           selectedId={id}
-          onSelect={(ticketId) => navigate(`${homePath(me.role)}/${ticketId}`)}
+          onSelect={(ticketId) =>
+            navigate(`${homePath(currentUser.role)}/${ticketId}`)
+          }
         />
       </Paper>
       <Paper withBorder flex={1} style={{ minWidth: 0, minHeight: 0 }}>
@@ -52,9 +54,11 @@ export function TicketsPage() {
           <TicketDetail
             key={id}
             ticketId={id}
-            me={me}
+            currentUser={currentUser}
             draft={drafts[id] ?? ""}
-            onDraftChange={(value) => setDrafts((d) => ({ ...d, [id]: value }))}
+            onDraftChange={(value) =>
+              setDrafts((current) => ({ ...current, [id]: value }))
+            }
           />
         ) : (
           <Box h="100%">

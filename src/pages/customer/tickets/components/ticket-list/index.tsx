@@ -14,14 +14,14 @@ import { StageBadge } from "../stage-badge";
 import type { Props } from "./types";
 import { handlerLine, listItems, unreadLabel } from "./utils";
 
-export function TicketList({ me, selectedId, onSelect }: Props) {
+export function TicketList({ currentUser, selectedId, onSelect }: Props) {
   const state = useTickets();
   const [search, setSearch] = useState("");
-  const viewer = state.people[me.id];
+  const viewer = state.people[currentUser.id];
 
   const items = useMemo(
-    () => listItems({ state, meId: me.id, search }),
-    [state, me.id, search],
+    () => listItems({ state, meId: currentUser.id, search }),
+    [state, currentUser.id, search],
   );
 
   return (
@@ -32,7 +32,7 @@ export function TicketList({ me, selectedId, onSelect }: Props) {
         placeholder="Buscar por número ou título"
         leftSection={<IconSearch size={14} />}
         value={search}
-        onChange={(e) => setSearch(e.currentTarget.value)}
+        onChange={(event) => setSearch(event.currentTarget.value)}
       />
       <div
         style={{

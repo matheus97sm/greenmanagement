@@ -40,8 +40,8 @@ export interface TeamWeek {
   replies: number;
 }
 
-const byTime = (a: HistoryEntry, b: HistoryEntry) =>
-  a.ocorrido_em.localeCompare(b.ocorrido_em);
+const byTime = (firstHistoryEntry: HistoryEntry, historyEntry: HistoryEntry) =>
+  firstHistoryEntry.ocorrido_em.localeCompare(historyEntry.ocorrido_em);
 
 function activePeriods(
   ticket: Ticket,
@@ -74,19 +74,24 @@ export function heldIntervals(
   history: HistoryEntry[] | undefined,
 ): Held[] {
   const entries = [...(history ?? [])].sort(byTime);
-  const owners = entries.filter((h) => h.tipo === HistoryType.Assignment);
+  const owners = entries.filter(
+    (historyEntry) => historyEntry.tipo === HistoryType.Assignment,
+  );
   if (owners.length === 0) return [];
   const active = activePeriods(
     ticket,
-    entries.filter((h) => h.tipo === HistoryType.Status && h.para),
+    entries.filter(
+      (historyEntry) =>
+        historyEntry.tipo === HistoryType.Status && historyEntry.para,
+    ),
   );
 
   return owners.flatMap((owner, index) => {
     const start = Date.parse(owner.ocorrido_em);
     const next = owners[index + 1];
     const end = next ? Date.parse(next.ocorrido_em) : Infinity;
-    return intersectIntervals([{ start, end }], active).map((i) => ({
-      ...i,
+    return intersectIntervals([{ start, end }], active).map((interval) => ({
+      ...interval,
       consultantId: owner.usuario_id,
     }));
   });
@@ -167,12 +172,12 @@ export function idleShare(week: { businessMs: number; idleMs: number }) {
 
 export function teamWeek(weeks: ConsultantWeek[]): TeamWeek {
   const totals = weeks.reduce(
-    (sum, w) => ({
-      businessMs: sum.businessMs + w.businessMs,
-      idleMs: sum.idleMs + w.idleMs,
-      assigned: sum.assigned + w.assigned,
-      resolved: sum.resolved + w.resolved,
-      replies: sum.replies + w.replies,
+    (sum, consultantWeek) => ({
+      businessMs: sum.businessMs + consultantWeek.businessMs,
+      idleMs: sum.idleMs + consultantWeek.idleMs,
+      assigned: sum.assigned + consultantWeek.assigned,
+      resolved: sum.resolved + consultantWeek.resolved,
+      replies: sum.replies + consultantWeek.replies,
     }),
     { businessMs: 0, idleMs: 0, assigned: 0, resolved: 0, replies: 0 },
   );

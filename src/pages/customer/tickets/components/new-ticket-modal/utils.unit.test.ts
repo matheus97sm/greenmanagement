@@ -7,7 +7,7 @@ import { Impact } from "./enums";
 import { impactOptions, isComplete, priorityOf, topicOptions } from "./utils";
 
 const categories: Record<string, Category> = Object.fromEntries(
-  rawData.categorias.map((c) => [c.id, c]),
+  rawData.categorias.map((category) => [category.id, category]),
 );
 
 describe("topicOptions", () => {
@@ -15,18 +15,24 @@ describe("topicOptions", () => {
 
   it("offers every topic by its plain name", () => {
     expect(options).toHaveLength(8);
-    expect(options.map((o) => o.label)).toContain("Rede e VPN");
+    expect(options.map((topicOption) => topicOption.label)).toContain(
+      "Rede e VPN",
+    );
   });
 
   it("uses the id of the category as the value", () => {
-    const vpn = rawData.categorias.find((c) => c.nome === "Rede e VPN")!;
-    expect(options.find((o) => o.label === "Rede e VPN")?.value).toBe(vpn.id);
+    const vpn = rawData.categorias.find(
+      (category) => category.nome === "Rede e VPN",
+    )!;
+    expect(
+      options.find((topicOption) => topicOption.label === "Rede e VPN")?.value,
+    ).toBe(vpn.id);
   });
 
   it("lists them alphabetically", () => {
-    const labels = options.map((o) => o.label);
+    const labels = options.map((topicOption) => topicOption.label);
     expect(labels).toEqual(
-      [...labels].sort((a, b) => a.localeCompare(b, "pt")),
+      [...labels].sort((first, second) => first.localeCompare(second, "pt")),
     );
   });
 
@@ -61,7 +67,7 @@ describe("impact", () => {
   });
 
   it("offers the answers from the most to the least serious", () => {
-    expect(impactOptions().map((o) => o.value)).toEqual([
+    expect(impactOptions().map((impactOption) => impactOption.value)).toEqual([
       Impact.Everyone,
       Impact.Blocked,
       Impact.Slows,

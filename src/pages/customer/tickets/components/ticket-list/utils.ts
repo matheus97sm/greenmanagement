@@ -24,9 +24,9 @@ export function listItems({ state, meId, search }: ListInput): ListItem[] {
       unread: unreadCount(state, ticket.id, meId),
     }))
     .sort(
-      (a, b) =>
-        attentionRank(a) - attentionRank(b) ||
-        b.ticket.atualizado_em.localeCompare(a.ticket.atualizado_em),
+      (first, second) =>
+        attentionRank(first) - attentionRank(second) ||
+        second.ticket.atualizado_em.localeCompare(first.ticket.atualizado_em),
     );
 }
 

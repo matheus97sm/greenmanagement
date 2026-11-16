@@ -29,12 +29,12 @@ describe("labels and colours", () => {
   });
 
   it("never reuse a label", () => {
-    expect(new Set(statuses.map((s) => STATUS_LABEL[s])).size).toBe(
+    expect(new Set(statuses.map((status) => STATUS_LABEL[status])).size).toBe(
       statuses.length,
     );
-    expect(new Set(priorities.map((p) => PRIORITY_LABEL[p])).size).toBe(
-      priorities.length,
-    );
+    expect(
+      new Set(priorities.map((priority) => PRIORITY_LABEL[priority])).size,
+    ).toBe(priorities.length);
   });
 });
 
@@ -86,7 +86,7 @@ describe("isReopen", () => {
 
 describe("isActive", () => {
   it("is false only for resolved and closed", () => {
-    expect(statuses.filter((s) => !isActive(s))).toEqual([
+    expect(statuses.filter((status) => !isActive(status))).toEqual([
       Status.Resolved,
       Status.Closed,
     ]);

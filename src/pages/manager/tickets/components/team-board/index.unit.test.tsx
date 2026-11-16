@@ -11,13 +11,13 @@ const workloads = workloadByConsultant(
   rawData.chamados,
   consultantsOf(
     rawData.usuarios,
-    rawData.grupos.map((g) => g.id),
+    rawData.grupos.map((group) => group.id),
   ),
   NOW,
 );
 const idOf = (nome: string) =>
-  rawData.usuarios.find((u) => u.nome === nome)!.id;
-const infra = rawData.grupos.find((g) => g.nome === "Infraestrutura")!;
+  rawData.usuarios.find((person) => person.nome === nome)!.id;
+const infra = rawData.grupos.find((group) => group.nome === "Infraestrutura")!;
 
 function renderBoard(
   props: { selectedId?: string; unassigned?: Record<string, number> } = {},
@@ -77,10 +77,10 @@ describe("TeamBoard", () => {
     renderBoard();
     const names = screen
       .getAllByRole("button", { pressed: false })
-      .map((b) => b.textContent ?? "");
-    const apps = names.filter((n) =>
+      .map((element) => element.textContent ?? "");
+    const apps = names.filter((count) =>
       ["Beatriz", "Felipe", "Fernanda", "Gustavo", "Larissa", "Leandro"].some(
-        (first) => n.startsWith(first),
+        (first) => count.startsWith(first),
       ),
     );
     expect(apps[0]).toContain("Leandro Alves");
@@ -89,7 +89,7 @@ describe("TeamBoard", () => {
   it("shows the breached and at-risk counts of a consultant", () => {
     renderBoard();
     const marina = workloads.find(
-      (w) => w.consultant.nome === "Marina Almeida",
+      (workload) => workload.consultant.nome === "Marina Almeida",
     )!;
     expect(marina.breached).toBeGreaterThan(0);
     expect(

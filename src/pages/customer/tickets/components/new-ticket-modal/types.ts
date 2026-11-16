@@ -1,7 +1,7 @@
 import type { User } from "@/auth/users";
 
 export interface Props {
-  me: User;
+  currentUser: User;
   onClose: () => void;
   onOpenTicket: (ticketId: string) => void;
 }

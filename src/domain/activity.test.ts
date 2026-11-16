@@ -44,10 +44,14 @@ function ticket(overrides: Partial<Ticket> = {}): Ticket {
   };
 }
 
-function assigned(t: Ticket, consultantId: string, at: number): HistoryEntry {
+function assigned(
+  currentTicket: Ticket,
+  consultantId: string,
+  at: number,
+): HistoryEntry {
   return {
     id: `h${seq++}`,
-    chamado_id: t.id,
+    chamado_id: currentTicket.id,
     tipo: HistoryType.Assignment,
     de: null,
     para: null,
@@ -58,7 +62,7 @@ function assigned(t: Ticket, consultantId: string, at: number): HistoryEntry {
 }
 
 function moved(
-  t: Ticket,
+  currentTicket: Ticket,
   from: Status,
   to: Status,
   at: number,
@@ -66,7 +70,7 @@ function moved(
 ): HistoryEntry {
   return {
     id: `h${seq++}`,
-    chamado_id: t.id,
+    chamado_id: currentTicket.id,
     tipo: HistoryType.Status,
     de: from,
     para: to,
@@ -77,14 +81,14 @@ function moved(
 }
 
 function message(
-  t: Ticket,
+  currentTicket: Ticket,
   authorId: string,
   at: number,
   internal = false,
 ): Message {
   return {
     id: `m${seq++}`,
-    chamado_id: t.id,
+    chamado_id: currentTicket.id,
     criada_em: iso(at),
     autor_id: authorId,
     texto: "x",
@@ -92,75 +96,117 @@ function message(
   };
 }
 
-function groupByTicket<T extends { chamado_id: string }>(
-  items: T[],
-): Record<string, T[]> {
-  const out: Record<string, T[]> = {};
+function groupByTicket<Item extends { chamado_id: string }>(
+  items: Item[],
+): Record<string, Item[]> {
+  const out: Record<string, Item[]> = {};
   for (const item of items) (out[item.chamado_id] ??= []).push(item);
   return out;
 }
 
 const spans = (list: { start: number; end: number }[]) =>
-  list.map((i) => [(i.start - MONDAY_8H) / HOUR, (i.end - MONDAY_8H) / HOUR]);
+  list.map((index) => [
+    (index.start - MONDAY_8H) / HOUR,
+    (index.end - MONDAY_8H) / HOUR,
+  ]);
 
 describe("heldIntervals", () => {
   it("runs from the assignment until the ticket is resolved", () => {
-    const t = ticket({ status: Status.Resolved });
+    const currentTicket = ticket({ status: Status.Resolved });
     const history = [
-      assigned(t, "a", MONDAY_8H + 1 * HOUR),
-      moved(t, Status.Open, Status.InProgress, MONDAY_8H + 1 * HOUR),
-      moved(t, Status.InProgress, Status.Resolved, MONDAY_8H + 5 * HOUR),
+      assigned(currentTicket, "a", MONDAY_8H + 1 * HOUR),
+      moved(
+        currentTicket,
+        Status.Open,
+        Status.InProgress,
+        MONDAY_8H + 1 * HOUR,
+      ),
+      moved(
+        currentTicket,
+        Status.InProgress,
+        Status.Resolved,
+        MONDAY_8H + 5 * HOUR,
+      ),
     ];
-    expect(spans(heldIntervals(t, history))).toEqual([[1, 5]]);
-    expect(heldIntervals(t, history)[0].consultantId).toBe("a");
+    expect(spans(heldIntervals(currentTicket, history))).toEqual([[1, 5]]);
+    expect(heldIntervals(currentTicket, history)[0].consultantId).toBe("a");
   });
 
   it("keeps counting while the ticket waits for the customer", () => {
-    const t = ticket({ status: Status.Resolved });
+    const currentTicket = ticket({ status: Status.Resolved });
     const history = [
-      assigned(t, "a", MONDAY_8H),
-      moved(t, Status.Open, Status.InProgress, MONDAY_8H),
-      moved(t, Status.InProgress, Status.WaitingCustomer, MONDAY_8H + 2 * HOUR),
-      moved(t, Status.WaitingCustomer, Status.InProgress, MONDAY_8H + 4 * HOUR),
-      moved(t, Status.InProgress, Status.Resolved, MONDAY_8H + 6 * HOUR),
+      assigned(currentTicket, "a", MONDAY_8H),
+      moved(currentTicket, Status.Open, Status.InProgress, MONDAY_8H),
+      moved(
+        currentTicket,
+        Status.InProgress,
+        Status.WaitingCustomer,
+        MONDAY_8H + 2 * HOUR,
+      ),
+      moved(
+        currentTicket,
+        Status.WaitingCustomer,
+        Status.InProgress,
+        MONDAY_8H + 4 * HOUR,
+      ),
+      moved(
+        currentTicket,
+        Status.InProgress,
+        Status.Resolved,
+        MONDAY_8H + 6 * HOUR,
+      ),
     ];
-    expect(spans(heldIntervals(t, history))).toEqual([[0, 6]]);
+    expect(spans(heldIntervals(currentTicket, history))).toEqual([[0, 6]]);
   });
 
   it("stays open while the ticket is still active", () => {
-    const t = ticket();
-    const [held] = heldIntervals(t, [assigned(t, "a", MONDAY_8H)]);
+    const currentTicket = ticket();
+    const [held] = heldIntervals(currentTicket, [
+      assigned(currentTicket, "a", MONDAY_8H),
+    ]);
     expect(held.end).toBe(Infinity);
   });
 
   it("counts a ticket handed out while it was still waiting to be started", () => {
-    const t = ticket({ status: Status.Open });
-    const [held] = heldIntervals(t, [assigned(t, "a", MONDAY_8H + HOUR)]);
+    const currentTicket = ticket({ status: Status.Open });
+    const [held] = heldIntervals(currentTicket, [
+      assigned(currentTicket, "a", MONDAY_8H + HOUR),
+    ]);
     expect(held.start).toBe(MONDAY_8H + HOUR);
   });
 
   it("splits into two stretches when a ticket is resolved and then reopened", () => {
-    const t = ticket();
+    const currentTicket = ticket();
     const history = [
-      assigned(t, "a", MONDAY_8H),
-      moved(t, Status.Open, Status.InProgress, MONDAY_8H),
-      moved(t, Status.InProgress, Status.Resolved, MONDAY_8H + 2 * HOUR),
-      moved(t, Status.Resolved, Status.InProgress, MONDAY_8H + 5 * HOUR),
+      assigned(currentTicket, "a", MONDAY_8H),
+      moved(currentTicket, Status.Open, Status.InProgress, MONDAY_8H),
+      moved(
+        currentTicket,
+        Status.InProgress,
+        Status.Resolved,
+        MONDAY_8H + 2 * HOUR,
+      ),
+      moved(
+        currentTicket,
+        Status.Resolved,
+        Status.InProgress,
+        MONDAY_8H + 5 * HOUR,
+      ),
     ];
-    const held = heldIntervals(t, history);
+    const held = heldIntervals(currentTicket, history);
     expect(spans(held.slice(0, 1))).toEqual([[0, 2]]);
     expect(held[1].start).toBe(MONDAY_8H + 5 * HOUR);
     expect(held[1].end).toBe(Infinity);
   });
 
   it("hands the ticket from one consultant to the next on a reassignment", () => {
-    const t = ticket({ responsavel_id: "b" });
+    const currentTicket = ticket({ responsavel_id: "b" });
     const history = [
-      assigned(t, "a", MONDAY_8H),
-      assigned(t, "b", MONDAY_8H + 3 * HOUR),
+      assigned(currentTicket, "a", MONDAY_8H),
+      assigned(currentTicket, "b", MONDAY_8H + 3 * HOUR),
     ];
-    const held = heldIntervals(t, history);
-    expect(held.map((h) => h.consultantId)).toEqual(["a", "b"]);
+    const held = heldIntervals(currentTicket, history);
+    expect(held.map((entry) => entry.consultantId)).toEqual(["a", "b"]);
     expect(spans(held.slice(0, 1))).toEqual([[0, 3]]);
     expect(held[1].end).toBe(Infinity);
   });
@@ -171,13 +217,18 @@ describe("heldIntervals", () => {
   });
 
   it("does not depend on the order the history arrives in", () => {
-    const t = ticket({ status: Status.Resolved });
+    const currentTicket = ticket({ status: Status.Resolved });
     const history = [
-      moved(t, Status.InProgress, Status.Resolved, MONDAY_8H + 5 * HOUR),
-      assigned(t, "a", MONDAY_8H + HOUR),
-      moved(t, Status.Open, Status.InProgress, MONDAY_8H + HOUR),
+      moved(
+        currentTicket,
+        Status.InProgress,
+        Status.Resolved,
+        MONDAY_8H + 5 * HOUR,
+      ),
+      assigned(currentTicket, "a", MONDAY_8H + HOUR),
+      moved(currentTicket, Status.Open, Status.InProgress, MONDAY_8H + HOUR),
     ];
-    expect(spans(heldIntervals(t, history))).toEqual([[1, 5]]);
+    expect(spans(heldIntervals(currentTicket, history))).toEqual([[1, 5]]);
   });
 });
 
@@ -197,38 +248,46 @@ describe("weekByConsultant", () => {
     });
 
   it("counts the whole working time so far as idle for someone with nothing", () => {
-    const [a] = compute([], []);
-    expect(a.businessMs / HOUR).toBe(12);
-    expect(a.idleMs).toBe(a.businessMs);
-    expect(idleShare(a)).toBe(1);
+    const [consultantWeek] = compute([], []);
+    expect(consultantWeek.businessMs / HOUR).toBe(12);
+    expect(consultantWeek.idleMs).toBe(consultantWeek.businessMs);
+    expect(idleShare(consultantWeek)).toBe(1);
   });
 
   it("counts no idle time while a ticket is held the whole week", () => {
-    const t = ticket();
-    const [a, b] = compute([t], [assigned(t, "a", MONDAY_8H - 5 * HOUR)]);
-    expect(a.idleMs).toBe(0);
-    expect(b.idleMs).toBe(b.businessMs);
+    const currentTicket = ticket();
+    const [firstConsultantWeek, consultantWeek] = compute(
+      [currentTicket],
+      [assigned(currentTicket, "a", MONDAY_8H - 5 * HOUR)],
+    );
+    expect(firstConsultantWeek.idleMs).toBe(0);
+    expect(consultantWeek.idleMs).toBe(consultantWeek.businessMs);
   });
 
   it("counts only the hours with no ticket", () => {
-    const t = ticket({ status: Status.Resolved });
-    const [a] = compute(
-      [t],
+    const currentTicket = ticket({ status: Status.Resolved });
+    const [consultantWeek] = compute(
+      [currentTicket],
       [
-        assigned(t, "a", MONDAY_8H),
-        moved(t, Status.Open, Status.InProgress, MONDAY_8H),
-        moved(t, Status.InProgress, Status.Resolved, MONDAY_8H + 4 * HOUR),
+        assigned(currentTicket, "a", MONDAY_8H),
+        moved(currentTicket, Status.Open, Status.InProgress, MONDAY_8H),
+        moved(
+          currentTicket,
+          Status.InProgress,
+          Status.Resolved,
+          MONDAY_8H + 4 * HOUR,
+        ),
       ],
     );
-    expect(a.idleMs / HOUR).toBe(8);
-    expect(a.days[0].idleMs / HOUR).toBe(6);
-    expect(a.days[1].idleMs / HOUR).toBe(2);
+    expect(consultantWeek.idleMs / HOUR).toBe(8);
+    expect(consultantWeek.days[0].idleMs / HOUR).toBe(6);
+    expect(consultantWeek.days[1].idleMs / HOUR).toBe(2);
   });
 
   it("does not count overlapping tickets twice", () => {
     const first = ticket({ status: Status.Resolved });
     const second = ticket({ status: Status.Resolved });
-    const [a] = compute(
+    const [consultantWeek] = compute(
       [first, second],
       [
         assigned(first, "a", MONDAY_8H),
@@ -239,66 +298,106 @@ describe("weekByConsultant", () => {
         moved(second, Status.InProgress, Status.Resolved, MONDAY_8H + 8 * HOUR),
       ],
     );
-    expect(a.days[0].idleMs / HOUR).toBe(2);
+    expect(consultantWeek.days[0].idleMs / HOUR).toBe(2);
   });
 
   it("ignores work done outside business hours", () => {
-    const t = ticket({ status: Status.Resolved });
+    const currentTicket = ticket({ status: Status.Resolved });
     const sundayNight = MONDAY_8H - 12 * HOUR;
-    const [a] = compute(
-      [t],
+    const [consultantWeek] = compute(
+      [currentTicket],
       [
-        assigned(t, "a", sundayNight),
-        moved(t, Status.Open, Status.InProgress, sundayNight),
-        moved(t, Status.InProgress, Status.Resolved, MONDAY_8H - 2 * HOUR),
+        assigned(currentTicket, "a", sundayNight),
+        moved(currentTicket, Status.Open, Status.InProgress, sundayNight),
+        moved(
+          currentTicket,
+          Status.InProgress,
+          Status.Resolved,
+          MONDAY_8H - 2 * HOUR,
+        ),
       ],
     );
-    expect(a.idleMs).toBe(a.businessMs);
+    expect(consultantWeek.idleMs).toBe(consultantWeek.businessMs);
   });
 
   it("leaves the days that have not started with no working time", () => {
-    const [a] = compute([], []);
-    expect(a.days.map((d) => d.businessMs / HOUR)).toEqual([10, 2, 0, 0, 0]);
+    const [consultantWeek] = compute([], []);
+    expect(
+      consultantWeek.days.map((dayIdle) => dayIdle.businessMs / HOUR),
+    ).toEqual([10, 2, 0, 0, 0]);
   });
 
   it("moves the idle time to whoever received a reassigned ticket", () => {
-    const t = ticket({ responsavel_id: "b" });
-    const [a, b] = compute(
-      [t],
+    const currentTicket = ticket({ responsavel_id: "b" });
+    const [firstConsultantWeek, consultantWeek] = compute(
+      [currentTicket],
       [
-        assigned(t, "a", MONDAY_8H - HOUR),
-        assigned(t, "b", MONDAY_8H + 4 * HOUR),
+        assigned(currentTicket, "a", MONDAY_8H - HOUR),
+        assigned(currentTicket, "b", MONDAY_8H + 4 * HOUR),
       ],
     );
-    expect(a.days[0].idleMs / HOUR).toBe(6);
-    expect(b.days[0].idleMs / HOUR).toBe(4);
+    expect(firstConsultantWeek.days[0].idleMs / HOUR).toBe(6);
+    expect(consultantWeek.days[0].idleMs / HOUR).toBe(4);
   });
 
   it("counts what each consultant did inside the week", () => {
-    const t = ticket({ status: Status.Resolved });
+    const currentTicket = ticket({ status: Status.Resolved });
     const history = [
-      assigned(t, "a", MONDAY_8H + HOUR),
-      assigned(t, "a", MONDAY_8H - 3 * 24 * HOUR),
-      moved(t, Status.InProgress, Status.Resolved, MONDAY_8H + 3 * HOUR, "a"),
-      moved(t, Status.Resolved, Status.Closed, MONDAY_8H + 4 * HOUR, "a"),
-      moved(t, Status.InProgress, Status.Resolved, MONDAY_8H + 5 * HOUR, "b"),
+      assigned(currentTicket, "a", MONDAY_8H + HOUR),
+      assigned(currentTicket, "a", MONDAY_8H - 3 * 24 * HOUR),
+      moved(
+        currentTicket,
+        Status.InProgress,
+        Status.Resolved,
+        MONDAY_8H + 3 * HOUR,
+        "a",
+      ),
+      moved(
+        currentTicket,
+        Status.Resolved,
+        Status.Closed,
+        MONDAY_8H + 4 * HOUR,
+        "a",
+      ),
+      moved(
+        currentTicket,
+        Status.InProgress,
+        Status.Resolved,
+        MONDAY_8H + 5 * HOUR,
+        "b",
+      ),
     ];
     const messages = [
-      message(t, "a", MONDAY_8H + HOUR),
-      message(t, "a", MONDAY_8H + 2 * HOUR),
-      message(t, "a", MONDAY_8H + 2 * HOUR, true),
-      message(t, "a", MONDAY_8H - 12 * HOUR),
-      message(t, "s", MONDAY_8H + HOUR),
+      message(currentTicket, "a", MONDAY_8H + HOUR),
+      message(currentTicket, "a", MONDAY_8H + 2 * HOUR),
+      message(currentTicket, "a", MONDAY_8H + 2 * HOUR, true),
+      message(currentTicket, "a", MONDAY_8H - 12 * HOUR),
+      message(currentTicket, "s", MONDAY_8H + HOUR),
     ];
-    const [a, b] = compute([t], history, messages);
-    expect(a).toMatchObject({ assigned: 1, resolved: 1, replies: 2 });
-    expect(b).toMatchObject({ assigned: 0, resolved: 1, replies: 0 });
+    const [firstConsultantWeek, consultantWeek] = compute(
+      [currentTicket],
+      history,
+      messages,
+    );
+    expect(firstConsultantWeek).toMatchObject({
+      assigned: 1,
+      resolved: 1,
+      replies: 2,
+    });
+    expect(consultantWeek).toMatchObject({
+      assigned: 0,
+      resolved: 1,
+      replies: 0,
+    });
   });
 
   it("leaves out anything after the end of the window", () => {
-    const t = ticket();
-    const [a] = compute([t], [assigned(t, "a", NOW + HOUR)]);
-    expect(a.assigned).toBe(0);
+    const currentTicket = ticket();
+    const [consultantWeek] = compute(
+      [currentTicket],
+      [assigned(currentTicket, "a", NOW + HOUR)],
+    );
+    expect(consultantWeek.assigned).toBe(0);
   });
 });
 

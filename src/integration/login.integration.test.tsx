@@ -76,7 +76,8 @@ describe("logging in and landing on the profile page", () => {
       path: "/customer/tickets",
       heading: "Meus chamados",
       tickets: () =>
-        rawData.chamados.filter((t) => t.solicitante_id === HELENA_ID).length,
+        rawData.chamados.filter((ticket) => ticket.solicitante_id === HELENA_ID)
+          .length,
     },
   ])(
     "signs $name in and sends them to $path with their own data",

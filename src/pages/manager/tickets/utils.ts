@@ -15,7 +15,7 @@ import type {
 export function filterByGroup(tickets: Ticket[], groupId: string): Ticket[] {
   return groupId === ALL_GROUPS
     ? tickets
-    : tickets.filter((t) => t.grupo_id === groupId);
+    : tickets.filter((ticket) => ticket.grupo_id === groupId);
 }
 
 export function findTickets({
@@ -27,7 +27,7 @@ export function findTickets({
 }: FindInput): Ticket[] {
   return filterByGroup(
     tickets
-      .filter((t) => matchesSearch(t, term, people))
+      .filter((ticket) => matchesSearch(ticket, term, people))
       .sort(compareBySla(now)),
     groupId,
   );
@@ -65,7 +65,7 @@ export function keepVisible(
   selected: ReadonlySet<string>,
   visible: Ticket[],
 ): Set<string> {
-  const ids = new Set(visible.map((t) => t.id));
+  const ids = new Set(visible.map((ticket) => ticket.id));
   return new Set([...selected].filter((id) => ids.has(id)));
 }
 

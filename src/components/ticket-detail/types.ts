@@ -7,7 +7,7 @@ import type { TimelineKind } from "./enums";
 
 export interface Props {
   ticketId: string;
-  me: User;
+  currentUser: User;
   draft: string;
   onDraftChange: (value: string) => void;
   extraActions?: ReactNode;

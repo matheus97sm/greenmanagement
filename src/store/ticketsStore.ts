@@ -52,33 +52,39 @@ function emptyState(): TicketsState {
   };
 }
 
-function insertSorted<T extends { id: string }>(
-  list: T[] | undefined,
-  item: T,
-  time: (x: T) => string,
-): T[] {
+function insertSorted<Item extends { id: string }>(
+  list: Item[] | undefined,
+  item: Item,
+  time: (currentItem: Item) => string,
+): Item[] {
   const current = list ?? [];
-  if (current.some((x) => x.id === item.id)) return current;
+  if (current.some((currentItem) => currentItem.id === item.id)) return current;
   const next = [...current, item];
-  next.sort((a, b) => time(a).localeCompare(time(b)));
+  next.sort((first, second) => time(first).localeCompare(time(second)));
   return next;
 }
 
-const byCreated = (m: Message) => m.criada_em;
-const byOccurred = (h: HistoryEntry) => h.ocorrido_em;
+const byCreated = (message: Message) => message.criada_em;
+const byOccurred = (historyEntry: HistoryEntry) => historyEntry.ocorrido_em;
 
-function groupBy<T>(items: T[], key: (x: T) => string): Record<string, T[]> {
-  const out: Record<string, T[]> = {};
+function groupBy<Item>(
+  items: Item[],
+  key: (item: Item) => string,
+): Record<string, Item[]> {
+  const out: Record<string, Item[]> = {};
   for (const item of items) (out[key(item)] ??= []).push(item);
   return out;
 }
 
-function sortedBy<T>(items: T[], time: (x: T) => string): T[] {
-  return [...items].sort((a, b) => time(a).localeCompare(time(b)));
+function sortedBy<Item>(items: Item[], time: (item: Item) => string): Item[] {
+  return [...items].sort((first, second) =>
+    time(first).localeCompare(time(second)),
+  );
 }
 
 function latest(entries: HistoryEntry[], tipo: HistoryEntry["tipo"]) {
-  return entries.filter((h) => h.tipo === tipo).at(-1)?.ocorrido_em;
+  return entries.filter((historyEntry) => historyEntry.tipo === tipo).at(-1)
+    ?.ocorrido_em;
 }
 
 function reduce(
@@ -102,7 +108,8 @@ function reduce(
       const pending = orphans.get(ticket.id);
       if (pending) {
         orphans.delete(ticket.id);
-        for (const e of pending) next = reduce(next, e, orphans);
+        for (const domainEvent of pending)
+          next = reduce(next, domainEvent, orphans);
       }
       return next;
     }
@@ -153,7 +160,8 @@ function reduce(
     case EventType.MessageAdded: {
       const message = event.payload;
       const list = state.messages[message.chamado_id];
-      if (list?.some((m) => m.id === message.id)) return state;
+      if (list?.some((currentMessage) => currentMessage.id === message.id))
+        return state;
       const ticket = state.tickets[message.chamado_id];
       return {
         ...state,
@@ -175,45 +183,50 @@ function reduce(
     }
 
     case EventType.StatusChanged: {
-      const p = event.payload;
-      const ticket = state.tickets[p.chamado_id];
+      const payload = event.payload;
+      const ticket = state.tickets[payload.chamado_id];
       if (!ticket) {
-        park(p.chamado_id);
+        park(payload.chamado_id);
         return state;
       }
       const entry: HistoryEntry = {
         id: event.id,
-        chamado_id: p.chamado_id,
+        chamado_id: payload.chamado_id,
         tipo: HistoryType.Status,
-        de: p.de,
-        para: p.para,
-        usuario_id: p.usuario_id,
-        motivo: p.motivo,
+        de: payload.de,
+        para: payload.para,
+        usuario_id: payload.usuario_id,
+        motivo: payload.motivo,
         ocorrido_em: event.ocorrido_em,
       };
-      const before = state.history[p.chamado_id];
+      const before = state.history[payload.chamado_id];
       const stale =
-        event.ocorrido_em < (state.statusAt[p.chamado_id] ?? ticket.aberto_em);
+        event.ocorrido_em <
+        (state.statusAt[payload.chamado_id] ?? ticket.aberto_em);
       return {
         ...state,
         history: {
           ...state.history,
-          [p.chamado_id]: insertSorted(before, entry, byOccurred),
+          [payload.chamado_id]: insertSorted(before, entry, byOccurred),
         },
         tickets: stale
           ? state.tickets
           : {
               ...state.tickets,
-              [p.chamado_id]: applyStatusChange(
+              [payload.chamado_id]: applyStatusChange(
                 ticket,
-                { de: p.de, para: p.para, ocorrido_em: event.ocorrido_em },
+                {
+                  de: payload.de,
+                  para: payload.para,
+                  ocorrido_em: event.ocorrido_em,
+                },
                 before,
                 state.sla,
               ),
             },
         statusAt: stale
           ? state.statusAt
-          : { ...state.statusAt, [p.chamado_id]: event.ocorrido_em },
+          : { ...state.statusAt, [payload.chamado_id]: event.ocorrido_em },
       };
     }
   }
@@ -230,7 +243,7 @@ export function createTicketsStore() {
   const set = (next: TicketsState) => {
     if (next === state) return;
     state = next;
-    listeners.forEach((l) => l());
+    listeners.forEach((listener) => listener());
   };
 
   return {
@@ -252,17 +265,29 @@ export function createTicketsStore() {
 
     loadSnapshot(snapshot: Snapshot) {
       anchorClock(snapshot.agora);
-      const messages = groupBy(snapshot.mensagens, (m) => m.chamado_id);
-      const history = groupBy(snapshot.historico, (h) => h.chamado_id);
+      const messages = groupBy(
+        snapshot.mensagens,
+        (message) => message.chamado_id,
+      );
+      const history = groupBy(
+        snapshot.historico,
+        (historyEntry) => historyEntry.chamado_id,
+      );
 
       const base: TicketsState = {
         ...emptyState(),
         status: LoadStatus.Ready,
-        tickets: Object.fromEntries(snapshot.chamados.map((t) => [t.id, t])),
-        people: Object.fromEntries(snapshot.usuarios.map((p) => [p.id, p])),
-        groups: Object.fromEntries(snapshot.grupos.map((g) => [g.id, g])),
+        tickets: Object.fromEntries(
+          snapshot.chamados.map((ticket) => [ticket.id, ticket]),
+        ),
+        people: Object.fromEntries(
+          snapshot.usuarios.map((person) => [person.id, person]),
+        ),
+        groups: Object.fromEntries(
+          snapshot.grupos.map((group) => [group.id, group]),
+        ),
         categories: Object.fromEntries(
-          snapshot.categorias.map((c) => [c.id, c]),
+          snapshot.categorias.map((category) => [category.id, category]),
         ),
         messages: Object.fromEntries(
           Object.entries(messages).map(([id, list]) => [
@@ -282,22 +307,22 @@ export function createTicketsStore() {
         loadedAt: nowIso(),
         lastRead: state.lastRead,
       };
-      for (const t of snapshot.chamados) {
-        const entries = base.history[t.id] ?? [];
-        base.statusAt[t.id] =
-          latest(entries, HistoryType.Status) ?? t.aberto_em;
-        base.assignedAt[t.id] =
-          latest(entries, HistoryType.Assignment) ?? t.aberto_em;
+      for (const ticket of snapshot.chamados) {
+        const entries = base.history[ticket.id] ?? [];
+        base.statusAt[ticket.id] =
+          latest(entries, HistoryType.Status) ?? ticket.aberto_em;
+        base.assignedAt[ticket.id] =
+          latest(entries, HistoryType.Assignment) ?? ticket.aberto_em;
       }
 
       let next = base;
       for (const [id, list] of Object.entries(state.messages)) {
-        for (const m of list) {
+        for (const message of list) {
           next = {
             ...next,
             messages: {
               ...next.messages,
-              [id]: insertSorted(next.messages[id], m, byCreated),
+              [id]: insertSorted(next.messages[id], message, byCreated),
             },
           };
         }
@@ -306,7 +331,8 @@ export function createTicketsStore() {
       for (const [id, pending] of [...orphans]) {
         if (!next.tickets[id]) continue;
         orphans.delete(id);
-        for (const e of pending) next = reduce(next, e, orphans);
+        for (const domainEvent of pending)
+          next = reduce(next, domainEvent, orphans);
       }
       set(next);
     },
@@ -319,9 +345,9 @@ export function createTicketsStore() {
       set({ ...state, status: LoadStatus.Loading });
       const requestedIn = generation;
       loadPromise = fetchSnapshot()
-        .then((s) => {
+        .then((snapshot) => {
           if (requestedIn !== generation) return;
-          this.loadSnapshot(s);
+          this.loadSnapshot(snapshot);
           this.restoreRead(readMarks);
         })
         .catch(() => {
@@ -365,6 +391,6 @@ export function unreadCount(
 ): number {
   const since = state.lastRead[ticketId] ?? state.loadedAt;
   return (state.messages[ticketId] ?? []).filter(
-    (m) => m.autor_id !== meId && m.criada_em > since,
+    (message) => message.autor_id !== meId && message.criada_em > since,
   ).length;
 }

@@ -11,11 +11,16 @@ import { TicketThread } from "../ticket-thread";
 import { REPLY_PLACEHOLDER } from "./constants";
 import type { Props } from "./types";
 
-export function Conversation({ ticketId, me, draft, onDraftChange }: Props) {
+export function Conversation({
+  ticketId,
+  currentUser,
+  draft,
+  onDraftChange,
+}: Props) {
   const state = useTickets();
   const [since] = useState(() => state.lastRead[ticketId] ?? state.loadedAt);
   const ticket = state.tickets[ticketId];
-  const viewer = state.people[me.id];
+  const viewer = state.people[currentUser.id];
 
   if (!ticket) {
     return (
@@ -48,18 +53,22 @@ export function Conversation({ ticketId, me, draft, onDraftChange }: Props) {
 
       <Box p="md" style={{ flex: 1, minHeight: 0, overflowY: "auto" }}>
         <Stack gap="lg">
-          <TicketSummary ticketId={ticketId} me={me} />
-          <TicketThread ticketId={ticketId} me={me} since={since} />
+          <TicketSummary ticketId={ticketId} currentUser={currentUser} />
+          <TicketThread
+            ticketId={ticketId}
+            currentUser={currentUser}
+            since={since}
+          />
         </Stack>
       </Box>
 
       {canReopen(ticket) ? (
-        <ReopenBox ticketId={ticketId} customerId={me.id} />
+        <ReopenBox ticketId={ticketId} customerId={currentUser.id} />
       ) : (
         <Composer
           key={ticketId}
           ticketId={ticketId}
-          userId={me.id}
+          userId={currentUser.id}
           draft={draft}
           onDraftChange={onDraftChange}
           allowNotes={false}

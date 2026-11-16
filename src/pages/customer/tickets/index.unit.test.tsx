@@ -16,7 +16,7 @@ vi.mock("@/store/actions", async (importOriginal) => ({
 }));
 
 const idOf = (numero: number) =>
-  rawData.chamados.find((t) => t.numero === numero)!.id;
+  rawData.chamados.find((ticket) => ticket.numero === numero)!.id;
 
 function renderPage(route = "/customer/tickets") {
   return renderWithProviders(<TicketsPage />, {

@@ -16,10 +16,10 @@ export interface Workload {
 
 export function consultantsOf(people: Person[], groupIds: string[]): Person[] {
   return people.filter(
-    (p) =>
-      p.perfil === Profile.Consultant &&
-      !!p.grupo_id &&
-      groupIds.includes(p.grupo_id),
+    (person) =>
+      person.perfil === Profile.Consultant &&
+      !!person.grupo_id &&
+      groupIds.includes(person.grupo_id),
   );
 }
 
@@ -34,12 +34,14 @@ export function needsAttention(ticket: Ticket, now: number): boolean {
 }
 
 export function riskTickets(tickets: Ticket[], now: number): Ticket[] {
-  return tickets.filter((t) => needsAttention(t, now)).sort(compareBySla(now));
+  return tickets
+    .filter((ticket) => needsAttention(ticket, now))
+    .sort(compareBySla(now));
 }
 
 export function unassignedTickets(tickets: Ticket[], now: number): Ticket[] {
   return tickets
-    .filter((t) => isActive(t.status) && !t.responsavel_id)
+    .filter((ticket) => isActive(ticket.status) && !ticket.responsavel_id)
     .sort(compareBySla(now));
 }
 
@@ -49,7 +51,10 @@ export function activeTicketsOf(
   now: number,
 ): Ticket[] {
   return tickets
-    .filter((t) => isActive(t.status) && t.responsavel_id === consultantId)
+    .filter(
+      (ticket) =>
+        isActive(ticket.status) && ticket.responsavel_id === consultantId,
+    )
     .sort(compareBySla(now));
 }
 
@@ -66,8 +71,8 @@ export function workloadByConsultant(
   now: number,
 ): Workload[] {
   const stats = new Map(
-    consultants.map((c) => [
-      c.id,
+    consultants.map((person) => [
+      person.id,
       { active: 0, waitingCustomer: 0, breached: 0, atRisk: 0 },
     ]),
   );
@@ -84,20 +89,28 @@ export function workloadByConsultant(
   }
 
   const averageByGroup = new Map<string, number>();
-  for (const c of consultants) {
-    const group = c.grupo_id ?? "";
+  for (const person of consultants) {
+    const group = person.grupo_id ?? "";
     if (averageByGroup.has(group)) continue;
-    const members = consultants.filter((m) => m.grupo_id === c.grupo_id);
-    const total = members.reduce((sum, m) => sum + stats.get(m.id)!.active, 0);
+    const members = consultants.filter(
+      (currentPerson) => currentPerson.grupo_id === person.grupo_id,
+    );
+    const total = members.reduce(
+      (sum, currentPerson) => sum + stats.get(currentPerson.id)!.active,
+      0,
+    );
     averageByGroup.set(group, total / members.length);
   }
 
   return consultants.map((consultant) => {
-    const s = stats.get(consultant.id)!;
+    const consultantStats = stats.get(consultant.id)!;
     return {
       consultant,
-      ...s,
-      level: levelOf(s.active, averageByGroup.get(consultant.grupo_id ?? "")!),
+      ...consultantStats,
+      level: levelOf(
+        consultantStats.active,
+        averageByGroup.get(consultant.grupo_id ?? "")!,
+      ),
     };
   });
 }
@@ -108,13 +121,16 @@ const LEVEL_ORDER: Record<LoadLevel, number> = {
   [LoadLevel.Normal]: 2,
 };
 
-export function compareWorkload(a: Workload, b: Workload): number {
+export function compareWorkload(
+  firstWorkload: Workload,
+  workload: Workload,
+): number {
   return (
-    LEVEL_ORDER[a.level] - LEVEL_ORDER[b.level] ||
-    b.breached - a.breached ||
-    b.atRisk - a.atRisk ||
-    b.active - a.active ||
-    a.consultant.nome.localeCompare(b.consultant.nome)
+    LEVEL_ORDER[firstWorkload.level] - LEVEL_ORDER[workload.level] ||
+    workload.breached - firstWorkload.breached ||
+    workload.atRisk - firstWorkload.atRisk ||
+    workload.active - firstWorkload.active ||
+    firstWorkload.consultant.nome.localeCompare(workload.consultant.nome)
   );
 }
 
@@ -136,7 +152,8 @@ export function teamSummary(
     breached: 0,
     atRisk: 0,
     unassigned: 0,
-    idle: workloads.filter((w) => w.level === LoadLevel.Idle).length,
+    idle: workloads.filter((workload) => workload.level === LoadLevel.Idle)
+      .length,
   };
   for (const ticket of tickets) {
     if (!isActive(ticket.status)) continue;

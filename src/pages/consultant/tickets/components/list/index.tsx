@@ -24,7 +24,7 @@ import { StatusOption, Tab } from "./enums";
 import type { Props, StatusFilter } from "./types";
 import { selectRows, splitTickets, statusFilterOptions } from "./utils";
 
-export function TicketList({ me, selectedId, onSelect }: Props) {
+export function TicketList({ currentUser, selectedId, onSelect }: Props) {
   const state = useTickets();
   const now = useNow();
   const [tab, setTab] = useState<Tab>(Tab.Mine);
@@ -33,11 +33,11 @@ export function TicketList({ me, selectedId, onSelect }: Props) {
   );
   const [search, setSearch] = useState("");
 
-  const myGroupId = state.people[me.id]?.grupo_id;
+  const myGroupId = state.people[currentUser.id]?.grupo_id;
 
   const { mine, queue } = useMemo(
-    () => splitTickets(Object.values(state.tickets), me.id, myGroupId),
-    [state.tickets, me.id, myGroupId],
+    () => splitTickets(Object.values(state.tickets), currentUser.id, myGroupId),
+    [state.tickets, currentUser.id, myGroupId],
   );
 
   const rows = useMemo(
@@ -62,7 +62,7 @@ export function TicketList({ me, selectedId, onSelect }: Props) {
     overscan: ROW_OVERSCAN,
   });
 
-  const myActiveCount = mine.filter((t) => isActive(t.status)).length;
+  const myActiveCount = mine.filter((ticket) => isActive(ticket.status)).length;
 
   return (
     <Stack gap="xs" p="sm" h="100%" style={{ minHeight: 0 }}>
@@ -82,7 +82,7 @@ export function TicketList({ me, selectedId, onSelect }: Props) {
           placeholder="Buscar por nº, título ou cliente"
           leftSection={<IconSearch size={14} />}
           value={search}
-          onChange={(e) => setSearch(e.currentTarget.value)}
+          onChange={(event) => setSearch(event.currentTarget.value)}
         />
         <Select
           size="xs"
@@ -114,14 +114,14 @@ export function TicketList({ me, selectedId, onSelect }: Props) {
           <div
             style={{ height: virtualizer.getTotalSize(), position: "relative" }}
           >
-            {virtualizer.getVirtualItems().map((v) => {
-              const ticket = rows[v.index];
+            {virtualizer.getVirtualItems().map((virtualItem) => {
+              const ticket = rows[virtualItem.index];
               const sla = slaInfo(
                 ticket,
                 now,
                 pausedSince(ticket, state.history[ticket.id]),
               );
-              const unread = unreadCount(state, ticket.id, me.id);
+              const unread = unreadCount(state, ticket.id, currentUser.id);
               const requester = state.people[ticket.solicitante_id];
               return (
                 <UnstyledButton
@@ -134,8 +134,8 @@ export function TicketList({ me, selectedId, onSelect }: Props) {
                     top: 0,
                     left: 0,
                     width: "100%",
-                    height: v.size,
-                    transform: `translateY(${v.start}px)`,
+                    height: virtualItem.size,
+                    transform: `translateY(${virtualItem.start}px)`,
                   }}
                 >
                   <Group justify="space-between" wrap="nowrap" gap="xs">

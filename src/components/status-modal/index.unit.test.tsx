@@ -14,7 +14,7 @@ vi.mock("@/store/actions", () => ({
 }));
 
 const ticketWith = (status: Status) =>
-  rawData.chamados.find((t) => t.status === status)!;
+  rawData.chamados.find((ticket) => ticket.status === status)!;
 
 function renderModal(
   status: Status,

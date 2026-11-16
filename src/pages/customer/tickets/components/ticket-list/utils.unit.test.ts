@@ -7,7 +7,7 @@ import type { ListItem } from "./types";
 import { attentionRank, handlerLine, listItems, unreadLabel } from "./utils";
 
 const idOf = (numero: number) =>
-  rawData.chamados.find((t) => t.numero === numero)!.id;
+  rawData.chamados.find((ticket) => ticket.numero === numero)!.id;
 
 const numbers = (search = "") =>
   listItems({ state: ticketsStore.getState(), meId: HELENA_ID, search }).map(
@@ -38,7 +38,7 @@ describe("listItems", () => {
       state: ticketsStore.getState(),
       meId: HELENA_ID,
       search: "",
-    }).find((i) => i.ticket.id === idOf(10611))!;
+    }).find((listItem) => listItem.ticket.id === idOf(10611))!;
     expect(item.unread).toBe(2);
   });
 
@@ -48,7 +48,7 @@ describe("listItems", () => {
         state: ticketsStore.getState(),
         meId: HELENA_ID,
         search: "",
-      }).map((i) => [i.ticket.numero, i.handler]),
+      }).map((listItem) => [listItem.ticket.numero, listItem.handler]),
     );
     expect(handlers).toEqual({
       10611: "Marina Almeida",

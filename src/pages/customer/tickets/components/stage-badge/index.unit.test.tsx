@@ -14,7 +14,9 @@ describe("StageBadge", () => {
   });
 
   it("never reuses a label, so two stages cannot be mistaken", () => {
-    expect(new Set(stages.map((s) => STAGE_LABEL[s])).size).toBe(stages.length);
+    expect(new Set(stages.map((stage) => STAGE_LABEL[stage])).size).toBe(
+      stages.length,
+    );
   });
 
   it("gives every stage a colour", () => {
@@ -23,7 +25,7 @@ describe("StageBadge", () => {
 
   it("uses a warning colour only for the stage that needs the customer", () => {
     expect(STAGE_COLOR[CustomerStage.WaitingYou]).toBe("orange");
-    const others = stages.filter((s) => s !== CustomerStage.WaitingYou);
-    expect(others.some((s) => STAGE_COLOR[s] === "orange")).toBe(false);
+    const others = stages.filter((stage) => stage !== CustomerStage.WaitingYou);
+    expect(others.some((stage) => STAGE_COLOR[stage] === "orange")).toBe(false);
   });
 });

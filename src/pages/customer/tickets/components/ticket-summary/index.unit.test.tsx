@@ -5,13 +5,13 @@ import { HELENA_ID, rawData } from "@/test-data";
 import { loadStoreAs, renderWithProviders } from "@/test-utils";
 import { TicketSummary } from ".";
 
-const me = USERS.find((u) => u.id === HELENA_ID)!;
+const currentUser = USERS.find((user) => user.id === HELENA_ID)!;
 const idOf = (numero: number) =>
-  rawData.chamados.find((t) => t.numero === numero)!.id;
+  rawData.chamados.find((ticket) => ticket.numero === numero)!.id;
 
 function renderSummary(numero: number) {
   return renderWithProviders(
-    <TicketSummary ticketId={idOf(numero)} me={me} />,
+    <TicketSummary ticketId={idOf(numero)} currentUser={currentUser} />,
     { userId: HELENA_ID },
   );
 }
@@ -88,9 +88,12 @@ describe("TicketSummary", () => {
   });
 
   it("shows nothing for a ticket that is not in the store", () => {
-    renderWithProviders(<TicketSummary ticketId="unknown" me={me} />, {
-      userId: HELENA_ID,
-    });
+    renderWithProviders(
+      <TicketSummary ticketId="unknown" currentUser={currentUser} />,
+      {
+        userId: HELENA_ID,
+      },
+    );
     expect(screen.queryByText("Última atualização")).not.toBeInTheDocument();
     expect(screen.queryByText("O que já aconteceu")).not.toBeInTheDocument();
   });

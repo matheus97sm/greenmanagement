@@ -42,7 +42,9 @@ describe("manager tickets page", () => {
     expect(
       screen.getByRole("heading", { name: "Equipe e chamados" }),
     ).toBeInTheDocument();
-    const active = rawData.chamados.filter((t) => isActive(t.status)).length;
+    const active = rawData.chamados.filter((ticket) =>
+      isActive(ticket.status),
+    ).length;
     const card = screen
       .getByText("Chamados ativos")
       .closest(".mantine-Paper-root");
@@ -87,9 +89,9 @@ describe("manager tickets page", () => {
     await user.click(screen.getByRole("radio", { name: /Sem responsável/ }));
     const rows = rowsOf(container);
     expect(rows.length).toBeGreaterThan(0);
-    expect(rows.every((r) => r.textContent?.includes("sem responsável"))).toBe(
-      true,
-    );
+    expect(
+      rows.every((resolve) => resolve.textContent?.includes("sem responsável")),
+    ).toBe(true);
   });
 
   it("narrows the list to one group", async () => {
@@ -159,7 +161,9 @@ describe("manager tickets page", () => {
     const user = userEvent.setup();
     renderPage();
     const top = riskTickets(rawData.chamados, NOW).slice(0, MAX_ROWS);
-    const expected = top.filter((t) => t.grupo_id === top[0].grupo_id).length;
+    const expected = top.filter(
+      (ticket) => ticket.grupo_id === top[0].grupo_id,
+    ).length;
     expect(expected).toBeLessThan(top.length);
 
     await user.click(
@@ -173,7 +177,7 @@ describe("manager tickets page", () => {
   describe("one group at a time", () => {
     const top = riskTickets(rawData.chamados, NOW).slice(0, 10);
     const first = top[0];
-    const other = top.find((t) => t.grupo_id !== first.grupo_id)!;
+    const other = top.find((ticket) => ticket.grupo_id !== first.grupo_id)!;
     const box = (numero: number) =>
       screen.getByRole("checkbox", { name: `Selecionar chamado ${numero}` });
 
@@ -189,8 +193,10 @@ describe("manager tickets page", () => {
       await user.click(box(first.numero));
       expect(box(other.numero)).toBeDisabled();
       expect(box(first.numero)).toBeEnabled();
-      for (const t of top.filter((x) => x.grupo_id === first.grupo_id)) {
-        expect(box(t.numero)).toBeEnabled();
+      for (const ticket of top.filter(
+        (currentTicket) => currentTicket.grupo_id === first.grupo_id,
+      )) {
+        expect(box(ticket.numero)).toBeEnabled();
       }
     });
 
@@ -217,7 +223,7 @@ describe("manager tickets page", () => {
       expect(
         screen
           .queryAllByRole("checkbox", { name: /Selecionar chamado/ })
-          .every((c) => !(c as HTMLInputElement).disabled),
+          .every((element) => !(element as HTMLInputElement).disabled),
       ).toBe(true);
     });
   });
@@ -250,7 +256,9 @@ describe("manager tickets page", () => {
 
     await waitFor(() => expect(reassignTickets).toHaveBeenCalledTimes(1));
     expect(vi.mocked(reassignTickets).mock.calls[0][0]).toMatchObject({
-      ticketIds: [rawData.chamados.find((t) => t.numero === 10503)!.id],
+      ticketIds: [
+        rawData.chamados.find((ticket) => ticket.numero === 10503)!.id,
+      ],
       managerId: RICARDO_ID,
     });
     await waitFor(() =>
@@ -262,7 +270,9 @@ describe("manager tickets page", () => {
   });
 
   describe("reading a conversation", () => {
-    const ticket = rawData.chamados.find((t) => t.numero === 10503)!;
+    const ticket = rawData.chamados.find(
+      (currentTicket) => currentTicket.numero === 10503,
+    )!;
 
     it("opens the conversation from the ticket title and puts it in the address", async () => {
       const user = userEvent.setup();
@@ -311,7 +321,9 @@ describe("manager tickets page", () => {
     it("searches every ticket, finished ones included, ignoring the current view", async () => {
       const user = userEvent.setup();
       const { container } = renderPage();
-      const closed = rawData.chamados.find((t) => t.status === Status.Closed)!;
+      const closed = rawData.chamados.find(
+        (ticket) => ticket.status === Status.Closed,
+      )!;
 
       await user.type(
         screen.getByLabelText("Buscar chamado"),

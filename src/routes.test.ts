@@ -7,9 +7,9 @@ import { HELENA_ID, MARINA_ID, RICARDO_ID } from "./test-data";
 function fakeStorage(initial: Record<string, string> = {}) {
   const data = new Map(Object.entries(initial));
   return {
-    getItem: (k: string) => data.get(k) ?? null,
-    setItem: (k: string, v: string) => void data.set(k, v),
-    removeItem: (k: string) => void data.delete(k),
+    getItem: (key: string) => data.get(key) ?? null,
+    setItem: (key: string, value: string) => void data.set(key, value),
+    removeItem: (key: string) => void data.delete(key),
   };
 }
 

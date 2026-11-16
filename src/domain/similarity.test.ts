@@ -3,9 +3,11 @@ import type { Ticket } from "./types";
 import { similarTickets, tokensOf } from "./similarity";
 import { HELENA_ID, rawData } from "@/test-data";
 
-const helenas = rawData.chamados.filter((t) => t.solicitante_id === HELENA_ID);
+const helenas = rawData.chamados.filter(
+  (ticket) => ticket.solicitante_id === HELENA_ID,
+);
 const byNumber = (numero: number) =>
-  rawData.chamados.find((t) => t.numero === numero) as Ticket;
+  rawData.chamados.find((ticket) => ticket.numero === numero) as Ticket;
 
 const withTitle = (titulo: string, atualizado_em: string): Ticket => ({
   ...byNumber(10611),
@@ -43,7 +45,9 @@ describe("similarTickets", () => {
       { title: "VPN não liga em casa", description: "" },
       helenas,
     );
-    expect(hits.map((h) => h.ticket.numero)).toContain(10612);
+    expect(hits.map((similarTicket) => similarTicket.ticket.numero)).toContain(
+      10612,
+    );
   });
 
   it("also finds the duplicate that is still open", () => {
@@ -51,7 +55,9 @@ describe("similarTickets", () => {
       { title: "VPN não liga em casa", description: "" },
       helenas,
     );
-    expect(hits.map((h) => h.ticket.numero)).toContain(10614);
+    expect(hits.map((similarTicket) => similarTicket.ticket.numero)).toContain(
+      10614,
+    );
   });
 
   it("looks at the description too, not only at the title", () => {
@@ -62,7 +68,9 @@ describe("similarTickets", () => {
       },
       helenas,
     );
-    expect(hits.map((h) => h.ticket.numero)).toContain(10611);
+    expect(hits.map((similarTicket) => similarTicket.ticket.numero)).toContain(
+      10611,
+    );
   });
 
   it("finds nothing for an unrelated problem", () => {
@@ -106,7 +114,7 @@ describe("similarTickets", () => {
       { title: "vpn liga casa partir", description: "" },
       [looser, exact, newer],
     );
-    expect(hits.map((h) => h.ticket.id)).toEqual([
+    expect(hits.map((similarTicket) => similarTicket.ticket.id)).toEqual([
       newer.id,
       exact.id,
       looser.id,
@@ -114,8 +122,8 @@ describe("similarTickets", () => {
   });
 
   it("returns at most three by default and as many as asked", () => {
-    const many = Array.from({ length: 6 }, (_, i) =>
-      withTitle("vpn liga casa", `2026-01-0${i + 1}T00:00:00Z`),
+    const many = Array.from({ length: 6 }, (_, index) =>
+      withTitle("vpn liga casa", `2026-01-0${index + 1}T00:00:00Z`),
     );
     const draft = { title: "vpn liga casa", description: "" };
     expect(similarTickets(draft, many)).toHaveLength(3);
@@ -126,7 +134,7 @@ describe("similarTickets", () => {
     const draft = { title: "VPN não liga em casa", description: "" };
     expect(
       similarTickets(draft, helenas, { minScore: 0.9 }).map(
-        (h) => h.ticket.numero,
+        (similarTicket) => similarTicket.ticket.numero,
       ),
     ).toEqual([]);
   });

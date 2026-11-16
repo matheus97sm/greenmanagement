@@ -15,14 +15,14 @@ export function StatusModal({ ticket, userId, reopen, onClose }: Props) {
   const submit = async () => {
     if (!to || !reason.trim()) return;
     setSaving(true);
-    const ok = await changeStatus({
+    const succeeded = await changeStatus({
       ticketId: ticket.id,
       to,
       reason,
       userId,
     });
     setSaving(false);
-    if (ok) onClose();
+    if (succeeded) onClose();
   };
 
   return (
@@ -38,7 +38,10 @@ export function StatusModal({ ticket, userId, reopen, onClose }: Props) {
             allowDeselect={false}
             value={to}
             onChange={(value) => setTo(value as Status | null)}
-            data={options.map((s) => ({ value: s, label: STATUS_LABEL[s] }))}
+            data={options.map((status) => ({
+              value: status,
+              label: STATUS_LABEL[status],
+            }))}
           />
         )}
         <Textarea
@@ -49,7 +52,7 @@ export function StatusModal({ ticket, userId, reopen, onClose }: Props) {
           minRows={3}
           data-autofocus
           value={reason}
-          onChange={(e) => setReason(e.currentTarget.value)}
+          onChange={(event) => setReason(event.currentTarget.value)}
         />
         <Group justify="flex-end">
           <Button variant="default" onClick={onClose}>

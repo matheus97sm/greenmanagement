@@ -13,7 +13,9 @@ const bodyRows = () => screen.getAllByRole("row").slice(1);
 const rowOf = (nome: string) =>
   screen.getByText(nome).closest("tr") as HTMLElement;
 const firstNames = () =>
-  bodyRows().map((r) => within(r).getAllByRole("cell")[0].textContent ?? "");
+  bodyRows().map(
+    (resolve) => within(resolve).getAllByRole("cell")[0].textContent ?? "",
+  );
 
 async function choose(
   user: ReturnType<typeof userEvent.setup>,
@@ -109,7 +111,9 @@ describe("manager weekly dashboard", () => {
     await choose(user, "Ordenar por", "Nome");
     const names = firstNames();
     expect(names[0]).toContain("Beatriz Lima");
-    expect(names).toEqual([...names].sort((a, b) => a.localeCompare(b)));
+    expect(names).toEqual(
+      [...names].sort((first, second) => first.localeCompare(second)),
+    );
   });
 
   it("sorts by how many tickets were resolved", async () => {

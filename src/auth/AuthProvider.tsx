@@ -9,7 +9,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(getSessionUser);
 
   const signIn = useCallback((email: string, password: string) => {
-    const found = USERS.find((u) => u.email === email.trim().toLowerCase());
+    const found = USERS.find(
+      (currentUser) => currentUser.email === email.trim().toLowerCase(),
+    );
     if (!found || password !== DEMO_PASSWORD) return null;
     saveSession(found.id);
     setUser(found);

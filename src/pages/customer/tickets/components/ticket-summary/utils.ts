@@ -100,8 +100,11 @@ export function progressEvents({
   const nameOf = (id: string) => people[id]?.nome ?? TEAM;
   const takenAt = new Set(
     entries
-      .filter((h) => h.tipo === HistoryType.Assignment)
-      .map((h) => `${h.usuario_id}|${h.ocorrido_em}`),
+      .filter((historyEntry) => historyEntry.tipo === HistoryType.Assignment)
+      .map(
+        (historyEntry) =>
+          `${historyEntry.usuario_id}|${historyEntry.ocorrido_em}`,
+      ),
   );
 
   const events: ProgressEvent[] = [
@@ -114,5 +117,7 @@ export function progressEvents({
         : statusText(entry, meId, nameOf, takenAt);
     if (text) events.push({ key: entry.id, at: entry.ocorrido_em, text });
   }
-  return events.sort((a, b) => a.at.localeCompare(b.at));
+  return events.sort((firstProgressEvent, progressEvent) =>
+    firstProgressEvent.at.localeCompare(progressEvent.at),
+  );
 }

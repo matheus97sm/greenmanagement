@@ -22,10 +22,11 @@ import {
 
 vi.mock("@/server/simulator", () => ({ startSimulator: () => () => {} }));
 
-const personOf = (id: string) => getDb().usuarios.find((u) => u.id === id)!;
+const personOf = (id: string) =>
+  getDb().usuarios.find((person) => person.id === id)!;
 const visibleTo = (id: string) =>
   scopedSnapshot(getDb(), personOf(id))
-    .chamados.map((t) => t.id)
+    .chamados.map((ticket) => ticket.id)
     .sort();
 
 describe("switching users", () => {
@@ -64,12 +65,12 @@ describe("switching users", () => {
     expect(
       Object.values(state.messages)
         .flat()
-        .some((m) => m.interna),
+        .some((message) => message.interna),
     ).toBe(false);
     const customers = Object.values(state.people).filter(
-      (p) => p.perfil === Profile.Customer,
+      (person) => person.perfil === Profile.Customer,
     );
-    expect(customers.map((p) => p.id)).toEqual([HELENA_ID]);
+    expect(customers.map((person) => person.id)).toEqual([HELENA_ID]);
   });
 
   it("picks up what changed while the same user was signed out", async () => {
@@ -86,13 +87,13 @@ describe("switching users", () => {
 
     const marina = personOf(MARINA_ID);
     const queued = getDb().chamados.find(
-      (t) => !t.responsavel_id && t.grupo_id === marina.grupo_id,
+      (ticket) => !ticket.responsavel_id && ticket.grupo_id === marina.grupo_id,
     )!;
     const colleague = getDb().usuarios.find(
-      (u) =>
-        u.perfil === Profile.Consultant &&
-        u.id !== MARINA_ID &&
-        u.grupo_id === marina.grupo_id,
+      (person) =>
+        person.perfil === Profile.Consultant &&
+        person.id !== MARINA_ID &&
+        person.grupo_id === marina.grupo_id,
     )!;
     assumeTicket(queued.id, colleague.id);
 
@@ -126,7 +127,7 @@ describe("switching users", () => {
     expect(
       Object.values(state.messages)
         .flat()
-        .some((m) => m.interna),
+        .some((message) => message.interna),
     ).toBe(false);
 
     stopHelena();

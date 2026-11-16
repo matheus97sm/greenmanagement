@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { lastItems } from "./list";
 
-const items = Array.from({ length: 10 }, (_, i) => i + 1);
+const items = Array.from({ length: 10 }, (_, index) => index + 1);
 
 describe("lastItems", () => {
   it("returns everything when it fits", () => {

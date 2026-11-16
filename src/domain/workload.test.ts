@@ -69,10 +69,11 @@ describe("consultantsOf", () => {
       person("m", "g1", Profile.Manager),
       person("h", "g1", Profile.Customer),
     ];
-    expect(consultantsOf(people, ["g1", "g2"]).map((p) => p.id)).toEqual([
-      "a",
-      "b",
-    ]);
+    expect(
+      consultantsOf(people, ["g1", "g2"]).map(
+        (currentPerson) => currentPerson.id,
+      ),
+    ).toEqual(["a", "b"]);
   });
 });
 
@@ -130,7 +131,9 @@ describe("riskTickets", () => {
       prioridade: Priority.Critical,
     });
     expect(
-      riskTickets([calm, soonCritical, late], NOW).map((t) => t.id),
+      riskTickets([calm, soonCritical, late], NOW).map(
+        (currentTicket) => currentTicket.id,
+      ),
     ).toEqual(["late", "soon"]);
   });
 });
@@ -149,7 +152,9 @@ describe("unassignedTickets", () => {
       status: Status.Closed,
     });
     expect(
-      unassignedTickets([taken, closed, queued], NOW).map((t) => t.id),
+      unassignedTickets([taken, closed, queued], NOW).map(
+        (currentTicket) => currentTicket.id,
+      ),
     ).toEqual(["q"]);
   });
 });
@@ -161,7 +166,9 @@ describe("activeTicketsOf", () => {
     const other = ticket({ id: "other", responsavel_id: "b" });
     const done = ticket({ id: "done", status: Status.Resolved });
     expect(
-      activeTicketsOf([calm, other, done, late], "a", NOW).map((t) => t.id),
+      activeTicketsOf([calm, other, done, late], "a", NOW).map(
+        (currentTicket) => currentTicket.id,
+      ),
     ).toEqual(["late", "calm"]);
   });
 });
@@ -194,15 +201,23 @@ describe("workloadByConsultant", () => {
       ticket({ id: "r", responsavel_id: "a", status: Status.Resolved }),
       ...many(1, { responsavel_id: "b" }),
     ];
-    const [a, b, c] = workloadByConsultant(tickets, consultants, NOW);
-    expect(a).toMatchObject({
+    const [firstWorkload, secondWorkload, thirdWorkload] = workloadByConsultant(
+      tickets,
+      consultants,
+      NOW,
+    );
+    expect(firstWorkload).toMatchObject({
       active: 5,
       breached: 1,
       atRisk: 1,
       waitingCustomer: 1,
     });
-    expect(b).toMatchObject({ active: 1, breached: 0, atRisk: 0 });
-    expect(c).toMatchObject({ active: 0 });
+    expect(secondWorkload).toMatchObject({
+      active: 1,
+      breached: 0,
+      atRisk: 0,
+    });
+    expect(thirdWorkload).toMatchObject({ active: 0 });
   });
 
   it("compares each consultant with the average of their own group", () => {
@@ -221,9 +236,9 @@ describe("workloadByConsultant", () => {
       ...many(10, { responsavel_id: "y", grupo_id: "g2" }),
     ];
     const level = Object.fromEntries(
-      workloadByConsultant(tickets, team, NOW).map((w) => [
-        w.consultant.id,
-        w.level,
+      workloadByConsultant(tickets, team, NOW).map((workload) => [
+        workload.consultant.id,
+        workload.level,
       ]),
     );
     expect(level).toEqual({
@@ -238,9 +253,9 @@ describe("workloadByConsultant", () => {
   it("marks a consultant with nothing assigned as idle", () => {
     const tickets = many(3, { responsavel_id: "a" });
     const result = workloadByConsultant(tickets, consultants, NOW);
-    expect(result.find((w) => w.consultant.id === "b")?.level).toBe(
-      LoadLevel.Idle,
-    );
+    expect(
+      result.find((workload) => workload.consultant.id === "b")?.level,
+    ).toBe(LoadLevel.Idle);
   });
 });
 
@@ -263,9 +278,9 @@ describe("compareWorkload", () => {
       entry("overloaded", { level: LoadLevel.Overloaded, active: 20 }),
       entry("idle", { level: LoadLevel.Idle, active: 0 }),
     ];
-    expect([...list].sort(compareWorkload).map((w) => w.consultant.id)).toEqual(
-      ["idle", "overloaded", "breached", "risky", "calm"],
-    );
+    expect(
+      [...list].sort(compareWorkload).map((workload) => workload.consultant.id),
+    ).toEqual(["idle", "overloaded", "breached", "risky", "calm"]);
   });
 });
 

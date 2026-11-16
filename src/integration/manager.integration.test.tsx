@@ -11,7 +11,7 @@ import { LOAD_TIMEOUT, renderApp, resetWorld, signInAs } from "./helpers";
 vi.mock("@/server/simulator", () => ({ startSimulator: () => () => {} }));
 
 const personNamed = (nome: string) =>
-  getDb().usuarios.find((u) => u.nome === nome)!;
+  getDb().usuarios.find((person) => person.nome === nome)!;
 
 const consultantRow = (nome: string) =>
   screen.getByText(nome).closest("button") as HTMLElement;
@@ -61,7 +61,7 @@ describe("the manager's team view", () => {
       .slice(0, count);
     const moved = boxes.map((box) => {
       const numero = Number(box.getAttribute("aria-label")!.match(/\d+/)![0]);
-      return getDb().chamados.find((t) => t.numero === numero)!;
+      return getDb().chamados.find((ticket) => ticket.numero === numero)!;
     });
     for (const box of boxes) await user.click(box);
     await user.click(
@@ -90,11 +90,15 @@ describe("the manager's team view", () => {
     await waitFor(
       () =>
         expect(
-          moved.every((t) => inStore(t.id).responsavel_id === diego.id),
+          moved.every(
+            (ticket) => inStore(ticket.id).responsavel_id === diego.id,
+          ),
         ).toBe(true),
       { timeout: LOAD_TIMEOUT },
     );
-    expect(moved.every((t) => t.responsavel_id === diego.id)).toBe(true);
+    expect(moved.every((ticket) => ticket.responsavel_id === diego.id)).toBe(
+      true,
+    );
 
     await waitFor(() =>
       expect(
@@ -115,9 +119,9 @@ describe("the manager's team view", () => {
   it("gives the idle consultant work from the queue of the group", async () => {
     const { user } = await openBoard();
     const leandro = personNamed("Leandro Alves");
-    const apps = getDb().grupos.find((g) => g.id === leandro.grupo_id)!;
+    const apps = getDb().grupos.find((group) => group.id === leandro.grupo_id)!;
     const waiting = getDb().chamados.filter(
-      (t) => !t.responsavel_id && t.grupo_id === apps.id,
+      (ticket) => !ticket.responsavel_id && ticket.grupo_id === apps.id,
     ).length;
 
     await user.click(
@@ -132,7 +136,9 @@ describe("the manager's team view", () => {
     await waitFor(
       () =>
         expect(
-          moved.every((t) => inStore(t.id).responsavel_id === leandro.id),
+          moved.every(
+            (ticket) => inStore(ticket.id).responsavel_id === leandro.id,
+          ),
         ).toBe(true),
       { timeout: LOAD_TIMEOUT },
     );
@@ -158,12 +164,15 @@ describe("the manager's team view", () => {
       screen.getByRole("radio", { name: /Sem responsável \(35\)/ }),
     ).toBeChecked();
 
-    const infra = getDb().grupos.find((g) => g.nome === "Infraestrutura")!;
+    const infra = getDb().grupos.find(
+      (group) => group.nome === "Infraestrutura",
+    )!;
     const queued = getDb().chamados.find(
-      (t) => !t.responsavel_id && t.grupo_id === infra.id,
+      (ticket) => !ticket.responsavel_id && ticket.grupo_id === infra.id,
     )!;
     const picker = getDb().usuarios.find(
-      (u) => u.perfil === Profile.Consultant && u.grupo_id === infra.id,
+      (person) =>
+        person.perfil === Profile.Consultant && person.grupo_id === infra.id,
     )!;
     assumeTicket(queued.id, picker.id);
 
@@ -180,7 +189,8 @@ describe("the manager's team view", () => {
     await openBoard();
     const leandro = personNamed("Leandro Alves");
     const queued = getDb().chamados.find(
-      (t) => !t.responsavel_id && t.grupo_id === leandro.grupo_id,
+      (ticket) =>
+        !ticket.responsavel_id && ticket.grupo_id === leandro.grupo_id,
     )!;
     assumeTicket(queued.id, leandro.id);
 

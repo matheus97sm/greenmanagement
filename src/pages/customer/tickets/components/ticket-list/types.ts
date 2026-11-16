@@ -4,7 +4,7 @@ import type { Ticket } from "@/domain/types";
 import type { TicketsState } from "@/store/ticketsStore";
 
 export interface Props {
-  me: User;
+  currentUser: User;
   selectedId: string | undefined;
   onSelect: (ticketId: string) => void;
 }

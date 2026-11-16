@@ -5,7 +5,7 @@ import type { HistoryEntry, Person, Ticket } from "@/domain/types";
 
 export interface Props {
   ticketId: string;
-  me: User;
+  currentUser: User;
 }
 
 export interface Summary {

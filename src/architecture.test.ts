@@ -13,7 +13,7 @@ const IMPORT =
   /(?:^|\n)\s*(?:import|export)\s[^;]*?\sfrom\s+["']([^"']+)["']|(?:^|\n)\s*import\s+["']([^"']+)["']/g;
 
 function importsOf(text: string): string[] {
-  return [...text.matchAll(IMPORT)].map((m) => m[1] ?? m[2]);
+  return [...text.matchAll(IMPORT)].map((match) => match[1] ?? match[2]);
 }
 
 function resolve(from: string, spec: string): string {
@@ -43,7 +43,7 @@ const sources: Source[] = Object.entries(modules)
   }));
 
 const within = (prefix: string) =>
-  sources.filter((s) => s.path.startsWith(prefix));
+  sources.filter((source) => source.path.startsWith(prefix));
 
 function violations(
   files: Source[],
@@ -107,7 +107,9 @@ describe("the checker itself", () => {
     ]) {
       expect(within(layer).length).toBeGreaterThan(1);
     }
-    expect(sources.some((s) => s.path.endsWith(".test.ts"))).toBe(false);
+    expect(sources.some((source) => source.path.endsWith(".test.ts"))).toBe(
+      false,
+    );
   });
 
   it("spots a forbidden import when there is one", () => {
@@ -117,7 +119,7 @@ describe("the checker itself", () => {
       imports: ["react", "/src/store/y"],
     };
     expect(
-      violations([fake], (_, i) => !i.startsWith("/src/domain/")),
+      violations([fake], (_, index) => !index.startsWith("/src/domain/")),
     ).toHaveLength(2);
   });
 });
@@ -205,21 +207,21 @@ describe("pages and shared components (ADRs 0004 and 0006)", () => {
 describe("time (ADR 0012)", () => {
   it("reads the current time only through the simulated clock", () => {
     const offenders = sources
-      .filter((s) => s.path !== "/src/lib/clock.ts")
-      .filter((s) => /\bDate\.now\(\)|new Date\(\)/.test(s.text))
-      .map((s) => s.path);
+      .filter((source) => source.path !== "/src/lib/clock.ts")
+      .filter((source) => /\bDate\.now\(\)|new Date\(\)/.test(source.text))
+      .map((source) => source.path);
     expect(offenders).toEqual([]);
   });
 });
 
 describe("code style (ADR 0016)", () => {
   it("has no comments in production code", () => {
-    const offenders = sources.flatMap((s) =>
-      s.text
+    const offenders = sources.flatMap((source) =>
+      source.text
         .split("\n")
         .map((line, index) => ({ line: line.trim(), at: index + 1 }))
         .filter(({ line }) => /^(\/\/|\/\*|\*\/|\* )/.test(line))
-        .map(({ at }) => `${s.path}:${at}`),
+        .map(({ at }) => `${source.path}:${at}`),
     );
     expect(offenders).toEqual([]);
   });
@@ -273,13 +275,13 @@ describe("components (ADRs 0005 and 0006)", () => {
   it("keeps type declarations in types.ts, not in the component files", () => {
     const offenders = sources
       .filter(
-        (s) =>
-          s.path.endsWith(".tsx") &&
-          (s.path.startsWith("/src/components/") ||
-            s.path.startsWith("/src/pages/")),
+        (source) =>
+          source.path.endsWith(".tsx") &&
+          (source.path.startsWith("/src/components/") ||
+            source.path.startsWith("/src/pages/")),
       )
-      .filter((s) => /^(export )?(interface|type) \w/m.test(s.text))
-      .map((s) => s.path);
+      .filter((source) => /^(export )?(interface|type) \w/m.test(source.text))
+      .map((source) => source.path);
     expect(offenders).toEqual([]);
   });
 });

@@ -7,7 +7,7 @@ import { renderWithProviders } from "@/test-utils";
 import { SimilarTickets } from ".";
 
 const hit = (numero: number): SimilarTicket => ({
-  ticket: rawData.chamados.find((t) => t.numero === numero)!,
+  ticket: rawData.chamados.find((ticket) => ticket.numero === numero)!,
   score: 1,
 });
 

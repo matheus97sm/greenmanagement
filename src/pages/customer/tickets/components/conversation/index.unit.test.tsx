@@ -16,16 +16,16 @@ vi.mock("@/store/actions", () => ({
   changeStatus: vi.fn(),
 }));
 
-const me = USERS.find((u) => u.id === HELENA_ID)!;
+const currentUser = USERS.find((user) => user.id === HELENA_ID)!;
 const idOf = (numero: number) =>
-  rawData.chamados.find((t) => t.numero === numero)!.id;
+  rawData.chamados.find((ticket) => ticket.numero === numero)!.id;
 
 function Harness({ ticketId }: { ticketId: string }) {
   const [draft, setDraft] = useState("");
   return (
     <Conversation
       ticketId={ticketId}
-      me={me}
+      currentUser={currentUser}
       draft={draft}
       onDraftChange={setDraft}
     />
@@ -138,7 +138,7 @@ describe("Conversation", () => {
     renderWithProviders(
       <Conversation
         ticketId={idOf(10613)}
-        me={me}
+        currentUser={currentUser}
         draft="Rascunho"
         onDraftChange={() => {}}
       />,

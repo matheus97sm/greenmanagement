@@ -7,7 +7,7 @@ import { EventType, Priority, Status } from "@/domain/enums";
 async function run(call: () => Promise<DomainEvent[]>): Promise<boolean> {
   try {
     const events = await call();
-    events.forEach((e) => ticketsStore.applyEvent(e));
+    events.forEach((domainEvent) => ticketsStore.applyEvent(domainEvent));
     return true;
   } catch (error) {
     notifications.show({
@@ -56,7 +56,9 @@ export async function reassignTickets(input: {
   const errors: string[] = [];
   for (const result of results) {
     if (result.status === "fulfilled") {
-      result.value.forEach((e) => ticketsStore.applyEvent(e));
+      result.value.forEach((domainEvent) =>
+        ticketsStore.applyEvent(domainEvent),
+      );
       done += 1;
     } else {
       errors.push(
@@ -94,7 +96,7 @@ export async function createTicket(input: {
 }): Promise<string | null> {
   try {
     const events = await api.openTicket(input);
-    events.forEach((e) => ticketsStore.applyEvent(e));
+    events.forEach((domainEvent) => ticketsStore.applyEvent(domainEvent));
     for (const event of events) {
       if (event.tipo === EventType.TicketOpened) return event.payload.id;
     }

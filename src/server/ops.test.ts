@@ -11,8 +11,10 @@ import {
 import { HELENA_ID, MARINA_ID, rawData, RICARDO_ID } from "@/test-data";
 import { Status, Priority, Profile, EventType } from "@/domain/enums";
 
-const person = (id: string) => getDb().usuarios.find((u) => u.id === id)!;
-const ticketOf = (id: string) => getDb().chamados.find((t) => t.id === id)!;
+const person = (id: string) =>
+  getDb().usuarios.find((currentPerson) => currentPerson.id === id)!;
+const ticketOf = (id: string) =>
+  getDb().chamados.find((ticket) => ticket.id === id)!;
 
 const find = (predicate: Parameters<typeof rawData.chamados.find>[0]) =>
   getDb().chamados.find(predicate)!;
@@ -23,15 +25,19 @@ beforeEach(() => {
 
 describe("the real data set", () => {
   it("matches the personas of the brief", () => {
-    const db = getDb();
-    const marina = db.chamados.filter((t) => t.responsavel_id === MARINA_ID);
+    const database = getDb();
+    const marina = database.chamados.filter(
+      (ticket) => ticket.responsavel_id === MARINA_ID,
+    );
     expect(marina).toHaveLength(42);
-    const queue = db.chamados.filter(
-      (t) => !t.responsavel_id && t.grupo_id === person(MARINA_ID).grupo_id,
+    const queue = database.chamados.filter(
+      (ticket) =>
+        !ticket.responsavel_id &&
+        ticket.grupo_id === person(MARINA_ID).grupo_id,
     );
     expect(queue).toHaveLength(35);
     expect(
-      db.chamados.filter((t) => t.solicitante_id === HELENA_ID),
+      database.chamados.filter((ticket) => ticket.solicitante_id === HELENA_ID),
     ).toHaveLength(4);
   });
 });
@@ -39,10 +45,12 @@ describe("the real data set", () => {
 describe("assumeTicket", () => {
   it("takes a ticket from the queue of the consultant's own group", () => {
     const queued = find(
-      (t) => !t.responsavel_id && t.grupo_id === person(MARINA_ID).grupo_id,
+      (ticket) =>
+        !ticket.responsavel_id &&
+        ticket.grupo_id === person(MARINA_ID).grupo_id,
     );
     const events = assumeTicket(queued.id, MARINA_ID);
-    expect(events.map((e) => e.tipo)).toEqual([
+    expect(events.map((domainEvent) => domainEvent.tipo)).toEqual([
       EventType.TicketAssigned,
       EventType.StatusChanged,
     ]);
@@ -52,13 +60,15 @@ describe("assumeTicket", () => {
 
   it("refuses a ticket someone else already took", () => {
     const queued = find(
-      (t) => !t.responsavel_id && t.grupo_id === person(MARINA_ID).grupo_id,
+      (ticket) =>
+        !ticket.responsavel_id &&
+        ticket.grupo_id === person(MARINA_ID).grupo_id,
     );
     const colleague = getDb().usuarios.find(
-      (u) =>
-        u.perfil === Profile.Consultant &&
-        u.id !== MARINA_ID &&
-        u.grupo_id === queued.grupo_id,
+      (currentPerson) =>
+        currentPerson.perfil === Profile.Consultant &&
+        currentPerson.id !== MARINA_ID &&
+        currentPerson.grupo_id === queued.grupo_id,
     )!;
     assumeTicket(queued.id, colleague.id);
     expect(() => assumeTicket(queued.id, MARINA_ID)).toThrow(ApiError);
@@ -67,7 +77,9 @@ describe("assumeTicket", () => {
 
   it("refuses a ticket from another group", () => {
     const other = find(
-      (t) => !t.responsavel_id && t.grupo_id !== person(MARINA_ID).grupo_id,
+      (ticket) =>
+        !ticket.responsavel_id &&
+        ticket.grupo_id !== person(MARINA_ID).grupo_id,
     );
     expect(() => assumeTicket(other.id, MARINA_ID)).toThrow(ApiError);
   });
@@ -76,15 +88,17 @@ describe("assumeTicket", () => {
 describe("reassignTicket", () => {
   const colleagueOf = (groupId: string, except: string | null) =>
     getDb().usuarios.find(
-      (u) =>
-        u.perfil === Profile.Consultant &&
-        u.grupo_id === groupId &&
-        u.id !== except,
+      (currentPerson) =>
+        currentPerson.perfil === Profile.Consultant &&
+        currentPerson.grupo_id === groupId &&
+        currentPerson.id !== except,
     )!;
 
   const marinas = () =>
     find(
-      (t) => t.responsavel_id === MARINA_ID && t.status === Status.InProgress,
+      (ticket) =>
+        ticket.responsavel_id === MARINA_ID &&
+        ticket.status === Status.InProgress,
     );
 
   it("moves a ticket to another consultant of the same group", () => {
@@ -95,7 +109,9 @@ describe("reassignTicket", () => {
       consultantId: target.id,
       managerId: RICARDO_ID,
     });
-    expect(events.map((e) => e.tipo)).toEqual([EventType.TicketAssigned]);
+    expect(events.map((domainEvent) => domainEvent.tipo)).toEqual([
+      EventType.TicketAssigned,
+    ]);
     expect(ticket.responsavel_id).toBe(target.id);
     expect(ticket.status).toBe(Status.InProgress);
     expect(getDb().historico.at(-1)).toMatchObject({
@@ -105,7 +121,7 @@ describe("reassignTicket", () => {
   });
 
   it("hands out a ticket nobody has taken, leaving its status alone", () => {
-    const queued = find((t) => !t.responsavel_id);
+    const queued = find((ticket) => !ticket.responsavel_id);
     const target = colleagueOf(queued.grupo_id, null);
     const status = queued.status;
     reassignTicket({
@@ -146,7 +162,9 @@ describe("reassignTicket", () => {
   it("refuses a consultant from another group", () => {
     const ticket = marinas();
     const outsider = getDb().usuarios.find(
-      (u) => u.perfil === Profile.Consultant && u.grupo_id !== ticket.grupo_id,
+      (currentPerson) =>
+        currentPerson.perfil === Profile.Consultant &&
+        currentPerson.grupo_id !== ticket.grupo_id,
     )!;
     expect(() =>
       reassignTicket({
@@ -169,7 +187,9 @@ describe("reassignTicket", () => {
   });
 
   it("refuses tickets that are resolved or closed", () => {
-    const done = find((t) => t.status === Status.Closed && !!t.responsavel_id);
+    const done = find(
+      (ticket) => ticket.status === Status.Closed && !!ticket.responsavel_id,
+    );
     const target = colleagueOf(done.grupo_id, done.responsavel_id);
     expect(() =>
       reassignTicket({
@@ -184,7 +204,9 @@ describe("reassignTicket", () => {
 describe("changeStatus", () => {
   const marinas = () =>
     find(
-      (t) => t.responsavel_id === MARINA_ID && t.status === Status.InProgress,
+      (ticket) =>
+        ticket.responsavel_id === MARINA_ID &&
+        ticket.status === Status.InProgress,
     );
 
   it("requires a reason and an allowed transition", () => {
@@ -201,7 +223,9 @@ describe("changeStatus", () => {
   it("lets only the assignee (or a manager) change the status", () => {
     const ticket = marinas();
     const colleague = getDb().usuarios.find(
-      (u) => u.perfil === Profile.Consultant && u.id !== MARINA_ID,
+      (currentPerson) =>
+        currentPerson.perfil === Profile.Consultant &&
+        currentPerson.id !== MARINA_ID,
     )!;
     const attempt = (userId: string) =>
       changeStatus({
@@ -228,7 +252,9 @@ describe("changeStatus", () => {
 describe("addMessage", () => {
   const marinas = () =>
     find(
-      (t) => t.responsavel_id === MARINA_ID && t.status === Status.InProgress,
+      (ticket) =>
+        ticket.responsavel_id === MARINA_ID &&
+        ticket.status === Status.InProgress,
     );
 
   it("refuses an empty message", () => {
@@ -253,7 +279,9 @@ describe("addMessage", () => {
       }),
     ).toThrow(ApiError);
     const stranger = getDb().usuarios.find(
-      (u) => u.perfil === Profile.Customer && u.id !== ticket.solicitante_id,
+      (currentPerson) =>
+        currentPerson.perfil === Profile.Customer &&
+        currentPerson.id !== ticket.solicitante_id,
     )!;
     expect(() =>
       addMessage({
@@ -268,10 +296,10 @@ describe("addMessage", () => {
   it("lets a colleague leave an internal note but not answer the customer", () => {
     const ticket = marinas();
     const colleague = getDb().usuarios.find(
-      (u) =>
-        u.perfil === Profile.Consultant &&
-        u.id !== MARINA_ID &&
-        u.grupo_id === ticket.grupo_id,
+      (currentPerson) =>
+        currentPerson.perfil === Profile.Consultant &&
+        currentPerson.id !== MARINA_ID &&
+        currentPerson.grupo_id === ticket.grupo_id,
     )!;
     const post = (internal: boolean) =>
       addMessage({
@@ -286,7 +314,9 @@ describe("addMessage", () => {
 
   it("registers the first response on the first public staff reply", () => {
     const ticket = find(
-      (t) => t.status === Status.InProgress && t.primeira_resposta_em === null,
+      (currentTicket) =>
+        currentTicket.status === Status.InProgress &&
+        currentTicket.primeira_resposta_em === null,
     );
     addMessage({
       ticketId: ticket.id,
@@ -305,7 +335,9 @@ describe("addMessage", () => {
   });
 
   it("resumes a ticket that was waiting when the customer answers", () => {
-    const ticket = find((t) => t.status === Status.WaitingCustomer);
+    const ticket = find(
+      (currentTicket) => currentTicket.status === Status.WaitingCustomer,
+    );
     const deadlineBefore = ticket.prazo_resolucao;
     const events = addMessage({
       ticketId: ticket.id,
@@ -313,7 +345,7 @@ describe("addMessage", () => {
       text: "Segue o que pediram.",
       internal: false,
     });
-    expect(events.map((e) => e.tipo)).toEqual([
+    expect(events.map((domainEvent) => domainEvent.tipo)).toEqual([
       EventType.MessageAdded,
       EventType.StatusChanged,
     ]);
@@ -364,10 +396,12 @@ describe("openTicket", () => {
 describe("reopening and the SLA", () => {
   const HOUR = 3_600_000;
   const hoursFor = (priority: string) =>
-    getDb().sla.find((s) => s.prioridade === priority)!;
+    getDb().sla.find((slaPolicy) => slaPolicy.prioridade === priority)!;
 
   it("renews the SLA when a closed ticket is reopened", () => {
-    const ticket = find((t) => t.status === Status.Closed);
+    const ticket = find(
+      (currentTicket) => currentTicket.status === Status.Closed,
+    );
     const policy = hoursFor(ticket.prioridade);
     changeStatus({
       ticketId: ticket.id,
@@ -386,7 +420,9 @@ describe("reopening and the SLA", () => {
   });
 
   it("keeps the SLA when a resolved ticket is reopened", () => {
-    const ticket = find((t) => t.status === Status.Resolved);
+    const ticket = find(
+      (currentTicket) => currentTicket.status === Status.Resolved,
+    );
     const before = {
       resolution: ticket.prazo_resolucao,
       firstResponse: ticket.prazo_primeira_resposta,
@@ -405,15 +441,17 @@ describe("reopening and the SLA", () => {
   });
 
   it("renews, when loading, the ticket that was reopened in the data", () => {
-    const original = rawData.chamados.find((t) => t.numero === 10611)!;
-    const loaded = find((t) => t.numero === 10611);
+    const original = rawData.chamados.find(
+      (ticket) => ticket.numero === 10611,
+    )!;
+    const loaded = find((ticket) => ticket.numero === 10611);
     const reopenedAt = Date.parse(
       getDb()
         .historico.filter(
-          (h) =>
-            h.chamado_id === loaded.id &&
-            h.de === Status.Closed &&
-            h.para === Status.InProgress,
+          (historyEntry) =>
+            historyEntry.chamado_id === loaded.id &&
+            historyEntry.de === Status.Closed &&
+            historyEntry.para === Status.InProgress,
         )
         .at(-1)!.ocorrido_em,
     );
@@ -427,9 +465,13 @@ describe("reopening and the SLA", () => {
   });
 
   it("does not change tickets that were never reopened from closed", () => {
-    const untouched = rawData.chamados.filter((t) => t.numero !== 10611);
+    const untouched = rawData.chamados.filter(
+      (ticket) => ticket.numero !== 10611,
+    );
     for (const original of untouched) {
-      const loaded = getDb().chamados.find((t) => t.id === original.id)!;
+      const loaded = getDb().chamados.find(
+        (ticket) => ticket.id === original.id,
+      )!;
       expect(loaded.prazo_resolucao).toBe(original.prazo_resolucao);
       expect(loaded.prazo_primeira_resposta).toBe(
         original.prazo_primeira_resposta,

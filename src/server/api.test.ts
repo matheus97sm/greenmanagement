@@ -13,25 +13,27 @@ import {
 } from "./api";
 import { getDb, initDb } from "./db";
 
-async function settle<T>(promise: Promise<T>): Promise<T> {
+async function settle<Item>(promise: Promise<Item>): Promise<Item> {
   await vi.advanceTimersByTimeAsync(1000);
   return promise;
 }
 
 const marinasGroup = () =>
-  getDb().usuarios.find((u) => u.id === MARINA_ID)!.grupo_id;
+  getDb().usuarios.find((person) => person.id === MARINA_ID)!.grupo_id;
 
 const queued = () =>
   getDb().chamados.find(
-    (t) =>
-      !t.responsavel_id &&
-      t.status === Status.Open &&
-      t.grupo_id === marinasGroup(),
+    (ticket) =>
+      !ticket.responsavel_id &&
+      ticket.status === Status.Open &&
+      ticket.grupo_id === marinasGroup(),
   )!;
 
 const marinasOpenTicket = () =>
   rawData.chamados.find(
-    (t) => t.responsavel_id === MARINA_ID && t.status === Status.InProgress,
+    (ticket) =>
+      ticket.responsavel_id === MARINA_ID &&
+      ticket.status === Status.InProgress,
   )!;
 
 describe("the simulated API", () => {
@@ -60,7 +62,9 @@ describe("the simulated API", () => {
       expect(snapshot.agora).toBe(rawData.meta.agora);
       expect(snapshot.chamados).toHaveLength(4);
       expect(
-        snapshot.chamados.every((t) => t.solicitante_id === HELENA_ID),
+        snapshot.chamados.every(
+          (ticket) => ticket.solicitante_id === HELENA_ID,
+        ),
       ).toBe(true);
     });
 
@@ -111,18 +115,19 @@ describe("the simulated API", () => {
           userId: MARINA_ID,
         }),
       );
-      expect(getDb().chamados.find((t) => t.id === ticket.id)?.status).toBe(
-        Status.Resolved,
-      );
+      expect(
+        getDb().chamados.find((currentTicket) => currentTicket.id === ticket.id)
+          ?.status,
+      ).toBe(Status.Resolved);
     });
 
     it("reassignTicket hands a ticket to another consultant", async () => {
       const ticket = marinasOpenTicket();
       const other = rawData.usuarios.find(
-        (u) =>
-          u.id !== MARINA_ID &&
-          u.grupo_id === ticket.grupo_id &&
-          u.perfil === Profile.Consultant,
+        (person) =>
+          person.id !== MARINA_ID &&
+          person.grupo_id === ticket.grupo_id &&
+          person.perfil === Profile.Consultant,
       )!;
       await settle(
         reassignTicket({
@@ -132,7 +137,8 @@ describe("the simulated API", () => {
         }),
       );
       expect(
-        getDb().chamados.find((t) => t.id === ticket.id)?.responsavel_id,
+        getDb().chamados.find((currentTicket) => currentTicket.id === ticket.id)
+          ?.responsavel_id,
       ).toBe(other.id);
     });
 
@@ -154,7 +160,9 @@ describe("the simulated API", () => {
 
     it("reopenTicket brings a finished ticket of the customer back", async () => {
       const ticket = getDb().chamados.find(
-        (t) => t.solicitante_id === HELENA_ID && t.status === Status.Closed,
+        (currentTicket) =>
+          currentTicket.solicitante_id === HELENA_ID &&
+          currentTicket.status === Status.Closed,
       )!;
       await settle(
         reopenTicket({

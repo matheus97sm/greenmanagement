@@ -82,9 +82,9 @@ function urgencyTier(ticket: Ticket, now: number): 0 | 1 | 2 {
 }
 
 export function compareBySla(now: number) {
-  return (a: Ticket, b: Ticket): number =>
-    clockState(a) - clockState(b) ||
-    urgencyTier(a, now) - urgencyTier(b, now) ||
-    PRIORITY_RANK[a.prioridade] - PRIORITY_RANK[b.prioridade] ||
-    pendingDeadline(a) - pendingDeadline(b);
+  return (firstTicket: Ticket, ticket: Ticket): number =>
+    clockState(firstTicket) - clockState(ticket) ||
+    urgencyTier(firstTicket, now) - urgencyTier(ticket, now) ||
+    PRIORITY_RANK[firstTicket.prioridade] - PRIORITY_RANK[ticket.prioridade] ||
+    pendingDeadline(firstTicket) - pendingDeadline(ticket);
 }

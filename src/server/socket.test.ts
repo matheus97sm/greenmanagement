@@ -94,7 +94,7 @@ describe("socket", () => {
   it("lets the filter of each subscriber decide what it receives", () => {
     const seen = vi.fn();
     const hidden = vi.fn();
-    listen(seen, (e) => e);
+    listen(seen, (domainEvent) => domainEvent);
     listen(hidden, () => null);
     publish(event("a"));
     vi.advanceTimersByTime(2000);
@@ -104,7 +104,7 @@ describe("socket", () => {
 
   it("delivers what the filter returns, which may be another version of the event", () => {
     const handler = vi.fn();
-    listen(handler, (e) => ({ ...e, id: "changed" }));
+    listen(handler, (domainEvent) => ({ ...domainEvent, id: "changed" }));
     publish(event("a"));
     vi.advanceTimersByTime(350);
     expect(handler.mock.calls[0][0].id).toBe("changed");

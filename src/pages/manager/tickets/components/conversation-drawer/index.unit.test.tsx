@@ -14,9 +14,9 @@ vi.mock("@/store/actions", () => ({
   changeStatus: vi.fn(),
 }));
 
-const me = USERS.find((u) => u.id === RICARDO_ID)!;
+const currentUser = USERS.find((user) => user.id === RICARDO_ID)!;
 const byNumber = (numero: number) =>
-  rawData.chamados.find((t) => t.numero === numero)!;
+  rawData.chamados.find((ticket) => ticket.numero === numero)!;
 
 function renderDrawer(ticketId: string | undefined) {
   const onClose = vi.fn();
@@ -24,7 +24,7 @@ function renderDrawer(ticketId: string | undefined) {
   const view = renderWithProviders(
     <ConversationDrawer
       ticketId={ticketId}
-      me={me}
+      currentUser={currentUser}
       onClose={onClose}
       onReassign={onReassign}
     />,
@@ -59,7 +59,9 @@ describe("ConversationDrawer", () => {
   });
 
   it("offers no reassignment for a finished ticket", () => {
-    const done = rawData.chamados.find((t) => t.status === Status.Closed)!;
+    const done = rawData.chamados.find(
+      (ticket) => ticket.status === Status.Closed,
+    )!;
     renderDrawer(done.id);
     expect(
       screen.queryByRole("button", { name: "Redistribuir" }),
@@ -77,8 +79,10 @@ describe("ConversationDrawer", () => {
   it("keeps a draft when switching to another ticket and back", async () => {
     const first = byNumber(10503);
     const second = rawData.chamados.find(
-      (t) =>
-        t.responsavel_id && t.id !== first.id && t.status === Status.InProgress,
+      (ticket) =>
+        ticket.responsavel_id &&
+        ticket.id !== first.id &&
+        ticket.status === Status.InProgress,
     )!;
 
     function Harness() {
@@ -93,7 +97,7 @@ describe("ConversationDrawer", () => {
           </button>
           <ConversationDrawer
             ticketId={id}
-            me={me}
+            currentUser={currentUser}
             onClose={vi.fn()}
             onReassign={vi.fn()}
           />

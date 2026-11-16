@@ -24,7 +24,8 @@ describe("the activity simulator", () => {
     vi.restoreAllMocks();
   });
 
-  const marina = () => getDb().usuarios.find((u) => u.id === MARINA_ID)!;
+  const marina = () =>
+    getDb().usuarios.find((person) => person.id === MARINA_ID)!;
 
   it("does nothing until the first interval has passed", () => {
     const stop = startSimulator(marina());
@@ -36,7 +37,7 @@ describe("the activity simulator", () => {
   it("brings in something new every few seconds", async () => {
     const stop = startSimulator(marina());
     await vi.advanceTimersByTimeAsync(8000);
-    const ids = new Set(received.map((e) => e.id));
+    const ids = new Set(received.map((domainEvent) => domainEvent.id));
     expect(ids.size).toBeGreaterThanOrEqual(2);
     stop();
   });
@@ -44,12 +45,16 @@ describe("the activity simulator", () => {
   it("writes customer messages in tickets that exist", async () => {
     const stop = startSimulator(marina());
     await vi.advanceTimersByTimeAsync(4000);
-    const messages = received.filter((e) => e.tipo === EventType.MessageAdded);
+    const messages = received.filter(
+      (domainEvent) => domainEvent.tipo === EventType.MessageAdded,
+    );
     expect(messages.length).toBeGreaterThan(0);
     for (const message of messages) {
       if (message.tipo !== EventType.MessageAdded) continue;
       expect(
-        getDb().chamados.some((t) => t.id === message.payload.chamado_id),
+        getDb().chamados.some(
+          (ticket) => ticket.id === message.payload.chamado_id,
+        ),
       ).toBe(true);
     }
     stop();

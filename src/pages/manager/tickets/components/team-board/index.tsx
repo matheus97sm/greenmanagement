@@ -74,7 +74,10 @@ function TeamBoardView({
   onSelect,
   onShowUnassigned,
 }: Props) {
-  const maxActive = Math.max(0, ...workloads.map((w) => w.active));
+  const maxActive = Math.max(
+    0,
+    ...workloads.map((workload) => workload.active),
+  );
   const sections = sectionsOf(groups, workloads);
 
   return (

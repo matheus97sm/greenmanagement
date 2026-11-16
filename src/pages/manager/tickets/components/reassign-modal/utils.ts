@@ -3,7 +3,7 @@ import type { Workload } from "@/domain/workload";
 import type { TargetOption } from "./types";
 
 export function groupsOfSelection(tickets: Ticket[]): string[] {
-  return [...new Set(tickets.map((t) => t.grupo_id))];
+  return [...new Set(tickets.map((ticket) => ticket.grupo_id))];
 }
 
 export function targetOptions(
@@ -11,14 +11,14 @@ export function targetOptions(
   groupId: string,
 ): TargetOption[] {
   return workloads
-    .filter((w) => w.consultant.grupo_id === groupId)
+    .filter((workload) => workload.consultant.grupo_id === groupId)
     .sort(
-      (a, b) =>
-        a.active - b.active ||
-        a.consultant.nome.localeCompare(b.consultant.nome),
+      (firstWorkload, workload) =>
+        firstWorkload.active - workload.active ||
+        firstWorkload.consultant.nome.localeCompare(workload.consultant.nome),
     )
-    .map((w) => ({
-      value: w.consultant.id,
-      label: `${w.consultant.nome} · ${w.active} ${w.active === 1 ? "chamado" : "chamados"}`,
+    .map((workload) => ({
+      value: workload.consultant.id,
+      label: `${workload.consultant.nome} · ${workload.active} ${workload.active === 1 ? "chamado" : "chamados"}`,
     }));
 }

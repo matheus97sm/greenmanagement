@@ -38,11 +38,15 @@ describe("sectionsOf", () => {
       [group("g2", "Redes"), group("g1", "Aplicações")],
       [workload("a", "g1"), workload("b", "g2"), workload("c", "g1")],
     );
-    expect(sections.map((s) => s.group.nome)).toEqual(["Aplicações", "Redes"]);
-    expect(sections[0].workloads.map((w) => w.consultant.id)).toEqual([
-      "a",
-      "c",
+    expect(sections.map((section) => section.group.nome)).toEqual([
+      "Aplicações",
+      "Redes",
     ]);
+    expect(
+      sections[0].workloads.map(
+        (currentWorkload) => currentWorkload.consultant.id,
+      ),
+    ).toEqual(["a", "c"]);
   });
 
   it("puts the people who need attention first inside a group", () => {
@@ -54,11 +58,9 @@ describe("sectionsOf", () => {
         workload("late", "g1", { breached: 2 }),
       ],
     );
-    expect(section.workloads.map((w) => w.consultant.id)).toEqual([
-      "idle",
-      "late",
-      "calm",
-    ]);
+    expect(
+      section.workloads.map((currentWorkload) => currentWorkload.consultant.id),
+    ).toEqual(["idle", "late", "calm"]);
   });
 
   it("leaves out groups with nobody in them", () => {

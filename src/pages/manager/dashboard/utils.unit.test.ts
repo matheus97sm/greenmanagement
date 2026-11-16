@@ -55,14 +55,15 @@ function row(
   };
 }
 
-const names = (rows: Row[]) => rows.map((r) => r.consultant.nome);
+const names = (rows: Row[]) =>
+  rows.map((currentRow) => currentRow.consultant.nome);
 
 describe("weekOptions", () => {
   const options = weekOptions(NOW);
 
   it("offers the current week and the seven before it", () => {
     expect(options).toHaveLength(8);
-    expect(options.map((o) => o.value)).toEqual([
+    expect(options.map((weekOption) => weekOption.value)).toEqual([
       "0",
       "1",
       "2",
@@ -174,11 +175,11 @@ describe("buildRows", () => {
     (messages[message.chamado_id] ??= []).push(message);
   }
   const groups: Record<string, Group> = Object.fromEntries(
-    rawData.grupos.map((g) => [g.id, g]),
+    rawData.grupos.map((group) => [group.id, group]),
   );
   const consultants = consultantsOf(
     rawData.usuarios,
-    rawData.grupos.map((g) => g.id),
+    rawData.grupos.map((group) => group.id),
   );
   const now = Date.parse(rawData.meta.agora);
 
@@ -193,8 +194,8 @@ describe("buildRows", () => {
   });
 
   it("makes one row per consultant, in the same order", () => {
-    expect(rows.map((r) => r.consultant.id)).toEqual(
-      consultants.map((c) => c.id),
+    expect(rows.map((currentRow) => currentRow.consultant.id)).toEqual(
+      consultants.map((person) => person.id),
     );
   });
 
@@ -206,14 +207,20 @@ describe("buildRows", () => {
   });
 
   it("names the group of each consultant", () => {
-    const leandro = rows.find((r) => r.consultant.nome === "Leandro Alves")!;
-    const marina = rows.find((r) => r.consultant.nome === "Marina Almeida")!;
+    const leandro = rows.find(
+      (currentRow) => currentRow.consultant.nome === "Leandro Alves",
+    )!;
+    const marina = rows.find(
+      (currentRow) => currentRow.consultant.nome === "Marina Almeida",
+    )!;
     expect(leandro.groupName).toBe("Aplicações");
     expect(marina.groupName).toBe("Infraestrutura");
   });
 
   it("carries the week of the range it was given", () => {
-    const leandro = rows.find((r) => r.consultant.nome === "Leandro Alves")!;
+    const leandro = rows.find(
+      (currentRow) => currentRow.consultant.nome === "Leandro Alves",
+    )!;
     expect(leandro.week.idleMs).toBe(leandro.week.businessMs);
     expect(leandro.workload.active).toBe(0);
   });

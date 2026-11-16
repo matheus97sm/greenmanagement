@@ -23,7 +23,7 @@ import { NewTicketModal } from "./components/new-ticket-modal";
 import { TicketList } from "./components/ticket-list";
 
 export function TicketsPage() {
-  const me = useCurrentUser();
+  const currentUser = useCurrentUser();
   const state = useTickets();
   const navigate = useNavigate();
   const { id } = useParams();
@@ -49,7 +49,7 @@ export function TicketsPage() {
   }
 
   const open = (ticketId: string) =>
-    navigate(`${homePath(me.role)}/${ticketId}`);
+    navigate(`${homePath(currentUser.role)}/${ticketId}`);
   const hasTickets = Object.keys(state.tickets).length > 0;
 
   return (
@@ -70,14 +70,18 @@ export function TicketsPage() {
 
       <Group align="stretch" wrap="nowrap" gap="md" flex={1} mih={0}>
         <Paper withBorder w={420} style={{ flexShrink: 0, minHeight: 0 }}>
-          <TicketList me={me} selectedId={id} onSelect={open} />
+          <TicketList
+            currentUser={currentUser}
+            selectedId={id}
+            onSelect={open}
+          />
         </Paper>
         <Paper withBorder flex={1} style={{ minWidth: 0, minHeight: 0 }}>
           {id ? (
             <Conversation
               key={id}
               ticketId={id}
-              me={me}
+              currentUser={currentUser}
               draft={drafts[id] ?? ""}
               onDraftChange={(value) =>
                 setDrafts((current) => ({ ...current, [id]: value }))
@@ -99,7 +103,7 @@ export function TicketsPage() {
 
       {creating && (
         <NewTicketModal
-          me={me}
+          currentUser={currentUser}
           onClose={() => setCreating(false)}
           onOpenTicket={(ticketId) => {
             setCreating(false);

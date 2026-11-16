@@ -20,19 +20,19 @@ export function Composer({
   const send = async () => {
     if (!draft.trim() || sending) return;
     setSending(true);
-    const ok = await sendMessage({
+    const succeeded = await sendMessage({
       ticketId,
       authorId: userId,
       text: draft,
       internal,
     });
     setSending(false);
-    if (ok) onDraftChange("");
+    if (succeeded) onDraftChange("");
   };
 
-  const onKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
-      e.preventDefault();
+  const onKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) {
+      event.preventDefault();
       void send();
     }
   };
@@ -54,7 +54,7 @@ export function Composer({
           internal ? "Nota interna: o cliente não vai ver" : placeholder
         }
         value={draft}
-        onChange={(e) => onDraftChange(e.currentTarget.value)}
+        onChange={(event) => onDraftChange(event.currentTarget.value)}
         onKeyDown={onKeyDown}
       />
       <Group justify={allowNotes ? "space-between" : "flex-end"}>
@@ -62,7 +62,7 @@ export function Composer({
           <Switch
             label="Nota interna"
             checked={internal}
-            onChange={(e) => setWantsNote(e.currentTarget.checked)}
+            onChange={(event) => setWantsNote(event.currentTarget.checked)}
           />
         )}
         <Button

@@ -26,7 +26,7 @@ import {
 
 export function TicketDetail({
   ticketId,
-  me,
+  currentUser,
   draft,
   onDraftChange,
   extraActions,
@@ -38,7 +38,7 @@ export function TicketDetail({
   const [taking, setTaking] = useState(false);
   const [shown, setShown] = useState(PAGE_SIZE);
 
-  const viewer = state.people[me.id];
+  const viewer = state.people[currentUser.id];
   const nameOf = (id: string | null) => personName(state.people, id);
   const formatDate = (iso: string) =>
     formatDateTime(iso, viewer?.zoneinfo, viewer?.locale);
@@ -57,8 +57,9 @@ export function TicketDetail({
   const scrollRef = useRef<HTMLDivElement>(null);
   const stickToBottom = useRef(true);
   useLayoutEffect(() => {
-    const el = scrollRef.current;
-    if (el && stickToBottom.current) el.scrollTop = el.scrollHeight;
+    const element = scrollRef.current;
+    if (element && stickToBottom.current)
+      element.scrollTop = element.scrollHeight;
   }, [items.length]);
 
   if (!ticket) {
@@ -73,11 +74,11 @@ export function TicketDetail({
   const requester = state.people[ticket.solicitante_id];
   const groupName = state.groups[ticket.grupo_id]?.nome;
   const categoryName = state.categories[ticket.categoria_id]?.nome;
-  const isMine = ticket.responsavel_id === me.id;
+  const isMine = ticket.responsavel_id === currentUser.id;
   const { canTake, canReply, canChangeStatus } = permissionsFor({
     ticket,
-    role: me.role,
-    userId: me.id,
+    role: currentUser.role,
+    userId: currentUser.id,
     groupId: viewer?.grupo_id,
   });
   const isClosed = isClosedStatus(ticket.status);
@@ -86,7 +87,7 @@ export function TicketDetail({
 
   const take = async () => {
     setTaking(true);
-    await takeTicket(ticket.id, me.id);
+    await takeTicket(ticket.id, currentUser.id);
     setTaking(false);
   };
 
@@ -155,10 +156,10 @@ export function TicketDetail({
 
       <Box
         ref={scrollRef}
-        onScroll={(e) => {
-          const el = e.currentTarget;
+        onScroll={(event) => {
+          const element = event.currentTarget;
           stickToBottom.current =
-            el.scrollHeight - el.scrollTop - el.clientHeight <
+            element.scrollHeight - element.scrollTop - element.clientHeight <
             STICK_TO_BOTTOM_THRESHOLD;
         }}
         style={{ flex: 1, minHeight: 0, overflowY: "auto" }}
@@ -171,7 +172,7 @@ export function TicketDetail({
               size="xs"
               onClick={() => {
                 stickToBottom.current = false;
-                setShown((n) => n + PAGE_SIZE);
+                setShown((current) => current + PAGE_SIZE);
               }}
             >
               Mostrar mensagens anteriores ({hidden})
@@ -187,7 +188,7 @@ export function TicketDetail({
                 key={item.key}
                 author={nameOf(item.author)}
                 role={item.authorProfile}
-                isOwn={item.author === me.id}
+                isOwn={item.author === currentUser.id}
                 internal={item.internal}
                 text={item.text}
                 at={formatDate(item.at)}
@@ -201,7 +202,7 @@ export function TicketDetail({
         <Composer
           key={ticket.id}
           ticketId={ticket.id}
-          userId={me.id}
+          userId={currentUser.id}
           draft={draft}
           onDraftChange={onDraftChange}
         />
@@ -220,7 +221,7 @@ export function TicketDetail({
       {modal && (
         <StatusModal
           ticket={ticket}
-          userId={me.id}
+          userId={currentUser.id}
           reopen={modal === ModalKind.Reopen}
           onClose={() => setModal(null)}
         />

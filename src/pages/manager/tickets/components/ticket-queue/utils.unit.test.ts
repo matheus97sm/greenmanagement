@@ -6,13 +6,13 @@ import { buildItems, isLocked, selectionScope } from "./utils";
 
 const NOW = Date.parse(rawData.meta.agora);
 const byNumber = (numero: number) =>
-  rawData.chamados.find((t) => t.numero === numero) as Ticket;
+  rawData.chamados.find((ticket) => ticket.numero === numero) as Ticket;
 
 const people: Record<string, Person> = Object.fromEntries(
-  rawData.usuarios.map((u) => [u.id, u]),
+  rawData.usuarios.map((person) => [person.id, person]),
 );
 const groups: Record<string, Group> = Object.fromEntries(
-  rawData.grupos.map((g) => [g.id, g]),
+  rawData.grupos.map((group) => [group.id, group]),
 );
 const history: Record<string, HistoryEntry[]> = {};
 for (const entry of rawData.historico) {
@@ -21,9 +21,11 @@ for (const entry of rawData.historico) {
 
 const [infra, apps] = rawData.grupos;
 const infraTicket = byNumber(10503);
-const appsTicket = rawData.chamados.find((t) => t.grupo_id === apps.id)!;
+const appsTicket = rawData.chamados.find(
+  (ticket) => ticket.grupo_id === apps.id,
+)!;
 const otherInfraTicket = rawData.chamados.find(
-  (t) => t.grupo_id === infra.id && t.id !== infraTicket.id,
+  (ticket) => ticket.grupo_id === infra.id && ticket.id !== infraTicket.id,
 )!;
 
 describe("buildItems", () => {
@@ -36,7 +38,7 @@ describe("buildItems", () => {
   });
 
   it("makes one item per ticket, in the same order", () => {
-    expect(items.map((i) => i.ticket.id)).toEqual([
+    expect(items.map((rowItem) => rowItem.ticket.id)).toEqual([
       infraTicket.id,
       appsTicket.id,
     ]);
@@ -49,7 +51,7 @@ describe("buildItems", () => {
 
   it("names who has the ticket, or nobody when nobody does", () => {
     expect(items[0].owner).toBe(people[infraTicket.responsavel_id!].nome);
-    const queued = rawData.chamados.find((t) => !t.responsavel_id)!;
+    const queued = rawData.chamados.find((ticket) => !ticket.responsavel_id)!;
     const [item] = buildItems({
       tickets: [queued],
       people,
@@ -89,7 +91,7 @@ describe("selectionScope", () => {
   it("takes the group of the first ticket when nothing is locked", () => {
     const scope = selectionScope(mixed, undefined);
     expect(scope.targetGroupId).toBe(infra.id);
-    expect(scope.selectable.map((t) => t.id)).toEqual([
+    expect(scope.selectable.map((ticket) => ticket.id)).toEqual([
       infraTicket.id,
       otherInfraTicket.id,
     ]);
@@ -98,7 +100,9 @@ describe("selectionScope", () => {
   it("takes the locked group, even when it is not the first one", () => {
     const scope = selectionScope(mixed, apps.id);
     expect(scope.targetGroupId).toBe(apps.id);
-    expect(scope.selectable.map((t) => t.id)).toEqual([appsTicket.id]);
+    expect(scope.selectable.map((ticket) => ticket.id)).toEqual([
+      appsTicket.id,
+    ]);
   });
 
   it("says the list is mixed when some tickets are left out", () => {

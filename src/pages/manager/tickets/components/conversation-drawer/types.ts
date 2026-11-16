@@ -2,7 +2,7 @@ import type { User } from "@/auth/users";
 
 export interface Props {
   ticketId: string | undefined;
-  me: User;
+  currentUser: User;
   onClose: () => void;
   onReassign: (ticketId: string) => void;
 }

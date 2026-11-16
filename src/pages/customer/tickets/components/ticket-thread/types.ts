@@ -4,7 +4,7 @@ import type { Message, Person, Ticket } from "@/domain/types";
 
 export interface Props {
   ticketId: string;
-  me: User;
+  currentUser: User;
   since: string;
 }
 

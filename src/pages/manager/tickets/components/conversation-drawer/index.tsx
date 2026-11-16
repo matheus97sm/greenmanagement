@@ -7,7 +7,7 @@ import type { Props } from "./types";
 
 export function ConversationDrawer({
   ticketId,
-  me,
+  currentUser,
   onClose,
   onReassign,
 }: Props) {
@@ -30,7 +30,7 @@ export function ConversationDrawer({
         <TicketDetail
           key={ticketId}
           ticketId={ticketId}
-          me={me}
+          currentUser={currentUser}
           draft={drafts[ticketId] ?? ""}
           onDraftChange={(value) =>
             setDrafts((current) => ({ ...current, [ticketId]: value }))

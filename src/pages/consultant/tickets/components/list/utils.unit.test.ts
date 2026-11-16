@@ -12,11 +12,11 @@ import {
 
 const NOW = Date.parse(rawData.meta.agora);
 const people: Record<string, Person> = Object.fromEntries(
-  rawData.usuarios.map((u) => [u.id, u]),
+  rawData.usuarios.map((person) => [person.id, person]),
 );
 const marina = people[MARINA_ID];
 const byNumber = (numero: number) =>
-  rawData.chamados.find((t) => t.numero === numero) as Ticket;
+  rawData.chamados.find((ticket) => ticket.numero === numero) as Ticket;
 
 describe("splitTickets", () => {
   const { mine, queue } = splitTickets(
@@ -27,17 +27,19 @@ describe("splitTickets", () => {
 
   it("separates the tickets assigned to the consultant", () => {
     expect(mine).toHaveLength(42);
-    expect(mine.every((t) => t.responsavel_id === MARINA_ID)).toBe(true);
+    expect(mine.every((ticket) => ticket.responsavel_id === MARINA_ID)).toBe(
+      true,
+    );
   });
 
   it("builds the queue from open, unassigned tickets of her group", () => {
     expect(queue).toHaveLength(35);
     expect(
       queue.every(
-        (t) =>
-          t.responsavel_id === null &&
-          t.status === Status.Open &&
-          t.grupo_id === marina.grupo_id,
+        (ticket) =>
+          ticket.responsavel_id === null &&
+          ticket.status === Status.Open &&
+          ticket.grupo_id === marina.grupo_id,
       ),
     ).toBe(true);
   });
@@ -51,7 +53,9 @@ describe("splitTickets", () => {
 
 describe("matchesStatus", () => {
   const inProgress = byNumber(10503);
-  const closed = rawData.chamados.find((t) => t.status === Status.Closed)!;
+  const closed = rawData.chamados.find(
+    (ticket) => ticket.status === Status.Closed,
+  )!;
 
   it("treats the active option as everything not resolved nor closed", () => {
     expect(matchesStatus(inProgress, StatusOption.Active)).toBe(true);
@@ -93,12 +97,12 @@ describe("selectRows", () => {
   it("returns only the queue on the queue tab", () => {
     const rows = selectRows({ ...base, tab: Tab.Queue });
     expect(rows).toHaveLength(35);
-    expect(rows.every((t) => t.status === Status.Open)).toBe(true);
+    expect(rows.every((ticket) => ticket.status === Status.Open)).toBe(true);
   });
 
   it("applies the search on top of the tab", () => {
     const rows = selectRows({ ...base, search: "10527" });
-    expect(rows.map((t) => t.numero)).toEqual([10527]);
+    expect(rows.map((ticket) => ticket.numero)).toEqual([10527]);
   });
 
   it("applies the status filter", () => {
@@ -111,22 +115,24 @@ describe("selectRows", () => {
   });
 
   it("does not reorder the input lists", () => {
-    const before = mine.map((t) => t.id);
+    const before = mine.map((ticket) => ticket.id);
     selectRows(base);
-    expect(mine.map((t) => t.id)).toEqual(before);
+    expect(mine.map((ticket) => ticket.id)).toEqual(before);
   });
 });
 
 describe("statusFilterOptions", () => {
   it("offers the two shortcuts followed by every status", () => {
     const options = statusFilterOptions();
-    expect(options.slice(0, 2).map((o) => o.value)).toEqual([
-      StatusOption.Active,
-      StatusOption.All,
-    ]);
+    expect(
+      options.slice(0, 2).map((statusFilterOption) => statusFilterOption.value),
+    ).toEqual([StatusOption.Active, StatusOption.All]);
     expect(options).toHaveLength(2 + Object.values(Status).length);
-    expect(options.find((o) => o.value === Status.WaitingCustomer)?.label).toBe(
-      "Aguardando cliente",
-    );
+    expect(
+      options.find(
+        (statusFilterOption) =>
+          statusFilterOption.value === Status.WaitingCustomer,
+      )?.label,
+    ).toBe("Aguardando cliente");
   });
 });

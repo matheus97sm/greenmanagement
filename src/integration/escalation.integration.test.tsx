@@ -9,9 +9,11 @@ import { LOAD_TIMEOUT, renderApp, resetWorld } from "./helpers";
 
 vi.mock("@/server/simulator", () => ({ startSimulator: () => () => {} }));
 
-const ticket = rawData.chamados.find((t) => t.numero === 10503)!;
+const ticket = rawData.chamados.find(
+  (currentTicket) => currentTicket.numero === 10503,
+)!;
 const personNamed = (nome: string) =>
-  getDb().usuarios.find((u) => u.nome === nome)!;
+  getDb().usuarios.find((person) => person.nome === nome)!;
 
 async function openEscalation() {
   const user = userEvent.setup();
@@ -67,7 +69,9 @@ describe("a ticket escalated to the manager", () => {
   it("finds a ticket by number even when it is finished, and opens it", async () => {
     const user = userEvent.setup();
     renderApp({ route: "/manager/tickets", userId: RICARDO_ID });
-    const closed = rawData.chamados.find((t) => t.status === Status.Closed)!;
+    const closed = rawData.chamados.find(
+      (currentTicket) => currentTicket.status === Status.Closed,
+    )!;
 
     await user.type(
       await screen.findByLabelText(
@@ -99,14 +103,14 @@ describe("a ticket escalated to the manager", () => {
 
     await waitFor(
       () =>
-        expect(getDb().mensagens.filter((m) => m.texto === text)).toHaveLength(
-          1,
-        ),
+        expect(
+          getDb().mensagens.filter((message) => message.texto === text),
+        ).toHaveLength(1),
       { timeout: LOAD_TIMEOUT },
     );
-    expect(getDb().mensagens.find((m) => m.texto === text)?.autor_id).toBe(
-      RICARDO_ID,
-    );
+    expect(
+      getDb().mensagens.find((message) => message.texto === text)?.autor_id,
+    ).toBe(RICARDO_ID);
     await waitFor(() => expect(screen.getAllByText(text)).toHaveLength(1));
     expect(composer()).toHaveValue("");
   });
@@ -121,10 +125,14 @@ describe("a ticket escalated to the manager", () => {
 
     await waitFor(
       () =>
-        expect(getDb().mensagens.find((m) => m.texto === text)).toBeTruthy(),
+        expect(
+          getDb().mensagens.find((message) => message.texto === text),
+        ).toBeTruthy(),
       { timeout: LOAD_TIMEOUT },
     );
-    expect(getDb().mensagens.find((m) => m.texto === text)?.interna).toBe(true);
+    expect(
+      getDb().mensagens.find((message) => message.texto === text)?.interna,
+    ).toBe(true);
   });
 
   it("changes the status with a reason", async () => {
@@ -143,9 +151,10 @@ describe("a ticket escalated to the manager", () => {
         ),
       { timeout: LOAD_TIMEOUT },
     );
-    expect(getDb().chamados.find((t) => t.id === ticket.id)?.status).toBe(
-      Status.WaitingCustomer,
-    );
+    expect(
+      getDb().chamados.find((currentTicket) => currentTicket.id === ticket.id)
+        ?.status,
+    ).toBe(Status.WaitingCustomer);
   });
 
   it("hands the ticket to another consultant from the conversation", async () => {

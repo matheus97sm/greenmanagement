@@ -3,6 +3,14 @@
   "plugins": ["react", "typescript", "oxc"],
   "rules": {
     "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
+    "react/only-export-components": ["warn", { "allowConstantExport": true }],
+    "id-length": [
+      "error",
+      {
+        "min": 3,
+        "properties": "never",
+        "exceptions": ["id", "ms", "at", "to", "de", "Ok", "_"]
+      }
+    ]
   }
 }

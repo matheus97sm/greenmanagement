@@ -30,7 +30,9 @@ vi.mock("@/server/socket", async (importOriginal) => {
   };
 });
 
-const ticket = rawData.chamados.find((t) => t.numero === 10503)!;
+const ticket = rawData.chamados.find(
+  (currentTicket) => currentTicket.numero === 10503,
+)!;
 
 async function openTheMostUrgentTicket() {
   const user = userEvent.setup();
@@ -46,8 +48,9 @@ const composer = () =>
 
 function messageDeliveries(log: Delivery[], text: string) {
   return log.filter(
-    (d) =>
-      d.event.tipo === EventType.MessageAdded && d.event.payload.texto === text,
+    (delivery) =>
+      delivery.event.tipo === EventType.MessageAdded &&
+      delivery.event.payload.texto === text,
   );
 }
 
@@ -74,11 +77,15 @@ describe("replying to a ticket", () => {
     const deliveries = messageDeliveries(log, text);
     expect(deliveries.length).toBeGreaterThanOrEqual(3);
     expect(deliveries[0].applied).toBe(true);
-    expect(deliveries.slice(1).every((d) => !d.applied)).toBe(true);
+    expect(deliveries.slice(1).every((delivery) => !delivery.applied)).toBe(
+      true,
+    );
 
     expect(screen.getAllByText(text)).toHaveLength(1);
     expect(composer()).toHaveValue("");
-    expect(getDb().mensagens.filter((m) => m.texto === text)).toHaveLength(1);
+    expect(
+      getDb().mensagens.filter((message) => message.texto === text),
+    ).toHaveLength(1);
   });
 
   it("counts the public reply as the first response and stops that clock", async () => {
@@ -99,7 +106,8 @@ describe("replying to a ticket", () => {
     );
     expect(screen.queryByText(/1ª resposta até/)).not.toBeInTheDocument();
     expect(
-      getDb().chamados.find((t) => t.id === ticket.id)!.primeira_resposta_em,
+      getDb().chamados.find((currentTicket) => currentTicket.id === ticket.id)!
+        .primeira_resposta_em,
     ).not.toBeNull();
   });
 
@@ -119,7 +127,9 @@ describe("replying to a ticket", () => {
     );
     await sleep(SETTLE_MS);
     expect(screen.getAllByText(text)).toHaveLength(1);
-    expect(getDb().mensagens.find((m) => m.texto === text)?.interna).toBe(true);
+    expect(
+      getDb().mensagens.find((message) => message.texto === text)?.interna,
+    ).toBe(true);
     expect(
       ticketsStore.getState().tickets[ticket.id].primeira_resposta_em,
     ).toBeNull();

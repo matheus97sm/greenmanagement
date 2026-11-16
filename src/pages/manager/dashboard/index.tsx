@@ -30,19 +30,22 @@ import {
 } from "./utils";
 
 export function DashboardPage() {
-  const me = useCurrentUser();
+  const currentUser = useCurrentUser();
   const state = useTickets();
   const now = useNow();
   const [weeksAgo, setWeeksAgo] = useState("0");
   const [groupFilter, setGroupFilter] = useState(ALL_GROUPS);
   const [sortKey, setSortKey] = useState<SortKey>(SortKey.Idle);
 
-  const viewer = state.people[me.id];
+  const viewer = state.people[currentUser.id];
   const groupIds = useMemo(() => (viewer ? groupIdsOf(viewer) : []), [viewer]);
   const tickets = useMemo(() => Object.values(state.tickets), [state.tickets]);
 
   const groups = useMemo(
-    () => Object.values(state.groups).filter((g) => groupIds.includes(g.id)),
+    () =>
+      Object.values(state.groups).filter((group) =>
+        groupIds.includes(group.id),
+      ),
     [state.groups, groupIds],
   );
 
@@ -83,7 +86,7 @@ export function DashboardPage() {
   );
 
   const sorted = useMemo(() => sortRows(rows, sortKey), [rows, sortKey]);
-  const team = useMemo(() => teamWeek(rows.map((r) => r.week)), [rows]);
+  const team = useMemo(() => teamWeek(rows.map((row) => row.week)), [rows]);
 
   if (state.status === LoadStatus.Error) {
     return <Alert color="red">Não foi possível carregar os dados.</Alert>;
@@ -127,7 +130,10 @@ export function DashboardPage() {
             onChange={(value) => setGroupFilter(value ?? ALL_GROUPS)}
             data={[
               { value: ALL_GROUPS, label: "Todos os grupos" },
-              ...groups.map((g) => ({ value: g.id, label: g.nome })),
+              ...groups.map((group) => ({
+                value: group.id,
+                label: group.nome,
+              })),
             ]}
           />
           <Select

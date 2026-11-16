@@ -50,7 +50,7 @@ import {
 } from "./utils";
 
 export function TicketsPage() {
-  const me = useCurrentUser();
+  const currentUser = useCurrentUser();
   const state = useTickets();
   const now = useNow();
   const [focus, setFocus] = useState<Focus>({ kind: FocusKind.Risk });
@@ -61,12 +61,15 @@ export function TicketsPage() {
   const navigate = useNavigate();
   const { id: openId } = useParams();
 
-  const viewer = state.people[me.id];
+  const viewer = state.people[currentUser.id];
   const groupIds = useMemo(() => (viewer ? groupIdsOf(viewer) : []), [viewer]);
   const tickets = useMemo(() => Object.values(state.tickets), [state.tickets]);
 
   const groups = useMemo(
-    () => Object.values(state.groups).filter((g) => groupIds.includes(g.id)),
+    () =>
+      Object.values(state.groups).filter((group) =>
+        groupIds.includes(group.id),
+      ),
     [state.groups, groupIds],
   );
 
@@ -138,7 +141,7 @@ export function TicketsPage() {
     setSelected(new Set());
   }, []);
 
-  const role = me.role;
+  const role = currentUser.role;
   const toggle = useCallback(
     (ticketId: string) => setSelected((current) => toggled(current, ticketId)),
     [],
@@ -174,7 +177,9 @@ export function TicketsPage() {
   const toggleAll = (ticketIds: string[], checked: boolean) =>
     setSelected(checked ? new Set(ticketIds) : new Set());
 
-  const selectedTickets = visible.filter((t) => effectiveSelection.has(t.id));
+  const selectedTickets = visible.filter((ticket) =>
+    effectiveSelection.has(ticket.id),
+  );
 
   const views = viewOptions({
     riskCount: risk.length,
@@ -207,8 +212,8 @@ export function TicketsPage() {
                 placeholder="Buscar em todos os chamados por nº, título ou cliente"
                 leftSection={<IconSearch size={14} />}
                 value={search}
-                onChange={(e) => {
-                  setSearch(e.currentTarget.value);
+                onChange={(event) => {
+                  setSearch(event.currentTarget.value);
                   setSelected(new Set());
                 }}
               />
@@ -243,14 +248,17 @@ export function TicketsPage() {
                   }}
                   data={[
                     { value: ALL_GROUPS, label: "Todos os grupos" },
-                    ...groups.map((g) => ({ value: g.id, label: g.nome })),
+                    ...groups.map((group) => ({
+                      value: group.id,
+                      label: group.nome,
+                    })),
                   ]}
                 />
                 <Button
                   size="xs"
                   disabled={selectedTickets.length === 0}
                   onClick={() =>
-                    setReassignIds(selectedTickets.map((t) => t.id))
+                    setReassignIds(selectedTickets.map((ticket) => ticket.id))
                   }
                 >
                   Redistribuir ({selectedTickets.length})
@@ -283,15 +291,15 @@ export function TicketsPage() {
       </Grid>
       <ConversationDrawer
         ticketId={openId}
-        me={me}
-        onClose={() => navigate(homePath(me.role))}
+        currentUser={currentUser}
+        onClose={() => navigate(homePath(currentUser.role))}
         onReassign={(ticketId) => setReassignIds([ticketId])}
       />
       {reassignIds && (
         <ReassignModal
           tickets={reassignIds.flatMap((id) => state.tickets[id] ?? [])}
           workloads={workloads}
-          managerId={me.id}
+          managerId={currentUser.id}
           onClose={() => setReassignIds(null)}
           onDone={() => {
             setReassignIds(null);

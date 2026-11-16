@@ -15,7 +15,7 @@ describe("StatusBadge", () => {
   );
 
   it("uses a different label for every status", () => {
-    const labels = Object.values(Status).map((s) => STATUS_LABEL[s]);
+    const labels = Object.values(Status).map((status) => STATUS_LABEL[status]);
     expect(new Set(labels).size).toBe(labels.length);
   });
 });

@@ -27,8 +27,8 @@ export function threadItems({
     };
   };
 
-  const fromMessage = (m: Message) =>
-    itemOf(m.id, m.criada_em, m.autor_id, m.texto);
+  const fromMessage = (message: Message) =>
+    itemOf(message.id, message.criada_em, message.autor_id, message.texto);
 
   return [
     itemOf(
@@ -38,5 +38,7 @@ export function threadItems({
       ticket.descricao,
     ),
     ...(messages ?? []).map(fromMessage),
-  ].sort((a, b) => a.at.localeCompare(b.at));
+  ].sort((firstThreadItem, threadItem) =>
+    firstThreadItem.at.localeCompare(threadItem.at),
+  );
 }

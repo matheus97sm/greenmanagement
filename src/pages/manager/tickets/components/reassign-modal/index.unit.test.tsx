@@ -16,16 +16,20 @@ const workloads = workloadByConsultant(
   rawData.chamados,
   consultantsOf(
     rawData.usuarios,
-    rawData.grupos.map((g) => g.id),
+    rawData.grupos.map((group) => group.id),
   ),
   NOW,
 );
-const apps = rawData.grupos.find((g) => g.nome === "Aplicações")!;
+const apps = rawData.grupos.find((group) => group.nome === "Aplicações")!;
 const appsTickets = rawData.chamados
-  .filter((t) => t.grupo_id === apps.id && t.responsavel_id)
+  .filter((ticket) => ticket.grupo_id === apps.id && ticket.responsavel_id)
   .slice(0, 3);
-const otherGroupTicket = rawData.chamados.find((t) => t.grupo_id !== apps.id)!;
-const leandro = rawData.usuarios.find((u) => u.nome === "Leandro Alves")!;
+const otherGroupTicket = rawData.chamados.find(
+  (ticket) => ticket.grupo_id !== apps.id,
+)!;
+const leandro = rawData.usuarios.find(
+  (person) => person.nome === "Leandro Alves",
+)!;
 
 function renderModal(tickets = appsTickets) {
   const onClose = vi.fn();
@@ -90,7 +94,7 @@ describe("ReassignModal", () => {
 
     await waitFor(() =>
       expect(reassignTickets).toHaveBeenCalledWith({
-        ticketIds: appsTickets.map((t) => t.id),
+        ticketIds: appsTickets.map((ticket) => ticket.id),
         consultantId: leandro.id,
         managerId: RICARDO_ID,
       }),

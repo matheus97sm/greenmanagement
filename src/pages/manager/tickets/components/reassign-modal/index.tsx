@@ -29,7 +29,7 @@ export function ReassignModal({
     if (!target) return;
     setSaving(true);
     const result = await reassignTickets({
-      ticketIds: tickets.map((t) => t.id),
+      ticketIds: tickets.map((ticket) => ticket.id),
       consultantId: target,
       managerId,
     });

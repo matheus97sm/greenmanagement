@@ -1,6 +1,6 @@
 import { groupIdsOf } from "@/domain/rules";
 import type { DomainEvent, Person, Snapshot, Ticket } from "@/domain/types";
-import type { Db } from "./db";
+import type { Database } from "./db";
 import { Profile, EventType } from "@/domain/enums";
 
 export function canSeeTicket(viewer: Person, ticket: Ticket): boolean {
@@ -20,12 +20,14 @@ export function canSeeTicket(viewer: Person, ticket: Ticket): boolean {
 export function eventFor(
   viewer: Person,
   event: DomainEvent,
-  db: Db,
+  database: Database,
 ): DomainEvent | null {
   if (event.tipo === EventType.TicketOpened) {
     return canSeeTicket(viewer, event.payload) ? event : null;
   }
-  const ticket = db.chamados.find((c) => c.id === event.payload.chamado_id);
+  const ticket = database.chamados.find(
+    (currentTicket) => currentTicket.id === event.payload.chamado_id,
+  );
   if (!ticket || !canSeeTicket(viewer, ticket)) return null;
   if (
     event.tipo === EventType.MessageAdded &&
@@ -37,27 +39,32 @@ export function eventFor(
   return event;
 }
 
-export function scopedSnapshot(db: Db, viewer: Person): Snapshot {
-  const chamados = db.chamados.filter((t) => canSeeTicket(viewer, t));
-  const ids = new Set(chamados.map((t) => t.id));
+export function scopedSnapshot(database: Database, viewer: Person): Snapshot {
+  const chamados = database.chamados.filter((ticket) =>
+    canSeeTicket(viewer, ticket),
+  );
+  const ids = new Set(chamados.map((ticket) => ticket.id));
   return structuredClone({
-    agora: db.agora,
-    grupos: db.grupos,
-    categorias: db.categorias,
-    sla: db.sla,
+    agora: database.agora,
+    grupos: database.grupos,
+    categorias: database.categorias,
+    sla: database.sla,
 
     usuarios:
       viewer.perfil === Profile.Customer
-        ? db.usuarios.filter(
-            (u) => u.perfil !== Profile.Customer || u.id === viewer.id,
+        ? database.usuarios.filter(
+            (person) =>
+              person.perfil !== Profile.Customer || person.id === viewer.id,
           )
-        : db.usuarios,
+        : database.usuarios,
     chamados,
-    mensagens: db.mensagens.filter(
-      (m) =>
-        ids.has(m.chamado_id) &&
-        !(viewer.perfil === Profile.Customer && m.interna),
+    mensagens: database.mensagens.filter(
+      (message) =>
+        ids.has(message.chamado_id) &&
+        !(viewer.perfil === Profile.Customer && message.interna),
     ),
-    historico: db.historico.filter((h) => ids.has(h.chamado_id)),
+    historico: database.historico.filter((historyEntry) =>
+      ids.has(historyEntry.chamado_id),
+    ),
   });
 }

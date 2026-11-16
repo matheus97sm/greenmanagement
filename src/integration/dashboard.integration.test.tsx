@@ -11,7 +11,7 @@ import { LOAD_TIMEOUT, renderApp, resetWorld } from "./helpers";
 vi.mock("@/server/simulator", () => ({ startSimulator: () => () => {} }));
 
 const personNamed = (nome: string) =>
-  getDb().usuarios.find((u) => u.nome === nome)!;
+  getDb().usuarios.find((person) => person.nome === nome)!;
 
 const rowOf = (nome: string) =>
   screen.getByText(nome).closest("tr") as HTMLElement;
@@ -90,7 +90,8 @@ describe("the manager's weekly dashboard", () => {
     ).toBeInTheDocument();
 
     const moved = getDb().chamados.find(
-      (t) => t.responsavel_id === thiago.id && isActive(t.status),
+      (ticket) =>
+        ticket.responsavel_id === thiago.id && isActive(ticket.status),
     )!;
     reassignTicket({
       ticketId: moved.id,
@@ -120,11 +121,12 @@ describe("the manager's weekly dashboard", () => {
 
     assumeTicket(
       getDb().chamados.find(
-        (t) =>
-          !t.responsavel_id &&
-          t.grupo_id === leandro.grupo_id &&
+        (ticket) =>
+          !ticket.responsavel_id &&
+          ticket.grupo_id === leandro.grupo_id &&
           getDb().usuarios.some(
-            (u) => u.id === leandro.id && u.perfil === Profile.Consultant,
+            (person) =>
+              person.id === leandro.id && person.perfil === Profile.Consultant,
           ),
       )!.id,
       leandro.id,

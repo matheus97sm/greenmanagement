@@ -33,13 +33,14 @@ const event = (id: string): DomainEvent => ({
   payload: { chamado_id: id, consultor_id: "c" },
 });
 
-const shown = () => vi.mocked(notifications.show).mock.calls.map((c) => c[0]);
+const shown = () =>
+  vi.mocked(notifications.show).mock.calls.map((call) => call[0]);
 
 describe("store actions", () => {
   beforeEach(() => {
     vi.mocked(notifications.show).mockReset();
-    for (const fn of Object.values(vi.mocked(api))) {
-      if (typeof fn === "function" && "mockReset" in fn) fn.mockReset();
+    for (const mock of Object.values(vi.mocked(api))) {
+      if (typeof mock === "function" && "mockReset" in mock) mock.mockReset();
     }
     vi.spyOn(ticketsStore, "applyEvent").mockReturnValue(true);
   });
@@ -197,7 +198,9 @@ describe("store actions", () => {
     it("tells nothing is done when none went through", async () => {
       vi.mocked(api.reassignTicket).mockRejectedValue("x");
       await reassignTickets(input(["t1", "t2"]));
-      expect(shown().some((n) => n.color === "green")).toBe(false);
+      expect(
+        shown().some((notificationData) => notificationData.color === "green"),
+      ).toBe(false);
       expect(shown()[0]).toMatchObject({ message: "Erro inesperado." });
     });
   });

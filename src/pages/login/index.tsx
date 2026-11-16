@@ -28,8 +28,8 @@ export function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState(false);
 
-  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
     const user = signIn(email, password);
     if (user) {
       navigate(homePath(user.role), { replace: true });
@@ -62,14 +62,14 @@ export function LoginPage() {
               autoComplete="username"
               required
               value={email}
-              onChange={(e) => setEmail(e.currentTarget.value)}
+              onChange={(event) => setEmail(event.currentTarget.value)}
             />
             <PasswordInput
               label="Senha"
               autoComplete="current-password"
               required
               value={password}
-              onChange={(e) => setPassword(e.currentTarget.value)}
+              onChange={(event) => setPassword(event.currentTarget.value)}
             />
             <Button type="submit" fullWidth>
               Entrar
@@ -83,21 +83,21 @@ export function LoginPage() {
           labelPosition="center"
         />
         <Stack gap="xs">
-          {USERS.map((u) => (
+          {USERS.map((user) => (
             <UnstyledButton
-              key={u.id}
+              key={user.id}
               onClick={() => {
-                setEmail(u.email);
+                setEmail(user.email);
                 setPassword(DEMO_PASSWORD);
                 setError(false);
               }}
             >
               <Group justify="space-between">
                 <Text size="sm" fw={500}>
-                  {u.name} · {ROLE_LABEL[u.role]}
+                  {user.name} · {ROLE_LABEL[user.role]}
                 </Text>
                 <Text size="xs" c="dimmed">
-                  {u.description}
+                  {user.description}
                 </Text>
               </Group>
             </UnstyledButton>

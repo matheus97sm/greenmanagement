@@ -18,18 +18,18 @@ export interface WeekRange {
   fullEnd: number;
 }
 
-export function startOfLocalDay(ts: number): number {
-  const local = ts + UTC_OFFSET_HOURS * HOUR;
+export function startOfLocalDay(timestamp: number): number {
+  const local = timestamp + UTC_OFFSET_HOURS * HOUR;
   return Math.floor(local / DAY) * DAY - UTC_OFFSET_HOURS * HOUR;
 }
 
-export function weekdayOf(ts: number): number {
-  const days = Math.floor((ts + UTC_OFFSET_HOURS * HOUR) / DAY);
+export function weekdayOf(timestamp: number): number {
+  const days = Math.floor((timestamp + UTC_OFFSET_HOURS * HOUR) / DAY);
   return (((days + 3) % 7) + 7) % 7;
 }
 
-export function weekStart(ts: number): number {
-  return startOfLocalDay(ts) - weekdayOf(ts) * DAY;
+export function weekStart(timestamp: number): number {
+  return startOfLocalDay(timestamp) - weekdayOf(timestamp) * DAY;
 }
 
 export function weekRange(now: number, weeksAgo = 0): WeekRange {
@@ -52,8 +52,8 @@ export function businessIntervals(from: number, to: number): Interval[] {
 
 export function mergeIntervals(list: Interval[]): Interval[] {
   const sorted = [...list]
-    .filter((i) => i.end > i.start)
-    .sort((a, b) => a.start - b.start);
+    .filter((interval) => interval.end > interval.start)
+    .sort((firstInterval, interval) => firstInterval.start - interval.start);
   const out: Interval[] = [];
   for (const interval of sorted) {
     const last = out.at(-1);
@@ -66,20 +66,29 @@ export function mergeIntervals(list: Interval[]): Interval[] {
   return out;
 }
 
-export function intersectIntervals(a: Interval[], b: Interval[]): Interval[] {
+export function intersectIntervals(
+  firstIntervals: Interval[],
+  intervals: Interval[],
+): Interval[] {
   const out: Interval[] = [];
-  let i = 0;
-  let j = 0;
-  while (i < a.length && j < b.length) {
-    const start = Math.max(a[i].start, b[j].start);
-    const end = Math.min(a[i].end, b[j].end);
+  let index = 0;
+  let otherIndex = 0;
+  while (index < firstIntervals.length && otherIndex < intervals.length) {
+    const start = Math.max(
+      firstIntervals[index].start,
+      intervals[otherIndex].start,
+    );
+    const end = Math.min(firstIntervals[index].end, intervals[otherIndex].end);
     if (end > start) out.push({ start, end });
-    if (a[i].end < b[j].end) i += 1;
-    else j += 1;
+    if (firstIntervals[index].end < intervals[otherIndex].end) index += 1;
+    else otherIndex += 1;
   }
   return out;
 }
 
 export function totalMs(list: Interval[]): number {
-  return list.reduce((sum, i) => sum + (i.end - i.start), 0);
+  return list.reduce(
+    (sum, interval) => sum + (interval.end - interval.start),
+    0,
+  );
 }

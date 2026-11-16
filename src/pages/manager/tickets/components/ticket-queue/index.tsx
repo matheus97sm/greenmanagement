@@ -43,8 +43,9 @@ export function TicketQueue({
     lockedGroupId,
   );
   const allSelected =
-    selectable.length > 0 && selectable.every((t) => selected.has(t.id));
-  const someSelected = selectable.some((t) => selected.has(t.id));
+    selectable.length > 0 &&
+    selectable.every((ticket) => selected.has(ticket.id));
+  const someSelected = selectable.some((ticket) => selected.has(ticket.id));
 
   return (
     <Stack gap={0}>
@@ -61,10 +62,10 @@ export function TicketQueue({
             label="Selecionar todos"
             checked={allSelected}
             indeterminate={someSelected && !allSelected}
-            onChange={(e) =>
+            onChange={(event) =>
               onToggleAll(
-                selectable.map((t) => t.id),
-                e.currentTarget.checked,
+                selectable.map((ticket) => ticket.id),
+                event.currentTarget.checked,
               )
             }
           />
@@ -91,8 +92,8 @@ export function TicketQueue({
         <div
           style={{ height: virtualizer.getTotalSize(), position: "relative" }}
         >
-          {virtualizer.getVirtualItems().map((v) => {
-            const item = items[v.index];
+          {virtualizer.getVirtualItems().map((virtualItem) => {
+            const item = items[virtualItem.index];
             return (
               <div
                 key={item.ticket.id}
@@ -101,8 +102,8 @@ export function TicketQueue({
                   top: 0,
                   left: 0,
                   width: "100%",
-                  height: v.size,
-                  transform: `translateY(${v.start}px)`,
+                  height: virtualItem.size,
+                  transform: `translateY(${virtualItem.start}px)`,
                 }}
               >
                 <TicketRow

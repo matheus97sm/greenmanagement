@@ -31,9 +31,9 @@ vi.mock("@/server/socket", async (importOriginal) => {
 });
 
 const idOf = (numero: number) =>
-  rawData.chamados.find((t) => t.numero === numero)!.id;
+  rawData.chamados.find((ticket) => ticket.numero === numero)!.id;
 const ticketOf = (numero: number) =>
-  getDb().chamados.find((t) => t.numero === numero)!;
+  getDb().chamados.find((ticket) => ticket.numero === numero)!;
 
 const rowsOf = (container: HTMLElement) =>
   Array.from(container.querySelectorAll<HTMLElement>(".ticket-row"));
@@ -108,7 +108,7 @@ describe("the customer's tickets", () => {
       expect(
         Object.values(state.messages)
           .flat()
-          .some((m) => m.interna),
+          .some((message) => message.interna),
       ).toBe(false);
     });
   });
@@ -132,7 +132,9 @@ describe("the customer's tickets", () => {
       await sleep(SETTLE_MS);
 
       expect(screen.getAllByText(text)).toHaveLength(1);
-      expect(getDb().mensagens.filter((m) => m.texto === text)).toHaveLength(1);
+      expect(
+        getDb().mensagens.filter((message) => message.texto === text),
+      ).toHaveLength(1);
       expect(
         screen.getByText("Juliana Pereira está cuidando do seu chamado."),
       ).toBeInTheDocument();
@@ -243,7 +245,9 @@ describe("the customer's tickets", () => {
         responsavel_id: null,
       });
       expect(
-        getDb().categorias.find((c) => c.id === created.categoria_id)?.nome,
+        getDb().categorias.find(
+          (category) => category.id === created.categoria_id,
+        )?.nome,
       ).toBe("Estação de trabalho");
 
       await waitFor(() =>
@@ -268,7 +272,9 @@ describe("the customer's tickets", () => {
       await waitFor(() => expect(ticketOf(10614)).toBeDefined());
 
       const created = getDb().chamados.at(-1)!;
-      const marina = getDb().usuarios.find((u) => u.id === MARINA_ID)!;
+      const marina = getDb().usuarios.find(
+        (person) => person.id === MARINA_ID,
+      )!;
       expect(created.grupo_id).toBe(marina.grupo_id);
     });
 
@@ -324,8 +330,8 @@ describe("the customer's tickets", () => {
 
       await signInAs(user, "Helena Fernandes");
       await screen.findByText(/#10611 ·/, {}, { timeout: LOAD_TIMEOUT });
-      const row = rowsOf(container).find((r) =>
-        /#10611/.test(r.textContent ?? ""),
+      const row = rowsOf(container).find((resolve) =>
+        /#10611/.test(resolve.textContent ?? ""),
       )!;
       expect(within(row).getByText("1 nova")).toBeInTheDocument();
 
@@ -342,7 +348,9 @@ describe("the customer's tickets", () => {
       await signInAs(user, "Helena Fernandes");
       await screen.findByText(/#10611 ·/, {}, { timeout: LOAD_TIMEOUT });
       const open = () =>
-        rowsOf(container).find((r) => /#10611/.test(r.textContent ?? ""))!;
+        rowsOf(container).find((resolve) =>
+          /#10611/.test(resolve.textContent ?? ""),
+        )!;
 
       await user.click(open());
       await waitFor(() =>

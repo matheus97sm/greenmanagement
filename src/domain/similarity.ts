@@ -103,9 +103,9 @@ export function similarTickets(
     })
     .filter((hit) => hit.shared >= minShared && hit.score >= minScore)
     .sort(
-      (a, b) =>
-        b.score - a.score ||
-        b.ticket.atualizado_em.localeCompare(a.ticket.atualizado_em),
+      (first, second) =>
+        second.score - first.score ||
+        second.ticket.atualizado_em.localeCompare(first.ticket.atualizado_em),
     )
     .slice(0, limit)
     .map(({ ticket, score }) => ({ ticket, score }));

@@ -142,7 +142,7 @@ describe("WeekTable", () => {
     const names = screen
       .getAllByRole("row")
       .slice(1)
-      .map((r) => r.textContent ?? "");
+      .map((resolve) => resolve.textContent ?? "");
     expect(names[0]).toContain("Zed");
     expect(names[1]).toContain("Ana");
   });

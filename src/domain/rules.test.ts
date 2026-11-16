@@ -10,8 +10,8 @@ import type { HistoryEntry, Message, SlaPolicy, Ticket } from "./types";
 import { Status, Priority, HistoryType } from "./enums";
 
 const HOUR = 3_600_000;
-const T0 = Date.parse("2026-11-03T10:00:00.000Z");
-const at = (hours: number) => new Date(T0 + hours * HOUR).toISOString();
+const START_TIME = Date.parse("2026-11-03T10:00:00.000Z");
+const at = (hours: number) => new Date(START_TIME + hours * HOUR).toISOString();
 
 const base: Ticket = {
   id: "t",

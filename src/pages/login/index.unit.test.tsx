@@ -16,7 +16,7 @@ const routes = [
 const email = () => screen.getByLabelText(/^E-mail/);
 const password = () => screen.getByLabelText(/^Senha/);
 const submit = () => screen.getByRole("button", { name: "Entrar" });
-const demo = (role: string) => USERS.find((u) => u.role === role)!;
+const demo = (role: string) => USERS.find((user) => user.role === role)!;
 
 describe("login page", () => {
   it("asks for e-mail and password", () => {

@@ -8,12 +8,12 @@ import { PAGE_SIZE } from "./constants";
 import type { Props } from "./types";
 import { threadItems } from "./utils";
 
-export function TicketThread({ ticketId, me, since }: Props) {
+export function TicketThread({ ticketId, currentUser, since }: Props) {
   const state = useTickets();
   const [shown, setShown] = useState(PAGE_SIZE);
   const ticket = state.tickets[ticketId];
   const messages = state.messages[ticketId];
-  const viewer = state.people[me.id];
+  const viewer = state.people[currentUser.id];
 
   const items = useMemo(
     () =>
@@ -22,11 +22,11 @@ export function TicketThread({ ticketId, me, since }: Props) {
             ticket,
             messages,
             people: state.people,
-            meId: me.id,
+            meId: currentUser.id,
             since,
           })
         : [],
-    [ticket, messages, state.people, me.id, since],
+    [ticket, messages, state.people, currentUser.id, since],
   );
 
   const { hidden, visible } = lastItems(items, shown);
@@ -37,7 +37,7 @@ export function TicketThread({ ticketId, me, since }: Props) {
         <Button
           variant="subtle"
           size="xs"
-          onClick={() => setShown((n) => n + PAGE_SIZE)}
+          onClick={() => setShown((current) => current + PAGE_SIZE)}
         >
           Mostrar mensagens anteriores ({hidden})
         </Button>

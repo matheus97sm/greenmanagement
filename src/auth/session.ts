@@ -6,7 +6,7 @@ export const SESSION_KEY = "greenmanagement.session";
 export function getSessionUser(): User | null {
   try {
     const id = localStorage.getItem(SESSION_KEY);
-    return USERS.find((u) => u.id === id) ?? null;
+    return USERS.find((user) => user.id === id) ?? null;
   } catch {
     return null;
   }

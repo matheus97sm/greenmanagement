@@ -7,14 +7,18 @@ import { HELENA_ID, rawData } from "@/test-data";
 import { loadStoreAs, renderWithProviders } from "@/test-utils";
 import { TicketList } from ".";
 
-const me = USERS.find((u) => u.id === HELENA_ID)!;
+const currentUser = USERS.find((user) => user.id === HELENA_ID)!;
 const idOf = (numero: number) =>
-  rawData.chamados.find((t) => t.numero === numero)!.id;
+  rawData.chamados.find((ticket) => ticket.numero === numero)!.id;
 
 function renderList(selectedId?: string) {
   const onSelect = vi.fn();
   const view = renderWithProviders(
-    <TicketList me={me} selectedId={selectedId} onSelect={onSelect} />,
+    <TicketList
+      currentUser={currentUser}
+      selectedId={selectedId}
+      onSelect={onSelect}
+    />,
     { userId: HELENA_ID },
   );
   return { ...view, onSelect };
@@ -76,8 +80,8 @@ describe("TicketList", () => {
 
   it("highlights the ticket that is open", () => {
     const { container } = renderList(idOf(10612));
-    const selected = rowsOf(container).filter((r) =>
-      r.hasAttribute("data-selected"),
+    const selected = rowsOf(container).filter((resolve) =>
+      resolve.hasAttribute("data-selected"),
     );
     expect(selected).toHaveLength(1);
     expect(selected[0]).toHaveTextContent("#10612");

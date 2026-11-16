@@ -25,11 +25,13 @@ import {
 const NOW = Date.parse(rawData.meta.agora);
 const [infra, apps] = rawData.grupos;
 const people: Record<string, Person> = Object.fromEntries(
-  rawData.usuarios.map((u) => [u.id, u]),
+  rawData.usuarios.map((person) => [person.id, person]),
 );
 const byNumber = (numero: number) =>
-  rawData.chamados.find((t) => t.numero === numero) as Ticket;
-const thiago = rawData.usuarios.find((u) => u.nome.startsWith("Thiago"))!;
+  rawData.chamados.find((ticket) => ticket.numero === numero) as Ticket;
+const thiago = rawData.usuarios.find((person) =>
+  person.nome.startsWith("Thiago"),
+)!;
 
 describe("filterByGroup", () => {
   it("keeps everything when no group is picked", () => {
@@ -40,7 +42,7 @@ describe("filterByGroup", () => {
     const result = filterByGroup(rawData.chamados, infra.id);
     expect(result.length).toBeGreaterThan(0);
     expect(result.length).toBeLessThan(rawData.chamados.length);
-    expect(result.every((t) => t.grupo_id === infra.id)).toBe(true);
+    expect(result.every((ticket) => ticket.grupo_id === infra.id)).toBe(true);
     expect(
       filterByGroup(rawData.chamados, apps.id).length + result.length,
     ).toBe(rawData.chamados.length);
@@ -58,18 +60,24 @@ describe("findTickets", () => {
     });
 
   it("finds a ticket by its number", () => {
-    expect(find("10503").map((t) => t.numero)).toContain(10503);
+    expect(find("10503").map((ticket) => ticket.numero)).toContain(10503);
   });
 
   it("looks at every ticket, finished ones included", () => {
-    const closed = rawData.chamados.find((t) => t.status === Status.Closed)!;
-    expect(find(String(closed.numero)).map((t) => t.id)).toContain(closed.id);
+    const closed = rawData.chamados.find(
+      (ticket) => ticket.status === Status.Closed,
+    )!;
+    expect(find(String(closed.numero)).map((ticket) => ticket.id)).toContain(
+      closed.id,
+    );
   });
 
   it("puts the most urgent first", () => {
     const result = find("10");
     const sorted = [...result].sort(compareBySla(NOW));
-    expect(result.map((t) => t.id)).toEqual(sorted.map((t) => t.id));
+    expect(result.map((ticket) => ticket.id)).toEqual(
+      sorted.map((ticket) => ticket.id),
+    );
   });
 
   it("returns every ticket, ordered, when the search is empty", () => {
@@ -80,7 +88,7 @@ describe("findTickets", () => {
     const all = find("104");
     const inGroup = find("104", infra.id);
     expect(inGroup.length).toBeLessThan(all.length);
-    expect(inGroup.every((t) => t.grupo_id === infra.id)).toBe(true);
+    expect(inGroup.every((ticket) => ticket.grupo_id === infra.id)).toBe(true);
   });
 
   it("finds nothing for something that matches nothing", () => {

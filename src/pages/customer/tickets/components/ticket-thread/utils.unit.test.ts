@@ -5,12 +5,12 @@ import { HELENA_ID, rawData } from "@/test-data";
 import { threadItems } from "./utils";
 
 const people: Record<string, Person> = Object.fromEntries(
-  rawData.usuarios.map((u) => [u.id, u]),
+  rawData.usuarios.map((person) => [person.id, person]),
 );
 const byNumber = (numero: number) =>
-  rawData.chamados.find((t) => t.numero === numero) as Ticket;
+  rawData.chamados.find((ticket) => ticket.numero === numero) as Ticket;
 const messagesOf = (ticket: Ticket): Message[] =>
-  rawData.mensagens.filter((m) => m.chamado_id === ticket.id);
+  rawData.mensagens.filter((message) => message.chamado_id === ticket.id);
 
 const items = (
   numero: number,
@@ -22,14 +22,14 @@ const items = (
     ticket,
     messages: [
       ...messagesOf(ticket),
-      ...extra.map((m, i) => ({
-        id: `extra-${i}`,
+      ...extra.map((message, index) => ({
+        id: `extra-${index}`,
         chamado_id: ticket.id,
         criada_em: "2026-11-03T10:00:00Z",
         autor_id: HELENA_ID,
         texto: "extra",
         interna: false,
-        ...m,
+        ...message,
       })),
     ],
     people,
@@ -53,12 +53,16 @@ describe("threadItems", () => {
   it("has the description and then every message, oldest first", () => {
     const list = items(10611, "2026-12-01T00:00:00Z");
     expect(list).toHaveLength(1 + messagesOf(byNumber(10611)).length);
-    expect(list.map((i) => i.at)).toEqual([...list.map((i) => i.at)].sort());
+    expect(list.map((threadItem) => threadItem.at)).toEqual(
+      [...list.map((threadItem) => threadItem.at)].sort(),
+    );
   });
 
   it("knows which messages are hers and who wrote the others", () => {
     const list = items(10611, "2026-12-01T00:00:00Z");
-    const marina = list.find((i) => i.author === "Marina Almeida")!;
+    const marina = list.find(
+      (threadItem) => threadItem.author === "Marina Almeida",
+    )!;
     expect(marina.isOwn).toBe(false);
     expect(marina.role).toBe(Profile.Consultant);
     expect(list.at(-1)?.isOwn).toBe(true);
@@ -66,13 +70,19 @@ describe("threadItems", () => {
 
   it("flags as new the team messages that came after the last visit", () => {
     const list = items(10611, "2026-10-20T00:00:00Z");
-    const fresh = list.filter((i) => i.isNew).map((i) => i.at);
+    const fresh = list
+      .filter((threadItem) => threadItem.isNew)
+      .map((threadItem) => threadItem.at);
     expect(fresh).toEqual(["2026-10-20T14:42:09Z", "2026-10-21T17:22:09Z"]);
   });
 
   it("does not flag what she wrote herself", () => {
     const list = items(10611, "2026-01-01T00:00:00Z");
-    expect(list.filter((i) => i.isOwn).every((i) => !i.isNew)).toBe(true);
+    expect(
+      list
+        .filter((threadItem) => threadItem.isOwn)
+        .every((threadItem) => !threadItem.isNew),
+    ).toBe(true);
   });
 
   it("flags nothing when she has seen everything", () => {
@@ -83,9 +93,10 @@ describe("threadItems", () => {
 
   it("flags a message that arrived exactly when she was last here as seen", () => {
     const list = items(10611, "2026-10-20T14:42:09Z");
-    expect(list.find((i) => i.at === "2026-10-20T14:42:09Z")?.isNew).toBe(
-      false,
-    );
+    expect(
+      list.find((threadItem) => threadItem.at === "2026-10-20T14:42:09Z")
+        ?.isNew,
+    ).toBe(false);
   });
 
   it("names an unknown author as the team instead of leaving it blank", () => {
@@ -103,6 +114,6 @@ describe("threadItems", () => {
       meId: HELENA_ID,
       since: "2026-01-01T00:00:00Z",
     });
-    expect(list.map((i) => i.key)).toEqual(["description"]);
+    expect(list.map((threadItem) => threadItem.key)).toEqual(["description"]);
   });
 });

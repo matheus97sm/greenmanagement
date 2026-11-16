@@ -2,7 +2,7 @@ import type { User } from "@/auth/users";
 
 export interface Props {
   ticketId: string;
-  me: User;
+  currentUser: User;
   draft: string;
   onDraftChange: (value: string) => void;
 }

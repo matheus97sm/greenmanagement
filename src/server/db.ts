@@ -4,56 +4,59 @@ import type { RawData } from "@/domain/types";
 import { anchorClock } from "@/lib/clock";
 import { Status, HistoryType } from "@/domain/enums";
 
-export type Db = Omit<RawData, "meta"> & { agora: string };
+export type Database = Omit<RawData, "meta"> & { agora: string };
 
-let current: Db | null = null;
-let loading: Promise<Db> | null = null;
+let current: Database | null = null;
+let loading: Promise<Database> | null = null;
 let nextNumber = 0;
 
-function renewReopenedTickets(db: Db): void {
-  const people = new Map(db.usuarios.map((u) => [u.id, u]));
-  for (const ticket of db.chamados) {
-    const reopenedAt = db.historico
+function renewReopenedTickets(database: Database): void {
+  const people = new Map(
+    database.usuarios.map((person) => [person.id, person]),
+  );
+  for (const ticket of database.chamados) {
+    const reopenedAt = database.historico
       .filter(
-        (h) =>
-          h.chamado_id === ticket.id &&
-          h.tipo === HistoryType.Status &&
-          h.de === Status.Closed &&
-          h.para === Status.InProgress,
+        (historyEntry) =>
+          historyEntry.chamado_id === ticket.id &&
+          historyEntry.tipo === HistoryType.Status &&
+          historyEntry.de === Status.Closed &&
+          historyEntry.para === Status.InProgress,
       )
-      .map((h) => h.ocorrido_em)
+      .map((historyEntry) => historyEntry.ocorrido_em)
       .sort()
       .at(-1);
     if (!reopenedAt) continue;
 
     const firstReplyAfter =
-      db.mensagens
+      database.mensagens
         .filter(
-          (m) =>
-            m.chamado_id === ticket.id &&
-            !m.interna &&
-            m.criada_em >= reopenedAt &&
-            isStaff(people.get(m.autor_id)),
+          (message) =>
+            message.chamado_id === ticket.id &&
+            !message.interna &&
+            message.criada_em >= reopenedAt &&
+            isStaff(people.get(message.autor_id)),
         )
-        .map((m) => m.criada_em)
+        .map((message) => message.criada_em)
         .sort()[0] ?? null;
     Object.assign(
       ticket,
-      renewSla(ticket, reopenedAt, db.sla, firstReplyAfter),
+      renewSla(ticket, reopenedAt, database.sla, firstReplyAfter),
     );
   }
 }
 
-export function initDb(raw: RawData): Db {
+export function initDb(raw: RawData): Database {
   const { meta, ...tables } = structuredClone(raw);
   current = { agora: meta.agora, ...tables };
   renewReopenedTickets(current);
-  nextNumber = Math.max(0, ...current.chamados.map((c) => c.numero)) + 1;
+  nextNumber =
+    Math.max(0, ...current.chamados.map((ticket) => ticket.numero)) + 1;
   anchorClock(meta.agora);
   return current;
 }
 
-export function getDb(): Db {
+export function getDb(): Database {
   if (!current) throw new Error("The database has not been loaded yet.");
   return current;
 }
@@ -62,7 +65,7 @@ export function nextTicketNumber(): number {
   return nextNumber++;
 }
 
-export function ensureDb(): Promise<Db> {
+export function ensureDb(): Promise<Database> {
   if (current) return Promise.resolve(current);
   loading ??= fetch(dadosUrl)
     .then((response) => response.json() as Promise<RawData>)

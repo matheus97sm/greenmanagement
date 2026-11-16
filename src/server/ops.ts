@@ -29,7 +29,7 @@ export class ApiError extends Error {}
 const HOUR = 3_600_000;
 
 function person(id: string): Person | undefined {
-  return getDb().usuarios.find((u) => u.id === id);
+  return getDb().usuarios.find((currentPerson) => currentPerson.id === id);
 }
 
 function nameOf(id: string | null): string {
@@ -37,7 +37,9 @@ function nameOf(id: string | null): string {
 }
 
 function findTicket(id: string): Ticket {
-  const ticket = getDb().chamados.find((t) => t.id === id);
+  const ticket = getDb().chamados.find(
+    (currentTicket) => currentTicket.id === id,
+  );
   if (!ticket) throw new ApiError("Chamado não encontrado.");
   return ticket;
 }
@@ -48,7 +50,9 @@ function emit(event: DomainEvent): DomainEvent {
 }
 
 function historyOf(ticketId: string): HistoryEntry[] {
-  return getDb().historico.filter((h) => h.chamado_id === ticketId);
+  return getDb().historico.filter(
+    (historyEntry) => historyEntry.chamado_id === ticketId,
+  );
 }
 
 function commitStatus(
@@ -57,7 +61,7 @@ function commitStatus(
   reason: string,
   userId: string,
 ): DomainEvent {
-  const db = getDb();
+  const database = getDb();
   const at = nowIso();
   const id = crypto.randomUUID();
   const from = ticket.status;
@@ -67,10 +71,10 @@ function commitStatus(
       ticket,
       { de: from, para: to, ocorrido_em: at },
       historyOf(ticket.id),
-      db.sla,
+      database.sla,
     ),
   );
-  db.historico.push({
+  database.historico.push({
     id,
     chamado_id: ticket.id,
     tipo: HistoryType.Status,
@@ -123,19 +127,23 @@ export function openTicket(input: {
   title: string;
   description: string;
 }): DomainEvent[] {
-  const db = getDb();
+  const database = getDb();
   const requester = person(input.requesterId);
   if (requester?.perfil !== Profile.Customer) {
     throw new ApiError("Só clientes abrem chamados.");
   }
-  const category = db.categorias.find((c) => c.id === input.categoryId);
+  const category = database.categorias.find(
+    (currentCategory) => currentCategory.id === input.categoryId,
+  );
   if (!category) throw new ApiError("Categoria inválida.");
   const title = input.title.trim();
   const description = input.description.trim();
   if (!title || !description) {
     throw new ApiError("Informe o título e a descrição.");
   }
-  const policy = db.sla.find((s) => s.prioridade === input.priority);
+  const policy = database.sla.find(
+    (slaPolicy) => slaPolicy.prioridade === input.priority,
+  );
   if (!policy) throw new ApiError("Prioridade inválida.");
 
   const at = nowIso();
@@ -164,7 +172,7 @@ export function openTicket(input: {
     resolvido_em: null,
     fechado_em: null,
   };
-  db.chamados.push(ticket);
+  database.chamados.push(ticket);
   return [
     emit({
       id: crypto.randomUUID(),
@@ -243,7 +251,7 @@ export function addMessage(input: {
   text: string;
   internal: boolean;
 }): DomainEvent[] {
-  const db = getDb();
+  const database = getDb();
   const ticket = findTicket(input.ticketId);
   const author = person(input.authorId);
   const text = input.text.trim();
@@ -278,7 +286,7 @@ export function addMessage(input: {
     texto: text,
     interna: input.internal,
   };
-  db.mensagens.push(message);
+  database.mensagens.push(message);
   Object.assign(ticket, applyMessage(ticket, message, isStaff(author)));
 
   const events: DomainEvent[] = [

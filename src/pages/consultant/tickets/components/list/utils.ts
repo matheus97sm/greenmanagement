@@ -16,10 +16,12 @@ export function splitTickets(
   groupId: string | undefined,
 ): { mine: Ticket[]; queue: Ticket[] } {
   return {
-    mine: tickets.filter((t) => t.responsavel_id === meId),
+    mine: tickets.filter((ticket) => ticket.responsavel_id === meId),
     queue: tickets.filter(
-      (t) =>
-        !t.responsavel_id && t.status === Status.Open && t.grupo_id === groupId,
+      (ticket) =>
+        !ticket.responsavel_id &&
+        ticket.status === Status.Open &&
+        ticket.grupo_id === groupId,
     ),
   };
 }
@@ -40,8 +42,8 @@ export function selectRows({
   now,
 }: SelectRowsInput): Ticket[] {
   return (tab === Tab.Mine ? mine : queue)
-    .filter((t) => matchesStatus(t, statusFilter))
-    .filter((t) => matchesSearch(t, search, people))
+    .filter((ticket) => matchesStatus(ticket, statusFilter))
+    .filter((ticket) => matchesSearch(ticket, search, people))
     .sort(compareBySla(now));
 }
 
@@ -49,6 +51,9 @@ export function statusFilterOptions(): StatusFilterOption[] {
   return [
     { value: StatusOption.Active, label: "Em andamento" },
     { value: StatusOption.All, label: "Todos" },
-    ...Object.values(Status).map((s) => ({ value: s, label: STATUS_LABEL[s] })),
+    ...Object.values(Status).map((status) => ({
+      value: status,
+      label: STATUS_LABEL[status],
+    })),
   ];
 }

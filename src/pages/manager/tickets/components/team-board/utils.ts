@@ -12,11 +12,11 @@ export function sectionsOf(groups: Group[], workloads: Workload[]): Section[] {
     .map((group) => ({
       group,
       workloads: workloads
-        .filter((w) => w.consultant.grupo_id === group.id)
+        .filter((workload) => workload.consultant.grupo_id === group.id)
         .sort(compareWorkload),
     }))
     .filter((section) => section.workloads.length > 0)
-    .sort((a, b) => a.group.nome.localeCompare(b.group.nome));
+    .sort((first, second) => first.group.nome.localeCompare(second.group.nome));
 }
 
 export function barValue(active: number, maxActive: number): number {

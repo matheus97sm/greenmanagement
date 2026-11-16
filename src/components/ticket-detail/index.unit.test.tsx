@@ -15,10 +15,10 @@ vi.mock("@/store/actions", () => ({
   changeStatus: vi.fn(),
 }));
 
-const userOf = (id: string) => USERS.find((u) => u.id === id)!;
+const userOf = (id: string) => USERS.find((user) => user.id === id)!;
 const byNumber = (numero: number) =>
-  rawData.chamados.find((t) => t.numero === numero)!;
-const marina = rawData.usuarios.find((u) => u.id === MARINA_ID)!;
+  rawData.chamados.find((ticket) => ticket.numero === numero)!;
+const marina = rawData.usuarios.find((person) => person.id === MARINA_ID)!;
 
 function renderDetail(
   ticketId: string,
@@ -28,7 +28,7 @@ function renderDetail(
   return renderWithProviders(
     <TicketDetail
       ticketId={ticketId}
-      me={userOf(userId)}
+      currentUser={userOf(userId)}
       draft={options.draft ?? ""}
       onDraftChange={vi.fn()}
       extraActions={options.extra}
@@ -50,7 +50,7 @@ describe("TicketDetail", () => {
     it("shows the ticket, who asked for it and who is handling it", () => {
       const ticket = byNumber(10503);
       const requester = rawData.usuarios.find(
-        (u) => u.id === ticket.solicitante_id,
+        (person) => person.id === ticket.solicitante_id,
       )!;
       renderDetail(ticket.id);
       expect(
@@ -92,15 +92,15 @@ describe("TicketDetail", () => {
 
     it("shows internal notes with their own badge", () => {
       const note = rawData.mensagens.find(
-        (m) =>
-          m.interna &&
-          rawData.chamados.find((t) => t.id === m.chamado_id)
+        (message) =>
+          message.interna &&
+          rawData.chamados.find((ticket) => ticket.id === message.chamado_id)
             ?.responsavel_id === MARINA_ID,
       )!;
       const { container } = renderDetail(note.chamado_id);
       const badges = Array.from(
         container.querySelectorAll(".mantine-Badge-root"),
-      ).filter((b) => b.textContent === "Nota interna");
+      ).filter((element) => element.textContent === "Nota interna");
       expect(badges.length).toBeGreaterThan(0);
     });
 
@@ -124,7 +124,8 @@ describe("TicketDetail", () => {
 
     const queued = () =>
       rawData.chamados.find(
-        (t) => !t.responsavel_id && t.grupo_id === marina.grupo_id,
+        (ticket) =>
+          !ticket.responsavel_id && ticket.grupo_id === marina.grupo_id,
       )!;
 
     it("offers to take it and keeps the composer away", () => {
@@ -154,13 +155,17 @@ describe("TicketDetail", () => {
   describe("with a closed ticket of her own", () => {
     const closedInGroup = () =>
       rawData.chamados.find(
-        (t) => t.status === Status.Closed && t.grupo_id === marina.grupo_id,
+        (ticket) =>
+          ticket.status === Status.Closed &&
+          ticket.grupo_id === marina.grupo_id,
       )!;
 
     beforeEach(() => {
       const id = closedInGroup().id;
       loadStoreAs(MARINA_ID, (snapshot) => {
-        const ticket = snapshot.chamados.find((t) => t.id === id)!;
+        const ticket = snapshot.chamados.find(
+          (currentTicket) => currentTicket.id === id,
+        )!;
         ticket.responsavel_id = MARINA_ID;
       });
     });
@@ -235,7 +240,7 @@ describe("TicketDetail for the manager", () => {
 
   it("can answer a ticket nobody has taken yet without taking it", () => {
     const queued = rawData.chamados.find(
-      (t) => !t.responsavel_id && t.status === Status.Open,
+      (ticket) => !ticket.responsavel_id && ticket.status === Status.Open,
     )!;
     renderDetail(queued.id, { userId: RICARDO_ID });
     expect(composer()).toBeInTheDocument();
@@ -246,7 +251,9 @@ describe("TicketDetail for the manager", () => {
   });
 
   it("hides the reply box on a closed ticket and offers to reopen it", () => {
-    const closed = rawData.chamados.find((t) => t.status === Status.Closed)!;
+    const closed = rawData.chamados.find(
+      (ticket) => ticket.status === Status.Closed,
+    )!;
     renderDetail(closed.id, { userId: RICARDO_ID });
     expect(composer()).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Reabrir" })).toBeInTheDocument();
@@ -264,12 +271,16 @@ describe("TicketDetail for the manager", () => {
   });
 
   it("tells the customer's messages from the team's with a badge each", () => {
-    const people = new Map(rawData.usuarios.map((u) => [u.id, u.perfil]));
-    const mixed = rawData.chamados.find((t) => {
+    const people = new Map(
+      rawData.usuarios.map((person) => [person.id, person.perfil]),
+    );
+    const mixed = rawData.chamados.find((ticket) => {
       const list = rawData.mensagens.filter(
-        (m) => m.chamado_id === t.id && !m.interna,
+        (message) => message.chamado_id === ticket.id && !message.interna,
       );
-      const roles = new Set(list.map((m) => people.get(m.autor_id)));
+      const roles = new Set(
+        list.map((message) => people.get(message.autor_id)),
+      );
       return (
         list.length < 60 &&
         roles.has(Profile.Customer) &&
@@ -280,8 +291,8 @@ describe("TicketDetail for the manager", () => {
 
     const { container } = renderDetail(mixed.id, { userId: RICARDO_ID });
     const roles = new Set(
-      Array.from(container.querySelectorAll("[data-role]")).map((el) =>
-        el.getAttribute("data-role"),
+      Array.from(container.querySelectorAll("[data-role]")).map((element) =>
+        element.getAttribute("data-role"),
       ),
     );
     expect(roles).toEqual(new Set([Profile.Customer, Profile.Consultant]));

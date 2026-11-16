@@ -10,9 +10,9 @@ export function ReopenBox({ ticketId, customerId }: Props) {
   const submit = async () => {
     if (!reason.trim() || saving) return;
     setSaving(true);
-    const ok = await reopenTicket({ ticketId, customerId, reason });
+    const succeeded = await reopenTicket({ ticketId, customerId, reason });
     setSaving(false);
-    if (ok) setReason("");
+    if (succeeded) setReason("");
   };
 
   return (
@@ -31,7 +31,7 @@ export function ReopenBox({ ticketId, customerId }: Props) {
         minRows={2}
         maxRows={6}
         value={reason}
-        onChange={(e) => setReason(e.currentTarget.value)}
+        onChange={(event) => setReason(event.currentTarget.value)}
       />
       <Group justify="flex-end">
         <Button onClick={submit} loading={saving} disabled={!reason.trim()}>

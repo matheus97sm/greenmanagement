@@ -18,7 +18,7 @@ import { Impact } from "./enums";
 import type { Props } from "./types";
 import { impactOptions, isComplete, priorityOf, topicOptions } from "./utils";
 
-export function NewTicketModal({ me, onClose, onOpenTicket }: Props) {
+export function NewTicketModal({ currentUser, onClose, onOpenTicket }: Props) {
   const state = useTickets();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -40,7 +40,7 @@ export function NewTicketModal({ me, onClose, onOpenTicket }: Props) {
     if (!topic || !isComplete({ title, description, topic }) || saving) return;
     setSaving(true);
     const id = await createTicket({
-      requesterId: me.id,
+      requesterId: currentUser.id,
       categoryId: topic,
       priority: priorityOf(impact),
       title,
@@ -59,7 +59,7 @@ export function NewTicketModal({ me, onClose, onOpenTicket }: Props) {
           required
           data-autofocus
           value={title}
-          onChange={(e) => setTitle(e.currentTarget.value)}
+          onChange={(event) => setTitle(event.currentTarget.value)}
         />
         <Textarea
           label="O que está acontecendo?"
@@ -69,7 +69,7 @@ export function NewTicketModal({ me, onClose, onOpenTicket }: Props) {
           minRows={3}
           maxRows={8}
           value={description}
-          onChange={(e) => setDescription(e.currentTarget.value)}
+          onChange={(event) => setDescription(event.currentTarget.value)}
         />
         <SimilarTickets hits={hits} onOpen={onOpenTicket} />
         <Select

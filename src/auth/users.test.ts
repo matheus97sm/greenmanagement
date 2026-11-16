@@ -12,12 +12,16 @@ const PROFILE_OF_ROLE: Record<Role, Profile> = {
 
 describe("the demo users", () => {
   it("are the three people of the brief, one per profile", () => {
-    expect(USERS.map((u) => u.role).sort()).toEqual(Object.values(Role).sort());
+    expect(USERS.map((user) => user.role).sort()).toEqual(
+      Object.values(Role).sort(),
+    );
   });
 
   it("exist in the data with the same id, name, e-mail and profile", () => {
     for (const user of USERS) {
-      const person = rawData.usuarios.find((p) => p.id === user.id);
+      const person = rawData.usuarios.find(
+        (currentPerson) => currentPerson.id === user.id,
+      );
       expect(person, user.name).toBeDefined();
       expect(person?.nome).toBe(user.name);
       expect(person?.email).toBe(user.email);

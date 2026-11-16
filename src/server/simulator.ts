@@ -4,7 +4,7 @@ import { getDb } from "./db";
 import * as ops from "./ops";
 import { Status, Profile } from "@/domain/enums";
 
-const pick = <T>(items: T[]): T | undefined =>
+const pick = <Item>(items: Item[]): Item | undefined =>
   items[Math.floor(Math.random() * items.length)];
 
 function pickFor(
@@ -23,41 +23,49 @@ const concernsOf = (focus: Person) => (ticket: Ticket) =>
       : true;
 
 export function startSimulator(focus: Person): () => void {
-  const db = getDb();
+  const database = getDb();
   const people = (profile: Person["perfil"]) =>
-    db.usuarios.filter((u) => u.perfil === profile);
+    database.usuarios.filter((person) => person.perfil === profile);
 
-  const role = new Map(db.usuarios.map((u) => [u.id, u.perfil]));
+  const role = new Map(
+    database.usuarios.map((person) => [person.id, person.perfil]),
+  );
   const texts = {
     customer: [
       ...new Set(
-        db.mensagens
-          .filter((m) => role.get(m.autor_id) === Profile.Customer)
-          .map((m) => m.texto),
+        database.mensagens
+          .filter((message) => role.get(message.autor_id) === Profile.Customer)
+          .map((message) => message.texto),
       ),
     ],
     staff: [
       ...new Set(
-        db.mensagens
+        database.mensagens
           .filter(
-            (m) => role.get(m.autor_id) === Profile.Consultant && !m.interna,
+            (message) =>
+              role.get(message.autor_id) === Profile.Consultant &&
+              !message.interna,
           )
-          .map((m) => m.texto),
+          .map((message) => message.texto),
       ),
     ],
     note: [
-      ...new Set(db.mensagens.filter((m) => m.interna).map((m) => m.texto)),
+      ...new Set(
+        database.mensagens
+          .filter((message) => message.interna)
+          .map((message) => message.texto),
+      ),
     ],
   };
   const concerns = concernsOf(focus);
 
   function customerReplies() {
     const ticket = pickFor(
-      db.chamados.filter(
-        (t) =>
-          t.responsavel_id &&
-          (t.status === Status.InProgress ||
-            t.status === Status.WaitingCustomer),
+      database.chamados.filter(
+        (currentTicket) =>
+          currentTicket.responsavel_id &&
+          (currentTicket.status === Status.InProgress ||
+            currentTicket.status === Status.WaitingCustomer),
       ),
       concerns,
     );
@@ -73,8 +81,10 @@ export function startSimulator(focus: Person): () => void {
 
   function consultantReplies() {
     const ticket = pickFor(
-      db.chamados.filter(
-        (t) => t.responsavel_id && t.status === Status.InProgress,
+      database.chamados.filter(
+        (currentTicket) =>
+          currentTicket.responsavel_id &&
+          currentTicket.status === Status.InProgress,
       ),
       concerns,
     );
@@ -91,15 +101,17 @@ export function startSimulator(focus: Person): () => void {
   function newTicket() {
     const customer = pick(people(Profile.Customer));
 
-    const groupId = focus.grupo_id ?? pick(db.grupos)?.id;
+    const groupId = focus.grupo_id ?? pick(database.grupos)?.id;
     const category = pick(
       Math.random() < 0.7
-        ? db.categorias.filter((c) => c.grupo_id === groupId)
-        : db.categorias,
+        ? database.categorias.filter(
+            (currentCategory) => currentCategory.grupo_id === groupId,
+          )
+        : database.categorias,
     );
-    const title = pick(db.chamados)?.titulo;
+    const title = pick(database.chamados)?.titulo;
     const description = pick(texts.customer);
-    const priority = pick(db.sla)?.prioridade;
+    const priority = pick(database.sla)?.prioridade;
     if (!customer || !category || !title || !description || !priority) return;
     ops.openTicket({
       requesterId: customer.id,
@@ -111,16 +123,17 @@ export function startSimulator(focus: Person): () => void {
   }
 
   function colleagueTakesFromQueue() {
-    const queue = db.chamados.filter(
-      (t) =>
-        !t.responsavel_id &&
-        t.status === Status.Open &&
-        (focus.grupo_id ? t.grupo_id === focus.grupo_id : true),
+    const queue = database.chamados.filter(
+      (currentTicket) =>
+        !currentTicket.responsavel_id &&
+        currentTicket.status === Status.Open &&
+        (focus.grupo_id ? currentTicket.grupo_id === focus.grupo_id : true),
     );
     const ticket = pick(queue);
     const colleague = pick(
       people(Profile.Consultant).filter(
-        (p) => p.id !== focus.id && p.grupo_id === ticket?.grupo_id,
+        (person) =>
+          person.id !== focus.id && person.grupo_id === ticket?.grupo_id,
       ),
     );
     if (ticket && colleague) ops.assumeTicket(ticket.id, colleague.id);
@@ -128,12 +141,16 @@ export function startSimulator(focus: Person): () => void {
 
   function colleagueLeavesNote() {
     const ticket = pickFor(
-      db.chamados.filter((t) => t.responsavel_id && isActive(t.status)),
+      database.chamados.filter(
+        (currentTicket) =>
+          currentTicket.responsavel_id && isActive(currentTicket.status),
+      ),
       concerns,
     );
     const colleague = pick(
       people(Profile.Consultant).filter(
-        (p) => p.id !== focus.id && p.grupo_id === ticket?.grupo_id,
+        (person) =>
+          person.id !== focus.id && person.grupo_id === ticket?.grupo_id,
       ),
     );
     const text = pick(texts.note);
@@ -148,12 +165,12 @@ export function startSimulator(focus: Person): () => void {
   }
 
   function tick() {
-    const r = Math.random();
+    const roll = Math.random();
     try {
-      if (r < 0.35) customerReplies();
-      else if (r < 0.5) consultantReplies();
-      else if (r < 0.7) newTicket();
-      else if (r < 0.9) colleagueTakesFromQueue();
+      if (roll < 0.35) customerReplies();
+      else if (roll < 0.5) consultantReplies();
+      else if (roll < 0.7) newTicket();
+      else if (roll < 0.9) colleagueTakesFromQueue();
       else colleagueLeavesNote();
     } catch {}
   }

@@ -8,7 +8,10 @@ const find = (predicate: Parameters<typeof rawData.chamados.find>[0]) =>
   getDb().chamados.find(predicate)!;
 
 const closedOfHelena = () =>
-  find((t) => t.solicitante_id === HELENA_ID && t.status === Status.Closed);
+  find(
+    (ticket) =>
+      ticket.solicitante_id === HELENA_ID && ticket.status === Status.Closed,
+  );
 
 beforeEach(() => {
   initDb(rawData);
@@ -26,7 +29,9 @@ describe("writing on a finished ticket", () => {
       }),
     ).toThrow(ApiError);
     expect(
-      getDb().mensagens.some((m) => m.texto === "Ainda não funciona"),
+      getDb().mensagens.some(
+        (message) => message.texto === "Ainda não funciona",
+      ),
     ).toBe(false);
   });
 
@@ -64,12 +69,14 @@ describe("reopenTicket", () => {
     const ticket = closedOfHelena();
     const events = reopen(ticket.id);
 
-    expect(events.map((e) => e.tipo)).toEqual([
+    expect(events.map((domainEvent) => domainEvent.tipo)).toEqual([
       EventType.StatusChanged,
       EventType.MessageAdded,
     ]);
     expect(ticket.status).toBe(Status.InProgress);
-    const entry = getDb().historico.findLast((h) => h.chamado_id === ticket.id);
+    const entry = getDb().historico.findLast(
+      (historyEntry) => historyEntry.chamado_id === ticket.id,
+    );
     expect(entry).toMatchObject({
       para: Status.InProgress,
       usuario_id: HELENA_ID,
@@ -122,7 +129,8 @@ describe("reopenTicket", () => {
 
   it("refuses a ticket of another customer", () => {
     const other = find(
-      (t) => t.solicitante_id !== HELENA_ID && t.status === Status.Closed,
+      (ticket) =>
+        ticket.solicitante_id !== HELENA_ID && ticket.status === Status.Closed,
     );
     expect(() => reopen(other.id)).toThrow(ApiError);
     expect(other.status).toBe(Status.Closed);
@@ -140,8 +148,9 @@ describe("reopenTicket", () => {
 
   it("refuses a ticket that is still being worked on", () => {
     const active = find(
-      (t) =>
-        t.solicitante_id === HELENA_ID && t.status === Status.WaitingCustomer,
+      (ticket) =>
+        ticket.solicitante_id === HELENA_ID &&
+        ticket.status === Status.WaitingCustomer,
     );
     expect(() => reopen(active.id)).toThrow(/em andamento/);
   });

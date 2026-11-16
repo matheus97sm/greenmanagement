@@ -15,7 +15,7 @@ vi.mock("@/store/actions", async (importOriginal) => ({
 }));
 
 const idOf = (numero: number) =>
-  rawData.chamados.find((t) => t.numero === numero)!.id;
+  rawData.chamados.find((ticket) => ticket.numero === numero)!.id;
 
 const routes = [{ path: "/consultant/tickets/:id?", element: <TicketsPage /> }];
 
@@ -101,7 +101,9 @@ describe("consultant tickets page", () => {
 
     it("clears the unread counter once the ticket is opened", async () => {
       const user = userEvent.setup();
-      const ticket = rawData.chamados.find((t) => t.numero === 10503)!;
+      const ticket = rawData.chamados.find(
+        (currentTicket) => currentTicket.numero === 10503,
+      )!;
       const loadedAt = Date.parse(ticketsStore.getState().loadedAt);
 
       ticketsStore.applyEvent({

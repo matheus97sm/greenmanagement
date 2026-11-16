@@ -22,7 +22,7 @@ vi.mock("@/components/status-badge", async (importOriginal) => {
 
 const NOW = Date.parse(rawData.meta.agora);
 const byNumber = (numero: number) =>
-  rawData.chamados.find((t) => t.numero === numero)!;
+  rawData.chamados.find((ticket) => ticket.numero === numero)!;
 
 function renderQueue(
   props: {
@@ -65,9 +65,11 @@ describe("TicketQueue", () => {
     const { container } = renderQueue();
     const ticket = byNumber(10503);
     const requester = rawData.usuarios.find(
-      (u) => u.id === ticket.solicitante_id,
+      (person) => person.id === ticket.solicitante_id,
     )!;
-    const owner = rawData.usuarios.find((u) => u.id === ticket.responsavel_id)!;
+    const owner = rawData.usuarios.find(
+      (person) => person.id === ticket.responsavel_id,
+    )!;
     const [row] = rowsOf(container);
     expect(row).toHaveTextContent(`#10503 · ${ticket.titulo}`);
     expect(row).toHaveTextContent(requester.nome);
@@ -75,7 +77,7 @@ describe("TicketQueue", () => {
   });
 
   it("says when nobody has the ticket", () => {
-    const queued = rawData.chamados.find((t) => !t.responsavel_id)!;
+    const queued = rawData.chamados.find((ticket) => !ticket.responsavel_id)!;
     const { container } = renderQueue({ tickets: [queued] });
     expect(rowsOf(container)[0]).toHaveTextContent("sem responsável");
   });
@@ -150,14 +152,16 @@ describe("TicketQueue", () => {
 
   describe("one group at a time", () => {
     const infra = byNumber(10503);
-    const apps = rawData.chamados.find((t) => t.grupo_id !== infra.grupo_id)!;
+    const apps = rawData.chamados.find(
+      (ticket) => ticket.grupo_id !== infra.grupo_id,
+    )!;
     const mixed = [infra, apps, byNumber(10001)];
     const box = (numero: number) =>
       screen.getByRole("checkbox", { name: `Selecionar chamado ${numero}` });
 
     it("leaves every ticket enabled while nothing is locked", () => {
       renderQueue({ tickets: mixed });
-      for (const t of mixed) expect(box(t.numero)).toBeEnabled();
+      for (const ticket of mixed) expect(box(ticket.numero)).toBeEnabled();
     });
 
     it("disables the tickets of the other group once a group is locked", () => {
@@ -177,8 +181,8 @@ describe("TicketQueue", () => {
         selected: [infra.id],
         lockedGroupId: infra.grupo_id,
       });
-      const locked = rowsOf(container).filter((r) =>
-        r.hasAttribute("data-locked"),
+      const locked = rowsOf(container).filter((resolve) =>
+        resolve.hasAttribute("data-locked"),
       );
       expect(locked).toHaveLength(1);
       expect(locked[0]).toHaveTextContent(`#${apps.numero}`);
@@ -193,7 +197,9 @@ describe("TicketQueue", () => {
 
     it("shows the group of each ticket", () => {
       const { container } = renderQueue({ tickets: mixed });
-      const names = rowsOf(container).map((r) => r.textContent ?? "");
+      const names = rowsOf(container).map(
+        (resolve) => resolve.textContent ?? "",
+      );
       expect(names[0]).toContain("Infraestrutura");
       expect(names[1]).toContain("Aplicações");
     });
@@ -212,7 +218,7 @@ describe("TicketQueue", () => {
 
     it("selects all inside the locked group even when it is not the first one", async () => {
       const second = rawData.chamados.filter(
-        (t) => t.grupo_id === apps.grupo_id,
+        (ticket) => ticket.grupo_id === apps.grupo_id,
       );
       const list = [infra, second[0], second[1]];
       const { onToggleAll } = renderQueue({

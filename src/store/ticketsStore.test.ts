@@ -114,9 +114,9 @@ function newStore() {
 describe("ticketsStore", () => {
   it("ignores the same event delivered twice", () => {
     const store = newStore();
-    const e = message("m1", at(1));
-    expect(store.applyEvent(e)).toBe(true);
-    expect(store.applyEvent(e)).toBe(false);
+    const domainEvent = message("m1", at(1));
+    expect(store.applyEvent(domainEvent)).toBe(true);
+    expect(store.applyEvent(domainEvent)).toBe(false);
     expect(store.getState().messages["ch-1"]).toHaveLength(1);
   });
 
@@ -131,10 +131,11 @@ describe("ticketsStore", () => {
     const store = newStore();
     store.applyEvent(message("m2", at(2)));
     store.applyEvent(message("m1", at(1)));
-    expect(store.getState().messages["ch-1"].map((m) => m.id)).toEqual([
-      "m1",
-      "m2",
-    ]);
+    expect(
+      store
+        .getState()
+        .messages["ch-1"].map((currentMessage) => currentMessage.id),
+    ).toEqual(["m1", "m2"]);
   });
 
   it("does not let an old status overwrite a newer one", () => {

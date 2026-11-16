@@ -3,7 +3,8 @@ import { Status, Profile, HistoryType } from "./enums";
 
 const HOUR = 3_600_000;
 
-const later = (a: string, b: string) => (a > b ? a : b);
+const later = (first: string, second: string) =>
+  first > second ? first : second;
 
 export function groupIdsOf(person: Person): string[] {
   return person.grupos_ids ?? (person.grupo_id ? [person.grupo_id] : []);
@@ -22,7 +23,9 @@ export function pausedSince(
   const entry = [...(history ?? [])]
     .reverse()
     .find(
-      (h) => h.tipo === HistoryType.Status && h.para === Status.WaitingCustomer,
+      (historyEntry) =>
+        historyEntry.tipo === HistoryType.Status &&
+        historyEntry.para === Status.WaitingCustomer,
     );
 
   return entry?.ocorrido_em ?? ticket.atualizado_em;
@@ -46,7 +49,9 @@ export function renewSla(
   policies: SlaPolicy[],
   firstResponseAt: string | null = null,
 ): Ticket {
-  const policy = policies.find((p) => p.prioridade === ticket.prioridade);
+  const policy = policies.find(
+    (slaPolicy) => slaPolicy.prioridade === ticket.prioridade,
+  );
   if (!policy) return ticket;
   const start = Date.parse(from);
   return {

@@ -9,7 +9,7 @@ export function topicOptions(
 ): TopicOption[] {
   return Object.values(categories)
     .map((category) => ({ value: category.id, label: category.nome }))
-    .sort((a, b) => a.label.localeCompare(b.label, "pt"));
+    .sort((first, second) => first.label.localeCompare(second.label, "pt"));
 }
 
 export function impactOptions(): ImpactOption[] {

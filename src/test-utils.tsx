@@ -34,21 +34,21 @@ export function renderRoutes(
 }
 
 export function renderWithProviders(
-  ui: ReactElement,
+  element: ReactElement,
   options: RenderOptions & { path?: string } = {},
 ) {
   const { path = "*", ...rest } = options;
-  return renderRoutes([{ path, element: ui }], rest);
+  return renderRoutes([{ path, element: element }], rest);
 }
 
 export function loadStoreAs(
   userId: string,
   tweak?: (snapshot: Snapshot) => void,
 ): Snapshot {
-  const db = initDb(rawData);
-  const viewer = db.usuarios.find((u) => u.id === userId);
+  const database = initDb(rawData);
+  const viewer = database.usuarios.find((person) => person.id === userId);
   if (!viewer) throw new Error(`Unknown user ${userId}`);
-  const snapshot = scopedSnapshot(db, viewer);
+  const snapshot = scopedSnapshot(database, viewer);
   tweak?.(snapshot);
   ticketsStore.reset();
   ticketsStore.loadSnapshot(snapshot);

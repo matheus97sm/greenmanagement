@@ -116,8 +116,10 @@ describe("buildTimeline", () => {
       history: [],
       people,
     });
-    const profiles = items.map((i) =>
-      i.kind === TimelineKind.Message ? i.authorProfile : "event",
+    const profiles = items.map((timelineItem) =>
+      timelineItem.kind === TimelineKind.Message
+        ? timelineItem.authorProfile
+        : "event",
     );
     expect(profiles).toEqual([
       Profile.Customer,
@@ -158,7 +160,12 @@ describe("buildTimeline", () => {
       ],
       people,
     });
-    expect(items.map((i) => i.key)).toEqual(["description", "m1", "h1", "m2"]);
+    expect(items.map((timelineItem) => timelineItem.key)).toEqual([
+      "description",
+      "m1",
+      "h1",
+      "m2",
+    ]);
   });
 
   it("describes a status change with who, from, to and the reason", () => {
@@ -174,7 +181,7 @@ describe("buildTimeline", () => {
       ],
       people,
     });
-    const event = items.find((i) => i.key === "h1");
+    const event = items.find((timelineItem) => timelineItem.key === "h1");
     expect(event).toMatchObject({ kind: TimelineKind.Event });
     expect(event?.text).toBe(
       "Marina alterou o status de Em atendimento para Resolvido. Motivo: Correcao aplicada",
@@ -196,7 +203,10 @@ describe("buildTimeline", () => {
       ],
       people,
     });
-    expect(items.map((i) => i.key)).toEqual(["description", "take"]);
+    expect(items.map((timelineItem) => timelineItem.key)).toEqual([
+      "description",
+      "take",
+    ]);
   });
 
   it("shows the assignment row when someone else was given the ticket", () => {
@@ -214,9 +224,9 @@ describe("buildTimeline", () => {
       ],
       people,
     });
-    expect(items.find((i) => i.key === "assign")?.text).toBe(
-      "Rafael assumiu o chamado.",
-    );
+    expect(
+      items.find((timelineItem) => timelineItem.key === "assign")?.text,
+    ).toBe("Rafael assumiu o chamado.");
   });
 
   it("ignores status entries that miss the from or to status", () => {
@@ -226,7 +236,9 @@ describe("buildTimeline", () => {
       history: [entry("broken", 5, { de: null })],
       people,
     });
-    expect(items.map((i) => i.key)).toEqual(["description"]);
+    expect(items.map((timelineItem) => timelineItem.key)).toEqual([
+      "description",
+    ]);
   });
 
   it("keeps internal notes flagged so the screen can style them", () => {
@@ -236,7 +248,9 @@ describe("buildTimeline", () => {
       history: [],
       people,
     });
-    expect(items.find((i) => i.key === "note")).toMatchObject({
+    expect(
+      items.find((timelineItem) => timelineItem.key === "note"),
+    ).toMatchObject({
       internal: true,
     });
   });
@@ -336,11 +350,11 @@ describe("permissionsFor", () => {
     status: Status.InProgress,
     ...overrides,
   });
-  const as = (role: Role, userId: string, t: Ticket) =>
-    permissionsFor({ ticket: t, role, userId, groupId });
+  const permissionsAs = (role: Role, userId: string, currentTicket: Ticket) =>
+    permissionsFor({ ticket: currentTicket, role, userId, groupId });
 
   it("lets the consultant who owns an open ticket reply and change its status", () => {
-    expect(as(Role.Consultant, "owner", make())).toEqual({
+    expect(permissionsAs(Role.Consultant, "owner", make())).toEqual({
       canTake: false,
       canReply: true,
       canChangeStatus: true,
@@ -349,12 +363,16 @@ describe("permissionsFor", () => {
 
   it("keeps a consultant from replying once the ticket is closed", () => {
     const closed = make({ status: Status.Closed });
-    expect(as(Role.Consultant, "owner", closed).canReply).toBe(false);
-    expect(as(Role.Consultant, "owner", closed).canChangeStatus).toBe(true);
+    expect(permissionsAs(Role.Consultant, "owner", closed).canReply).toBe(
+      false,
+    );
+    expect(
+      permissionsAs(Role.Consultant, "owner", closed).canChangeStatus,
+    ).toBe(true);
   });
 
   it("gives a colleague no say over someone else's ticket", () => {
-    expect(as(Role.Consultant, "other", make())).toEqual({
+    expect(permissionsAs(Role.Consultant, "other", make())).toEqual({
       canTake: false,
       canReply: false,
       canChangeStatus: false,
@@ -363,7 +381,7 @@ describe("permissionsFor", () => {
 
   it("lets a consultant take a ticket nobody owns, in their group", () => {
     const queued = make({ responsavel_id: null, status: Status.Open });
-    expect(as(Role.Consultant, "other", queued).canTake).toBe(true);
+    expect(permissionsAs(Role.Consultant, "other", queued).canTake).toBe(true);
     expect(
       permissionsFor({
         ticket: queued,
@@ -375,26 +393,27 @@ describe("permissionsFor", () => {
   });
 
   it("lets the manager reply and change the status of any open ticket, but never take it", () => {
-    expect(as(Role.Manager, "boss", make())).toEqual({
+    expect(permissionsAs(Role.Manager, "boss", make())).toEqual({
       canTake: false,
       canReply: true,
       canChangeStatus: true,
     });
     expect(
-      as(Role.Manager, "boss", make({ responsavel_id: null })).canTake,
+      permissionsAs(Role.Manager, "boss", make({ responsavel_id: null }))
+        .canTake,
     ).toBe(false);
   });
 
   it("keeps the manager from replying to a finished ticket while allowing a reopen", () => {
     const done = make({ status: Status.Resolved });
-    expect(as(Role.Manager, "boss", done)).toMatchObject({
+    expect(permissionsAs(Role.Manager, "boss", done)).toMatchObject({
       canReply: false,
       canChangeStatus: true,
     });
   });
 
   it("gives the customer nothing", () => {
-    expect(as(Role.Customer, "c", make())).toEqual({
+    expect(permissionsAs(Role.Customer, "c", make())).toEqual({
       canTake: false,
       canReply: false,
       canChangeStatus: false,

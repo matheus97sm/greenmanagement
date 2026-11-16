@@ -71,11 +71,11 @@ export interface HistoryEntry {
   ocorrido_em: string;
 }
 
-interface EventBase<T extends string, P> {
+interface EventBase<Item extends string, Parent> {
   id: string;
-  tipo: T;
+  tipo: Item;
   ocorrido_em: string;
-  payload: P;
+  payload: Parent;
 }
 
 export type DomainEvent =

@@ -4,10 +4,10 @@ import { rawData } from "@/test-data";
 import { matchesSearch } from "./search";
 
 const people: Record<string, Person> = Object.fromEntries(
-  rawData.usuarios.map((u) => [u.id, u]),
+  rawData.usuarios.map((person) => [person.id, person]),
 );
 const byNumber = (numero: number) =>
-  rawData.chamados.find((t) => t.numero === numero) as Ticket;
+  rawData.chamados.find((ticket) => ticket.numero === numero) as Ticket;
 
 describe("matchesSearch", () => {
   const ticket = byNumber(10503);

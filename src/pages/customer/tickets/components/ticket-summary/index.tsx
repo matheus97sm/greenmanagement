@@ -7,11 +7,11 @@ import { STAGE_COLOR, STAGE_LABEL } from "../stage-badge/constants";
 import type { Props } from "./types";
 import { expectationText, progressEvents, summaryOf } from "./utils";
 
-export function TicketSummary({ ticketId, me }: Props) {
+export function TicketSummary({ ticketId, currentUser }: Props) {
   const state = useTickets();
   const now = useNow();
   const ticket = state.tickets[ticketId];
-  const viewer = state.people[me.id];
+  const viewer = state.people[currentUser.id];
   const history = state.history[ticketId];
 
   const summary = useMemo(
@@ -25,10 +25,10 @@ export function TicketSummary({ ticketId, me }: Props) {
             ticket,
             history,
             people: state.people,
-            meId: me.id,
+            meId: currentUser.id,
           })
         : [],
-    [ticket, history, state.people, me.id],
+    [ticket, history, state.people, currentUser.id],
   );
 
   if (!ticket || !summary) return null;

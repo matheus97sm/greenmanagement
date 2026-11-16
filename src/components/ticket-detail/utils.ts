@@ -34,8 +34,15 @@ export function buildTimeline({
 
   const takenAt = new Set(
     entries
-      .filter((h) => h.tipo === HistoryType.Status && h.de === Status.Open)
-      .map((h) => `${h.usuario_id}|${h.ocorrido_em}`),
+      .filter(
+        (historyEntry) =>
+          historyEntry.tipo === HistoryType.Status &&
+          historyEntry.de === Status.Open,
+      )
+      .map(
+        (historyEntry) =>
+          `${historyEntry.usuario_id}|${historyEntry.ocorrido_em}`,
+      ),
   );
 
   const items: TimelineItem[] = [
@@ -48,41 +55,46 @@ export function buildTimeline({
       text: ticket.descricao,
       internal: false,
     },
-    ...(messages ?? []).map((m): TimelineItem => ({
+    ...(messages ?? []).map((message): TimelineItem => ({
       kind: TimelineKind.Message,
-      key: m.id,
-      at: m.criada_em,
-      author: m.autor_id,
-      authorProfile: people[m.autor_id]?.perfil,
-      text: m.texto,
-      internal: m.interna,
+      key: message.id,
+      at: message.criada_em,
+      author: message.autor_id,
+      authorProfile: people[message.autor_id]?.perfil,
+      text: message.texto,
+      internal: message.interna,
     })),
-    ...entries.flatMap((h): TimelineItem[] => {
-      const who = personName(people, h.usuario_id);
-      if (h.tipo === HistoryType.Assignment) {
-        if (takenAt.has(`${h.usuario_id}|${h.ocorrido_em}`)) return [];
+    ...entries.flatMap((historyEntry): TimelineItem[] => {
+      const who = personName(people, historyEntry.usuario_id);
+      if (historyEntry.tipo === HistoryType.Assignment) {
+        if (
+          takenAt.has(`${historyEntry.usuario_id}|${historyEntry.ocorrido_em}`)
+        )
+          return [];
         return [
           {
             kind: TimelineKind.Event,
-            key: h.id,
-            at: h.ocorrido_em,
+            key: historyEntry.id,
+            at: historyEntry.ocorrido_em,
             text: `${who} assumiu o chamado.`,
           },
         ];
       }
-      if (!h.de || !h.para) return [];
+      if (!historyEntry.de || !historyEntry.para) return [];
       return [
         {
           kind: TimelineKind.Event,
-          key: h.id,
-          at: h.ocorrido_em,
-          text: `${who} alterou o status de ${STATUS_LABEL[h.de]} para ${STATUS_LABEL[h.para]}. Motivo: ${h.motivo ?? "não informado"}`,
+          key: historyEntry.id,
+          at: historyEntry.ocorrido_em,
+          text: `${who} alterou o status de ${STATUS_LABEL[historyEntry.de]} para ${STATUS_LABEL[historyEntry.para]}. Motivo: ${historyEntry.motivo ?? "não informado"}`,
         },
       ];
     }),
   ];
 
-  return items.sort((a, b) => a.at.localeCompare(b.at));
+  return items.sort((firstTimelineItem, timelineItem) =>
+    firstTimelineItem.at.localeCompare(timelineItem.at),
+  );
 }
 
 export function permissionsFor({

@@ -10,7 +10,8 @@ interface Subscriber {
 
 const subscribers = new Set<Subscriber>();
 
-const between = (a: number, b: number) => a + Math.random() * (b - a);
+const between = (first: number, second: number) =>
+  first + Math.random() * (second - first);
 
 export function subscribe(
   handler: Handler,

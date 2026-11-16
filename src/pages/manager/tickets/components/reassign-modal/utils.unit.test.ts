@@ -8,18 +8,25 @@ const workloads = workloadByConsultant(
   rawData.chamados,
   consultantsOf(
     rawData.usuarios,
-    rawData.grupos.map((g) => g.id),
+    rawData.grupos.map((group) => group.id),
   ),
   NOW,
 );
-const apps = rawData.grupos.find((g) => g.nome === "Aplicações")!;
+const apps = rawData.grupos.find((group) => group.nome === "Aplicações")!;
 
 describe("groupsOfSelection", () => {
   it("lists each group once", () => {
-    const [a, b] = rawData.chamados.filter((t) => t.grupo_id === apps.id);
-    const other = rawData.chamados.find((t) => t.grupo_id !== apps.id)!;
-    expect(groupsOfSelection([a, b])).toEqual([apps.id]);
-    expect(groupsOfSelection([a, other])).toEqual([apps.id, other.grupo_id]);
+    const [firstTicket, ticket] = rawData.chamados.filter(
+      (currentTicket) => currentTicket.grupo_id === apps.id,
+    );
+    const other = rawData.chamados.find(
+      (currentTicket) => currentTicket.grupo_id !== apps.id,
+    )!;
+    expect(groupsOfSelection([firstTicket, ticket])).toEqual([apps.id]);
+    expect(groupsOfSelection([firstTicket, other])).toEqual([
+      apps.id,
+      other.grupo_id,
+    ]);
   });
 });
 
@@ -28,7 +35,9 @@ describe("targetOptions", () => {
 
   it("offers only the consultants of that group", () => {
     expect(options).toHaveLength(6);
-    expect(options.map((o) => o.label).join()).not.toContain("Marina");
+    expect(
+      options.map((targetOption) => targetOption.label).join(),
+    ).not.toContain("Marina");
   });
 
   it("starts with the least loaded and shows each person's load", () => {
@@ -37,7 +46,7 @@ describe("targetOptions", () => {
   });
 
   it("uses the singular for a single ticket", () => {
-    const one = workloads.map((w) => ({ ...w, active: 1 }));
+    const one = workloads.map((workload) => ({ ...workload, active: 1 }));
     expect(targetOptions(one, apps.id)[0].label).toMatch(/· 1 chamado$/);
   });
 });

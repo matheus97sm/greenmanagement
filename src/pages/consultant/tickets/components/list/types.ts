@@ -6,7 +6,7 @@ import type { StatusOption, Tab } from "./enums";
 export type StatusFilter = StatusOption | Status;
 
 export interface Props {
-  me: User;
+  currentUser: User;
   selectedId: string | undefined;
   onSelect: (id: string) => void;
 }

@@ -14,14 +14,20 @@ vi.mock("@/store/actions", () => ({
   sendMessage: vi.fn(),
 }));
 
-const me = USERS.find((u) => u.id === HELENA_ID)!;
-const vpn = rawData.categorias.find((c) => c.nome === "Rede e VPN")!;
+const currentUser = USERS.find((user) => user.id === HELENA_ID)!;
+const vpn = rawData.categorias.find(
+  (category) => category.nome === "Rede e VPN",
+)!;
 
 function renderModal() {
   const onClose = vi.fn();
   const onOpenTicket = vi.fn();
   renderWithProviders(
-    <NewTicketModal me={me} onClose={onClose} onOpenTicket={onOpenTicket} />,
+    <NewTicketModal
+      currentUser={currentUser}
+      onClose={onClose}
+      onOpenTicket={onOpenTicket}
+    />,
     { userId: HELENA_ID },
   );
   return { onClose, onOpenTicket };

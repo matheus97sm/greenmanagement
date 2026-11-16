@@ -6,16 +6,20 @@ import { loadStoreAs, renderWithProviders } from "@/test-utils";
 import { MARINA_ID, rawData } from "@/test-data";
 import { TicketList } from ".";
 
-const me = USERS.find((u) => u.id === MARINA_ID)!;
+const currentUser = USERS.find((user) => user.id === MARINA_ID)!;
 const idOf = (numero: number) =>
-  rawData.chamados.find((t) => t.numero === numero)!.id;
+  rawData.chamados.find((ticket) => ticket.numero === numero)!.id;
 
 function renderList(
   props: { selectedId?: string; onSelect?: () => void } = {},
 ) {
   const onSelect = props.onSelect ?? vi.fn();
   const view = renderWithProviders(
-    <TicketList me={me} selectedId={props.selectedId} onSelect={onSelect} />,
+    <TicketList
+      currentUser={currentUser}
+      selectedId={props.selectedId}
+      onSelect={onSelect}
+    />,
     { userId: MARINA_ID },
   );
   return { ...view, onSelect };
@@ -44,9 +48,11 @@ describe("TicketList", () => {
 
   it("shows the requester with the company, to tell namesakes apart", () => {
     const { container } = renderList();
-    const ticket = rawData.chamados.find((t) => t.numero === 10503)!;
+    const ticket = rawData.chamados.find(
+      (currentTicket) => currentTicket.numero === 10503,
+    )!;
     const requester = rawData.usuarios.find(
-      (u) => u.id === ticket.solicitante_id,
+      (person) => person.id === ticket.solicitante_id,
     )!;
     expect(rowsOf(container)[0]).toHaveTextContent(
       `${requester.nome} · ${requester.empresa}`,
