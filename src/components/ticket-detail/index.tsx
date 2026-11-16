@@ -19,10 +19,17 @@ import {
   footerHint,
   isClosedStatus,
   lastItems,
+  permissionsFor,
   personName,
 } from "./utils";
 
-export function TicketDetail({ ticketId, me, draft, onDraftChange }: Props) {
+export function TicketDetail({
+  ticketId,
+  me,
+  draft,
+  onDraftChange,
+  extraActions,
+}: Props) {
   const state = useTickets();
   const now = useNow();
   const ticket = state.tickets[ticketId];
@@ -66,8 +73,12 @@ export function TicketDetail({ ticketId, me, draft, onDraftChange }: Props) {
   const groupName = state.groups[ticket.grupo_id]?.nome;
   const categoryName = state.categories[ticket.categoria_id]?.nome;
   const isMine = ticket.responsavel_id === me.id;
-  const canTake =
-    !ticket.responsavel_id && ticket.grupo_id === viewer?.grupo_id;
+  const { canTake, canReply, canChangeStatus } = permissionsFor({
+    ticket,
+    role: me.role,
+    userId: me.id,
+    groupId: viewer?.grupo_id,
+  });
   const isClosed = isClosedStatus(ticket.status);
   const { canAdvance, canReopen } = availableActions(ticket.status);
   const { hidden, visible } = lastItems(items, shown);
@@ -104,7 +115,7 @@ export function TicketDetail({ ticketId, me, draft, onDraftChange }: Props) {
                 Pegar chamado
               </Button>
             )}
-            {isMine && canAdvance && (
+            {canChangeStatus && canAdvance && (
               <Button
                 variant="default"
                 onClick={() => setModal(ModalKind.Status)}
@@ -112,7 +123,7 @@ export function TicketDetail({ ticketId, me, draft, onDraftChange }: Props) {
                 Alterar status
               </Button>
             )}
-            {isMine && canReopen && (
+            {canChangeStatus && canReopen && (
               <Button
                 variant="default"
                 onClick={() => setModal(ModalKind.Reopen)}
@@ -120,6 +131,7 @@ export function TicketDetail({ ticketId, me, draft, onDraftChange }: Props) {
                 Reabrir
               </Button>
             )}
+            {extraActions}
           </Group>
         </Group>
         <Group gap="xs">
@@ -173,6 +185,7 @@ export function TicketDetail({ ticketId, me, draft, onDraftChange }: Props) {
               <MessageBubble
                 key={item.key}
                 author={nameOf(item.author)}
+                role={item.authorProfile}
                 isOwn={item.author === me.id}
                 internal={item.internal}
                 text={item.text}
@@ -183,7 +196,7 @@ export function TicketDetail({ ticketId, me, draft, onDraftChange }: Props) {
         </Stack>
       </Box>
 
-      {isMine && !isClosed ? (
+      {canReply ? (
         <Composer
           key={ticket.id}
           ticketId={ticket.id}

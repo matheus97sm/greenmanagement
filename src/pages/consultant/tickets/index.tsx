@@ -6,7 +6,7 @@ import { homePath } from "@/paths";
 import { LoadStatus } from "@/store/enums";
 import { ticketsStore } from "@/store/ticketsStore";
 import { useTickets } from "@/store/useTickets";
-import { TicketDetail } from "./components/detail";
+import { TicketDetail } from "@/components/ticket-detail";
 import { TicketList } from "./components/list";
 
 export function TicketsPage() {

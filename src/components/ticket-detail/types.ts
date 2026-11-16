@@ -1,4 +1,7 @@
+import type { ReactNode } from "react";
+import type { Role } from "@/auth/enums";
 import type { User } from "@/auth/users";
+import type { Profile } from "@/domain/enums";
 import type { HistoryEntry, Message, Person, Ticket } from "@/domain/types";
 import type { TimelineKind } from "./enums";
 
@@ -7,6 +10,7 @@ export interface Props {
   me: User;
   draft: string;
   onDraftChange: (value: string) => void;
+  extraActions?: ReactNode;
 }
 
 export interface MessageItem {
@@ -14,6 +18,7 @@ export interface MessageItem {
   at: string;
   key: string;
   author: string;
+  authorProfile: Profile | undefined;
   text: string;
   internal: boolean;
 }
@@ -45,4 +50,17 @@ export interface FooterHintInput {
   isClosed: boolean;
   canTake: boolean;
   nameOf: (id: string | null) => string;
+}
+
+export interface PermissionsInput {
+  ticket: Ticket;
+  role: Role;
+  userId: string;
+  groupId: string | undefined;
+}
+
+export interface Permissions {
+  canTake: boolean;
+  canReply: boolean;
+  canChangeStatus: boolean;
 }

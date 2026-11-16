@@ -1,7 +1,8 @@
 import { Status } from "@/domain/enums";
+import { matchesSearch } from "@/domain/search";
 import { compareBySla } from "@/domain/sla";
 import { isActive, STATUS_LABEL } from "@/domain/status";
-import type { Person, Ticket } from "@/domain/types";
+import type { Ticket } from "@/domain/types";
 import { StatusOption, Tab } from "./enums";
 import type {
   SelectRowsInput,
@@ -27,22 +28,6 @@ export function matchesStatus(ticket: Ticket, filter: StatusFilter): boolean {
   if (filter === StatusOption.Active) return isActive(ticket.status);
   if (filter === StatusOption.All) return true;
   return ticket.status === filter;
-}
-
-export function matchesSearch(
-  ticket: Ticket,
-  term: string,
-  people: Record<string, Person>,
-): boolean {
-  const needle = term.trim().toLowerCase();
-  if (!needle) return true;
-  const requester = people[ticket.solicitante_id];
-  return (
-    String(ticket.numero).includes(needle) ||
-    ticket.titulo.toLowerCase().includes(needle) ||
-    (requester?.nome ?? "").toLowerCase().includes(needle) ||
-    (requester?.empresa ?? "").toLowerCase().includes(needle)
-  );
 }
 
 export function selectRows({

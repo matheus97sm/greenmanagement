@@ -1,3 +1,4 @@
+import { Role } from "@/auth/enums";
 import { HistoryType, Status } from "@/domain/enums";
 import { isReopen, STATUS_LABEL, TRANSITIONS } from "@/domain/status";
 import type { Person } from "@/domain/types";
@@ -7,6 +8,8 @@ import type {
   Actions,
   BuildTimelineInput,
   FooterHintInput,
+  Permissions,
+  PermissionsInput,
   TimelineItem,
 } from "./types";
 
@@ -41,6 +44,7 @@ export function buildTimeline({
       key: "description",
       at: ticket.aberto_em,
       author: ticket.solicitante_id,
+      authorProfile: people[ticket.solicitante_id]?.perfil,
       text: ticket.descricao,
       internal: false,
     },
@@ -49,6 +53,7 @@ export function buildTimeline({
       key: m.id,
       at: m.criada_em,
       author: m.autor_id,
+      authorProfile: people[m.autor_id]?.perfil,
       text: m.texto,
       internal: m.interna,
     })),
@@ -86,6 +91,27 @@ export function lastItems(
 ): { hidden: number; visible: TimelineItem[] } {
   const hidden = Math.max(0, items.length - shown);
   return { hidden, visible: hidden ? items.slice(-shown) : items };
+}
+
+export function permissionsFor({
+  ticket,
+  role,
+  userId,
+  groupId,
+}: PermissionsInput): Permissions {
+  const closed = isClosedStatus(ticket.status);
+  if (role === Role.Manager) {
+    return { canTake: false, canReply: !closed, canChangeStatus: true };
+  }
+  if (role === Role.Consultant) {
+    const mine = ticket.responsavel_id === userId;
+    return {
+      canTake: !ticket.responsavel_id && ticket.grupo_id === groupId,
+      canReply: mine && !closed,
+      canChangeStatus: mine,
+    };
+  }
+  return { canTake: false, canReply: false, canChangeStatus: false };
 }
 
 export function availableActions(status: Status): Actions {

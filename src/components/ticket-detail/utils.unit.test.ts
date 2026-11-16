@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { Role } from "@/auth/enums";
 import { HistoryType, Priority, Profile, Status } from "@/domain/enums";
 import type { HistoryEntry, Message, Person, Ticket } from "@/domain/types";
 import { TimelineKind } from "./enums";
@@ -8,6 +9,7 @@ import {
   footerHint,
   isClosedStatus,
   lastItems,
+  permissionsFor,
   personName,
 } from "./utils";
 
@@ -104,6 +106,28 @@ describe("isClosedStatus", () => {
 });
 
 describe("buildTimeline", () => {
+  it("records the profile of each author, so the screen can tell staff from customers", () => {
+    const items = buildTimeline({
+      ticket,
+      messages: [
+        message("m1", 10, { autor_id: "consultant" }),
+        message("m2", 20, { autor_id: "customer" }),
+        message("m3", 30, { autor_id: "stranger" }),
+      ],
+      history: [],
+      people,
+    });
+    const profiles = items.map((i) =>
+      i.kind === TimelineKind.Message ? i.authorProfile : "event",
+    );
+    expect(profiles).toEqual([
+      Profile.Customer,
+      Profile.Consultant,
+      Profile.Customer,
+      undefined,
+    ]);
+  });
+
   it("starts with the description, written by the requester", () => {
     const [first] = buildTimeline({
       ticket,
@@ -323,5 +347,80 @@ describe("footerHint", () => {
 
   it("names who is handling an active ticket of someone else", () => {
     expect(hint({}, {})).toBe("Atendido por Marina.");
+  });
+});
+
+describe("permissionsFor", () => {
+  const groupId = "g1";
+  const make = (overrides: Partial<Ticket> = {}): Ticket => ({
+    ...ticket,
+    grupo_id: groupId,
+    responsavel_id: "owner",
+    status: Status.InProgress,
+    ...overrides,
+  });
+  const as = (role: Role, userId: string, t: Ticket) =>
+    permissionsFor({ ticket: t, role, userId, groupId });
+
+  it("lets the consultant who owns an open ticket reply and change its status", () => {
+    expect(as(Role.Consultant, "owner", make())).toEqual({
+      canTake: false,
+      canReply: true,
+      canChangeStatus: true,
+    });
+  });
+
+  it("keeps a consultant from replying once the ticket is closed", () => {
+    const closed = make({ status: Status.Closed });
+    expect(as(Role.Consultant, "owner", closed).canReply).toBe(false);
+    expect(as(Role.Consultant, "owner", closed).canChangeStatus).toBe(true);
+  });
+
+  it("gives a colleague no say over someone else's ticket", () => {
+    expect(as(Role.Consultant, "other", make())).toEqual({
+      canTake: false,
+      canReply: false,
+      canChangeStatus: false,
+    });
+  });
+
+  it("lets a consultant take a ticket nobody owns, in their group", () => {
+    const queued = make({ responsavel_id: null, status: Status.Open });
+    expect(as(Role.Consultant, "other", queued).canTake).toBe(true);
+    expect(
+      permissionsFor({
+        ticket: queued,
+        role: Role.Consultant,
+        userId: "other",
+        groupId: "g2",
+      }).canTake,
+    ).toBe(false);
+  });
+
+  it("lets the manager reply and change the status of any open ticket, but never take it", () => {
+    expect(as(Role.Manager, "boss", make())).toEqual({
+      canTake: false,
+      canReply: true,
+      canChangeStatus: true,
+    });
+    expect(
+      as(Role.Manager, "boss", make({ responsavel_id: null })).canTake,
+    ).toBe(false);
+  });
+
+  it("keeps the manager from replying to a finished ticket while allowing a reopen", () => {
+    const done = make({ status: Status.Resolved });
+    expect(as(Role.Manager, "boss", done)).toMatchObject({
+      canReply: false,
+      canChangeStatus: true,
+    });
+  });
+
+  it("gives the customer nothing", () => {
+    expect(as(Role.Customer, "c", make())).toEqual({
+      canTake: false,
+      canReply: false,
+      canChangeStatus: false,
+    });
   });
 });

@@ -1,8 +1,9 @@
+import type { ReactNode } from "react";
 import { fireEvent, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { USERS } from "@/auth/users";
-import { Status } from "@/domain/enums";
+import { Profile, Status } from "@/domain/enums";
 import { takeTicket } from "@/store/actions";
 import { MARINA_ID, RICARDO_ID, rawData } from "@/test-data";
 import { loadStoreAs, renderWithProviders } from "@/test-utils";
@@ -21,7 +22,7 @@ const marina = rawData.usuarios.find((u) => u.id === MARINA_ID)!;
 
 function renderDetail(
   ticketId: string,
-  options: { userId?: string; draft?: string } = {},
+  options: { userId?: string; draft?: string; extra?: ReactNode } = {},
 ) {
   const userId = options.userId ?? MARINA_ID;
   return renderWithProviders(
@@ -30,6 +31,7 @@ function renderDetail(
       me={userOf(userId)}
       draft={options.draft ?? ""}
       onDraftChange={vi.fn()}
+      extraActions={options.extra}
     />,
     { userId },
   );
@@ -198,5 +200,92 @@ describe("TicketDetail", () => {
       fireEvent.click(label());
       expect(hiddenCount()).toBe(before - 100);
     });
+  });
+});
+
+describe("TicketDetail for the manager", () => {
+  beforeEach(() => {
+    loadStoreAs(RICARDO_ID);
+    vi.mocked(takeTicket).mockReset();
+  });
+
+  const composer = () =>
+    screen.queryByPlaceholderText(/Responder ao cliente|Nota interna/);
+
+  it("lets the manager read the whole conversation of someone else's ticket", () => {
+    const ticket = byNumber(10503);
+    renderDetail(ticket.id, { userId: RICARDO_ID });
+    expect(
+      screen.getByRole("heading", { name: new RegExp(`#10503 · `) }),
+    ).toBeInTheDocument();
+    expect(screen.getByText(ticket.descricao)).toBeInTheDocument();
+  });
+
+  it("offers a reply and a status change, but never to take the ticket", () => {
+    const ticket = byNumber(10503);
+    renderDetail(ticket.id, { userId: RICARDO_ID });
+    expect(composer()).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Alterar status" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Pegar chamado" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("can answer a ticket nobody has taken yet without taking it", () => {
+    const queued = rawData.chamados.find(
+      (t) => !t.responsavel_id && t.status === Status.Open,
+    )!;
+    renderDetail(queued.id, { userId: RICARDO_ID });
+    expect(composer()).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Pegar chamado" }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByText(/Sem responsável/)).toBeInTheDocument();
+  });
+
+  it("hides the reply box on a closed ticket and offers to reopen it", () => {
+    const closed = rawData.chamados.find((t) => t.status === Status.Closed)!;
+    renderDetail(closed.id, { userId: RICARDO_ID });
+    expect(composer()).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Reabrir" })).toBeInTheDocument();
+  });
+
+  it("shows the actions the page asks to add", () => {
+    const ticket = byNumber(10503);
+    renderDetail(ticket.id, {
+      userId: RICARDO_ID,
+      extra: <button type="button">Redistribuir</button>,
+    });
+    expect(
+      screen.getByRole("button", { name: "Redistribuir" }),
+    ).toBeInTheDocument();
+  });
+
+  it("tells the customer's messages from the team's with a badge each", () => {
+    const people = new Map(rawData.usuarios.map((u) => [u.id, u.perfil]));
+    const mixed = rawData.chamados.find((t) => {
+      const list = rawData.mensagens.filter(
+        (m) => m.chamado_id === t.id && !m.interna,
+      );
+      const roles = new Set(list.map((m) => people.get(m.autor_id)));
+      return (
+        list.length < 60 &&
+        roles.has(Profile.Customer) &&
+        roles.has(Profile.Consultant)
+      );
+    })!;
+    expect(mixed).toBeDefined();
+
+    const { container } = renderDetail(mixed.id, { userId: RICARDO_ID });
+    const roles = new Set(
+      Array.from(container.querySelectorAll("[data-role]")).map((el) =>
+        el.getAttribute("data-role"),
+      ),
+    );
+    expect(roles).toEqual(new Set([Profile.Customer, Profile.Consultant]));
+    expect(screen.getAllByText("Cliente").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Consultor").length).toBeGreaterThan(0);
   });
 });

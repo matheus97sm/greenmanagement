@@ -4,7 +4,6 @@ import type { Person, Ticket } from "@/domain/types";
 import { MARINA_ID, rawData } from "@/test-data";
 import { StatusOption, Tab } from "./enums";
 import {
-  matchesSearch,
   matchesStatus,
   selectRows,
   splitTickets,
@@ -67,38 +66,6 @@ describe("matchesStatus", () => {
   it("matches a specific status exactly", () => {
     expect(matchesStatus(closed, Status.Closed)).toBe(true);
     expect(matchesStatus(closed, Status.Open)).toBe(false);
-  });
-});
-
-describe("matchesSearch", () => {
-  const ticket = byNumber(10503);
-  const requester = people[ticket.solicitante_id];
-
-  it("accepts an empty search", () => {
-    expect(matchesSearch(ticket, "   ", people)).toBe(true);
-  });
-
-  it("matches the ticket number", () => {
-    expect(matchesSearch(ticket, "10503", people)).toBe(true);
-    expect(matchesSearch(ticket, "99999", people)).toBe(false);
-  });
-
-  it("matches the title regardless of case", () => {
-    expect(matchesSearch(ticket, ticket.titulo.toUpperCase(), people)).toBe(
-      true,
-    );
-  });
-
-  it("matches the requester name and company", () => {
-    expect(matchesSearch(ticket, requester.nome.slice(0, 4), people)).toBe(
-      true,
-    );
-    expect(matchesSearch(ticket, requester.empresa ?? "", people)).toBe(true);
-  });
-
-  it("copes with an unknown requester", () => {
-    expect(matchesSearch(ticket, "10503", {})).toBe(true);
-    expect(matchesSearch(ticket, "zzz", {})).toBe(false);
   });
 });
 
