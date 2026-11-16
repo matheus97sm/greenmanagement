@@ -50,3 +50,18 @@ export enum LoadLevel {
   Normal = "normal",
   Overloaded = "overloaded",
 }
+
+export enum CustomerStage {
+  Received = "received",
+  Assigned = "assigned",
+  InProgress = "in_progress",
+  WaitingYou = "waiting_you",
+  Resolved = "resolved",
+  Closed = "closed",
+}
+
+export enum Expectation {
+  FirstResponse = "first_response",
+  Resolution = "resolution",
+  None = "none",
+}

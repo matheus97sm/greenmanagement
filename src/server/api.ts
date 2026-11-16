@@ -37,6 +37,15 @@ export async function reassignTicket(input: {
   return ops.reassignTicket(input);
 }
 
+export async function reopenTicket(input: {
+  ticketId: string;
+  customerId: string;
+  reason: string;
+}): Promise<DomainEvent[]> {
+  await latency();
+  return ops.reopenTicket(input);
+}
+
 export async function sendMessage(input: {
   ticketId: string;
   authorId: string;

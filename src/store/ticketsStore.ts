@@ -311,13 +311,18 @@ export function createTicketsStore() {
       set(next);
     },
 
-    load(fetchSnapshot: () => Promise<Snapshot>): Promise<void> {
+    load(
+      fetchSnapshot: () => Promise<Snapshot>,
+      readMarks: Record<string, string> = {},
+    ): Promise<void> {
       if (loadPromise) return loadPromise;
       set({ ...state, status: LoadStatus.Loading });
       const requestedIn = generation;
       loadPromise = fetchSnapshot()
         .then((s) => {
-          if (requestedIn === generation) this.loadSnapshot(s);
+          if (requestedIn !== generation) return;
+          this.loadSnapshot(s);
+          this.restoreRead(readMarks);
         })
         .catch(() => {
           if (requestedIn !== generation) return;
@@ -333,6 +338,13 @@ export function createTicketsStore() {
       orphans.clear();
       loadPromise = null;
       set(emptyState());
+    },
+
+    restoreRead(marks: Record<string, string>) {
+      const known = Object.fromEntries(
+        Object.entries(marks).filter(([id]) => id in state.tickets),
+      );
+      set({ ...state, lastRead: { ...known, ...state.lastRead } });
     },
 
     markRead(ticketId: string) {

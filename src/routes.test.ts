@@ -71,4 +71,11 @@ describe("route guards", () => {
     signInAs(HELENA_ID);
     expect(await visit("/manager/dashboard")).toBe("/customer/tickets");
   });
+
+  it("lets the customer open the conversation of a ticket", async () => {
+    signInAs(HELENA_ID);
+    expect(await visit("/customer/tickets/ch-1000")).toBe(
+      "/customer/tickets/ch-1000",
+    );
+  });
 });

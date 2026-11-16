@@ -115,4 +115,22 @@ describe("MessageBubble", () => {
       expect(new Set([customer, consultant, manager]).size).toBe(3);
     });
   });
+
+  describe("marking what is new", () => {
+    it("shows a badge on a message flagged as new", () => {
+      renderWithProviders(<MessageBubble {...base} highlight />);
+      expect(screen.getByText("Novo")).toBeInTheDocument();
+    });
+
+    it("shows no badge by default", () => {
+      renderWithProviders(<MessageBubble {...base} />);
+      expect(screen.queryByText("Novo")).not.toBeInTheDocument();
+    });
+
+    it("can be new and an internal note at once", () => {
+      renderWithProviders(<MessageBubble {...base} highlight internal />);
+      expect(screen.getByText("Novo")).toBeInTheDocument();
+      expect(screen.getByText("Nota interna")).toBeInTheDocument();
+    });
+  });
 });

@@ -116,4 +116,51 @@ describe("Composer", () => {
     expect(textarea()).toHaveValue("Rascunho antigo");
     expect(sendButton()).toBeEnabled();
   });
+
+  describe("for someone who cannot write internal notes", () => {
+    function CustomerHarness() {
+      const [draft, setDraft] = useState("");
+      return (
+        <Composer
+          ticketId="ticket-1"
+          userId="user-1"
+          draft={draft}
+          onDraftChange={setDraft}
+          allowNotes={false}
+          placeholder="Escreva sua mensagem"
+        />
+      );
+    }
+
+    it("offers no internal note switch", () => {
+      renderWithProviders(<CustomerHarness />);
+      expect(screen.queryByRole("switch")).not.toBeInTheDocument();
+    });
+
+    it("uses the placeholder it was given", () => {
+      renderWithProviders(<CustomerHarness />);
+      expect(textarea()).toHaveAttribute("placeholder", "Escreva sua mensagem");
+    });
+
+    it("always sends a public message", async () => {
+      vi.mocked(sendMessage).mockResolvedValue(true);
+      const user = userEvent.setup();
+      renderWithProviders(<CustomerHarness />);
+      await user.type(textarea(), "Olá");
+      await user.click(screen.getByRole("button", { name: "Enviar" }));
+      await waitFor(() =>
+        expect(sendMessage).toHaveBeenCalledWith({
+          ticketId: "ticket-1",
+          authorId: "user-1",
+          text: "Olá",
+          internal: false,
+        }),
+      );
+    });
+  });
+
+  it("offers the internal note switch to the team by default", () => {
+    renderWithProviders(<Harness />);
+    expect(screen.getByRole("switch", { name: "Nota interna" })).toBeVisible();
+  });
 });

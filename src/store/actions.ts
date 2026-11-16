@@ -84,3 +84,9 @@ export async function reassignTickets(input: {
   }
   return { done, failed: errors.length };
 }
+
+export const reopenTicket = (input: {
+  ticketId: string;
+  customerId: string;
+  reason: string;
+}) => run(() => api.reopenTicket(input));

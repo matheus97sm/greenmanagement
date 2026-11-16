@@ -293,4 +293,82 @@ describe("ticketsStore", () => {
     store.loadSnapshot(snapshot);
     expect(store.applyEvent(message("m1", at(1)))).toBe(true);
   });
+
+  describe("read marks", () => {
+    const LONG_AGO = at(-30);
+
+    it("count as unread what arrived after the mark that was kept from before", () => {
+      const store = createTicketsStore();
+      store.loadSnapshot({
+        ...snapshot,
+        mensagens: [
+          {
+            id: "old",
+            chamado_id: "ch-1",
+            criada_em: at(-40),
+            autor_id: "cons",
+            texto: "antiga",
+            interna: false,
+          },
+          {
+            id: "new",
+            chamado_id: "ch-1",
+            criada_em: at(-20),
+            autor_id: "cons",
+            texto: "nova",
+            interna: false,
+          },
+        ],
+      });
+      expect(unreadCount(store.getState(), "ch-1", "cli")).toBe(0);
+
+      store.restoreRead({ "ch-1": LONG_AGO });
+      expect(unreadCount(store.getState(), "ch-1", "cli")).toBe(1);
+    });
+
+    it("do not count messages the person wrote", () => {
+      const store = newStore();
+      store.restoreRead({ "ch-1": LONG_AGO });
+      store.applyEvent(message("m1", at(1), "cli"));
+      expect(unreadCount(store.getState(), "ch-1", "cli")).toBe(0);
+    });
+
+    it("ignore tickets the person can no longer see", () => {
+      const store = newStore();
+      store.restoreRead({ "ch-1": LONG_AGO, "ch-gone": LONG_AGO });
+      expect(Object.keys(store.getState().lastRead)).toEqual(["ch-1"]);
+    });
+
+    it("lose to a mark made in this session, which is newer", () => {
+      const store = newStore();
+      store.markRead("ch-1");
+      const fresh = store.getState().lastRead["ch-1"];
+      store.restoreRead({ "ch-1": LONG_AGO });
+      expect(store.getState().lastRead["ch-1"]).toBe(fresh);
+    });
+
+    it("are restored by load, once the snapshot is in", async () => {
+      const store = createTicketsStore();
+      await store.load(() => Promise.resolve(snapshot), { "ch-1": LONG_AGO });
+      expect(store.getState().lastRead).toEqual({ "ch-1": LONG_AGO });
+      expect(store.getState().status).toBe(LoadStatus.Ready);
+    });
+
+    it("are not applied to a store that was reset while loading", async () => {
+      const store = createTicketsStore();
+      const loading = store.load(() => Promise.resolve(snapshot), {
+        "ch-1": LONG_AGO,
+      });
+      store.reset();
+      await loading;
+      expect(store.getState().lastRead).toEqual({});
+    });
+
+    it("start empty after a reset", () => {
+      const store = newStore();
+      store.markRead("ch-1");
+      store.reset();
+      expect(store.getState().lastRead).toEqual({});
+    });
+  });
 });

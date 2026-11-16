@@ -1,15 +1,89 @@
-import { Stack, Text, Title } from "@mantine/core";
-import { useAuth } from "@/auth/auth-context";
+import { useEffect, useState } from "react";
+import {
+  Alert,
+  Box,
+  Center,
+  Group,
+  Loader,
+  Paper,
+  Stack,
+  Text,
+  Title,
+} from "@mantine/core";
+import { useNavigate, useParams } from "react-router";
+import { useCurrentUser } from "@/auth/auth-context";
+import { homePath } from "@/paths";
+import { markRead } from "@/store/actions";
+import { LoadStatus } from "@/store/enums";
+import { useTickets } from "@/store/useTickets";
+import { Conversation } from "./components/conversation";
+import { TicketList } from "./components/ticket-list";
 
 export function TicketsPage() {
-  const { user } = useAuth();
+  const me = useCurrentUser();
+  const state = useTickets();
+  const navigate = useNavigate();
+  const { id } = useParams();
+  const [drafts, setDrafts] = useState<Record<string, string>>({});
+
+  const known = id ? Boolean(state.tickets[id]) : false;
+  const lastMessageId = id ? state.messages[id]?.at(-1)?.id : undefined;
+  useEffect(() => {
+    if (id && known) markRead(id);
+  }, [id, known, lastMessageId]);
+
+  if (state.status === LoadStatus.Error) {
+    return <Alert color="red">Não foi possível carregar os chamados.</Alert>;
+  }
+
+  if (state.status !== LoadStatus.Ready) {
+    return (
+      <Center h="60vh">
+        <Loader />
+      </Center>
+    );
+  }
+
+  const open = (ticketId: string) =>
+    navigate(`${homePath(me.role)}/${ticketId}`);
+  const hasTickets = Object.keys(state.tickets).length > 0;
 
   return (
-    <Stack gap="xs">
+    <Stack
+      gap="md"
+      h="calc(100dvh - 60px - 2 * var(--mantine-spacing-md))"
+      style={{ minHeight: 0 }}
+    >
       <Title order={2}>Meus chamados</Title>
-      <Text c="dimmed">
-        Olá, {user?.name}. A visão do cliente será construída em seguida.
-      </Text>
+
+      <Group align="stretch" wrap="nowrap" gap="md" flex={1} mih={0}>
+        <Paper withBorder w={420} style={{ flexShrink: 0, minHeight: 0 }}>
+          <TicketList me={me} selectedId={id} onSelect={open} />
+        </Paper>
+        <Paper withBorder flex={1} style={{ minWidth: 0, minHeight: 0 }}>
+          {id ? (
+            <Conversation
+              key={id}
+              ticketId={id}
+              me={me}
+              draft={drafts[id] ?? ""}
+              onDraftChange={(value) =>
+                setDrafts((current) => ({ ...current, [id]: value }))
+              }
+            />
+          ) : (
+            <Box h="100%">
+              <Center h="100%">
+                <Text c="dimmed" ta="center" maw={320}>
+                  {hasTickets
+                    ? "Escolha um chamado na lista para ver o andamento."
+                    : "Quando algo quebrar, abra um chamado e acompanhe tudo por aqui."}
+                </Text>
+              </Center>
+            </Box>
+          )}
+        </Paper>
+      </Group>
     </Stack>
   );
 }

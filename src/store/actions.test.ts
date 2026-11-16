@@ -7,6 +7,7 @@ import {
   changeStatus,
   markRead,
   reassignTickets,
+  reopenTicket,
   sendMessage,
   takeTicket,
 } from "./actions";
@@ -16,6 +17,7 @@ vi.mock("@mantine/notifications", () => ({ notifications: { show: vi.fn() } }));
 
 vi.mock("@/server/api", () => ({
   assumeTicket: vi.fn(),
+  reopenTicket: vi.fn(),
   reassignTicket: vi.fn(),
   sendMessage: vi.fn(),
   changeStatus: vi.fn(),
@@ -202,6 +204,28 @@ describe("store actions", () => {
       const spy = vi.spyOn(ticketsStore, "markRead");
       markRead("t9");
       expect(spy).toHaveBeenCalledWith("t9");
+    });
+  });
+
+  describe("reopenTicket", () => {
+    const input = { ticketId: "t1", customerId: "h", reason: "Voltou" };
+
+    it("applies the events of the reopening and reports success", async () => {
+      vi.mocked(api.reopenTicket).mockResolvedValue([event("a"), event("b")]);
+      expect(await reopenTicket(input)).toBe(true);
+      expect(api.reopenTicket).toHaveBeenCalledWith(input);
+      expect(ticketsStore.applyEvent).toHaveBeenCalledTimes(2);
+    });
+
+    it("shows what the server said when it refuses", async () => {
+      vi.mocked(api.reopenTicket).mockRejectedValue(
+        new Error("Conte o que continua errado."),
+      );
+      expect(await reopenTicket(input)).toBe(false);
+      expect(shown()[0]).toMatchObject({
+        color: "red",
+        message: "Conte o que continua errado.",
+      });
     });
   });
 });

@@ -5,8 +5,16 @@ import { IconSend } from "@tabler/icons-react";
 import { sendMessage } from "@/store/actions";
 import type { Props } from "./types";
 
-export function Composer({ ticketId, userId, draft, onDraftChange }: Props) {
-  const [internal, setInternal] = useState(false);
+export function Composer({
+  ticketId,
+  userId,
+  draft,
+  onDraftChange,
+  allowNotes = true,
+  placeholder = "Responder ao cliente (Ctrl+Enter envia)",
+}: Props) {
+  const [wantsNote, setWantsNote] = useState(false);
+  const internal = allowNotes && wantsNote;
   const [sending, setSending] = useState(false);
 
   const send = async () => {
@@ -43,20 +51,20 @@ export function Composer({ ticketId, userId, draft, onDraftChange }: Props) {
         minRows={2}
         maxRows={8}
         placeholder={
-          internal
-            ? "Nota interna: o cliente não vai ver"
-            : "Responder ao cliente (Ctrl+Enter envia)"
+          internal ? "Nota interna: o cliente não vai ver" : placeholder
         }
         value={draft}
         onChange={(e) => onDraftChange(e.currentTarget.value)}
         onKeyDown={onKeyDown}
       />
-      <Group justify="space-between">
-        <Switch
-          label="Nota interna"
-          checked={internal}
-          onChange={(e) => setInternal(e.currentTarget.checked)}
-        />
+      <Group justify={allowNotes ? "space-between" : "flex-end"}>
+        {allowNotes && (
+          <Switch
+            label="Nota interna"
+            checked={internal}
+            onChange={(e) => setWantsNote(e.currentTarget.checked)}
+          />
+        )}
         <Button
           leftSection={<IconSend size={16} />}
           onClick={send}

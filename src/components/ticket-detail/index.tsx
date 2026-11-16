@@ -6,6 +6,7 @@ import { pausedSince } from "@/domain/rules";
 import { slaInfo } from "@/domain/sla";
 import { useNow } from "@/hooks/useNow";
 import { formatDateTime } from "@/lib/format";
+import { lastItems } from "@/lib/list";
 import { takeTicket } from "@/store/actions";
 import { useTickets } from "@/store/useTickets";
 import { Composer } from "../composer";
@@ -19,7 +20,6 @@ import {
   buildTimeline,
   footerHint,
   isClosedStatus,
-  lastItems,
   permissionsFor,
   personName,
 } from "./utils";

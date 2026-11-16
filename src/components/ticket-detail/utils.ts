@@ -85,14 +85,6 @@ export function buildTimeline({
   return items.sort((a, b) => a.at.localeCompare(b.at));
 }
 
-export function lastItems(
-  items: TimelineItem[],
-  shown: number,
-): { hidden: number; visible: TimelineItem[] } {
-  const hidden = Math.max(0, items.length - shown);
-  return { hidden, visible: hidden ? items.slice(-shown) : items };
-}
-
 export function permissionsFor({
   ticket,
   role,

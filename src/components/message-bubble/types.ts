@@ -7,4 +7,5 @@ export interface Props {
   internal: boolean;
   text: string;
   at: string;
+  highlight?: boolean;
 }

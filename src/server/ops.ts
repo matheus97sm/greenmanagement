@@ -254,6 +254,11 @@ export function addMessage(input: {
     if (ticket.solicitante_id !== author.id) {
       throw new ApiError("Este chamado não é seu.");
     }
+    if (!isActive(ticket.status)) {
+      throw new ApiError(
+        "Este chamado foi encerrado. Reabra o chamado para escrever.",
+      );
+    }
     if (input.internal) {
       throw new ApiError("Clientes não escrevem notas internas.");
     }
@@ -294,6 +299,42 @@ export function addMessage(input: {
     );
   }
   return events;
+}
+
+export function reopenTicket(input: {
+  ticketId: string;
+  customerId: string;
+  reason: string;
+}): DomainEvent[] {
+  const ticket = findTicket(input.ticketId);
+  const customer = person(input.customerId);
+  if (
+    customer?.perfil !== Profile.Customer ||
+    ticket.solicitante_id !== customer.id
+  ) {
+    throw new ApiError("Este chamado não é seu.");
+  }
+  if (isActive(ticket.status)) {
+    throw new ApiError("Este chamado ainda está em andamento.");
+  }
+  const reason = input.reason.trim();
+  if (!reason) throw new ApiError("Conte o que continua errado.");
+
+  const reopened = commitStatus(
+    ticket,
+    Status.InProgress,
+    `Reaberto: ${reason}`,
+    customer.id,
+  );
+  return [
+    reopened,
+    ...addMessage({
+      ticketId: ticket.id,
+      authorId: customer.id,
+      text: reason,
+      internal: false,
+    }),
+  ];
 }
 
 export function changeStatus(input: {

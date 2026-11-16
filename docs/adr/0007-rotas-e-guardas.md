@@ -14,7 +14,7 @@ As rotas são `/<perfil>/<página>` (`/consultant/tickets`, `/manager/tickets`, 
 - `/` (login): quem já tem sessão vai direto para a página do próprio perfil;
 - cada área de perfil exige sessão e o perfil certo. Quem entra na área de outro é levado à página do seu próprio perfil, sem a outra chegar a aparecer;
 - qualquer caminho desconhecido leva à página do perfil, ou ao login sem sessão;
-- a página do gestor aceita um `id` opcional (`/manager/tickets/:id?`), que abre a conversa daquele chamado. O endereço pode ser compartilhado.
+- as páginas de chamados aceitam um `id` opcional (`/consultant/tickets/:id?`, `/manager/tickets/:id?` e `/customer/tickets/:id?`), que abre a conversa daquele chamado. O endereço pode ser compartilhado, e quem não pode ver aquele chamado só encontra "Chamado não encontrado", porque o chamado nunca chegou ao store dele (ADR 0010).
 
 A autenticação é simulada: os três usuários de demonstração compartilham uma senha, a sessão é o id do usuário no `localStorage` (`greenmanagement.session`) e leituras e escritas dele são protegidas por `try/catch`. Isso serve ao estudo e não é segurança.
 

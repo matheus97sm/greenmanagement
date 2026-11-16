@@ -4,6 +4,7 @@ import { startSimulator } from "@/server/simulator";
 import { subscribe } from "@/server/socket";
 import { eventFor } from "@/server/visibility";
 import { LoadStatus } from "./enums";
+import { loadReadMarks, persistReadMarks } from "./readMarks";
 import { ticketsStore } from "./ticketsStore";
 
 export function startRealtime(userId: string): () => void {
@@ -22,13 +23,15 @@ export function startRealtime(userId: string): () => void {
   });
 
   if (ticketsStore.getState().status === LoadStatus.Idle) {
-    void ticketsStore.load(() => fetchSnapshot(userId));
+    void ticketsStore.load(() => fetchSnapshot(userId), loadReadMarks(userId));
   }
+  const stopPersisting = persistReadMarks(userId, ticketsStore);
 
   return () => {
     stopped = true;
     unsubscribe();
     stopSimulator();
+    stopPersisting();
     ticketsStore.reset();
   };
 }

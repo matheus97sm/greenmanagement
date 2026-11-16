@@ -66,7 +66,7 @@ export const routes: RouteObject[] = [
         { path: "dashboard", Component: ManagerDashboardPage },
       ),
       profileRoute(Role.Customer, {
-        path: "tickets",
+        path: "tickets/:id?",
         Component: CustomerTicketsPage,
       }),
     ],

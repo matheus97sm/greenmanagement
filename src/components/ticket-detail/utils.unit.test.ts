@@ -8,7 +8,6 @@ import {
   buildTimeline,
   footerHint,
   isClosedStatus,
-  lastItems,
   permissionsFor,
   personName,
 } from "./utils";
@@ -251,28 +250,6 @@ describe("buildTimeline", () => {
         people,
       }),
     ).toHaveLength(1);
-  });
-});
-
-describe("lastItems", () => {
-  const items = buildTimeline({
-    ticket,
-    messages: Array.from({ length: 10 }, (_, i) => message(`m${i}`, i + 1)),
-    history: [],
-    people,
-  });
-
-  it("returns everything when it fits", () => {
-    const result = lastItems(items, 100);
-    expect(result.hidden).toBe(0);
-    expect(result.visible).toBe(items);
-  });
-
-  it("keeps only the most recent items and counts the hidden ones", () => {
-    const result = lastItems(items, 4);
-    expect(result.hidden).toBe(items.length - 4);
-    expect(result.visible).toHaveLength(4);
-    expect(result.visible.at(-1)).toBe(items.at(-1));
   });
 });
 

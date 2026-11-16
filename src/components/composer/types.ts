@@ -3,4 +3,6 @@ export interface Props {
   userId: string;
   draft: string;
   onDraftChange: (value: string) => void;
+  allowNotes?: boolean;
+  placeholder?: string;
 }

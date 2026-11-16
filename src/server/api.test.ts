@@ -7,6 +7,7 @@ import {
   changeStatus,
   fetchSnapshot,
   reassignTicket,
+  reopenTicket,
   sendMessage,
 } from "./api";
 import { getDb, initDb } from "./db";
@@ -132,6 +133,20 @@ describe("the simulated API", () => {
       expect(
         getDb().chamados.find((t) => t.id === ticket.id)?.responsavel_id,
       ).toBe(other.id);
+    });
+
+    it("reopenTicket brings a finished ticket of the customer back", async () => {
+      const ticket = getDb().chamados.find(
+        (t) => t.solicitante_id === HELENA_ID && t.status === Status.Closed,
+      )!;
+      await settle(
+        reopenTicket({
+          ticketId: ticket.id,
+          customerId: HELENA_ID,
+          reason: "Voltou a falhar",
+        }),
+      );
+      expect(ticket.status).toBe(Status.InProgress);
     });
 
     it("passes the refusal of the server on to the caller", async () => {

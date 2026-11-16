@@ -20,6 +20,7 @@ export function MessageBubble({
   internal,
   text,
   at,
+  highlight = false,
 }: Props) {
   const color = role ? ROLE_COLOR[role] : "gray";
 
@@ -46,6 +47,11 @@ export function MessageBubble({
         {internal && (
           <Badge size="xs" color="yellow" variant="filled">
             Nota interna
+          </Badge>
+        )}
+        {highlight && (
+          <Badge size="xs" color="green" variant="filled">
+            Novo
           </Badge>
         )}
         <Text size="xs" c="dimmed">
