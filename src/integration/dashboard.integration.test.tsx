@@ -2,6 +2,7 @@ import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Profile } from "@/domain/enums";
+import { isActive } from "@/domain/status";
 import { getDb } from "@/server/db";
 import { assumeTicket, reassignTicket } from "@/server/ops";
 import { RICARDO_ID } from "@/test-data";
@@ -89,10 +90,7 @@ describe("the manager's weekly dashboard", () => {
     ).toBeInTheDocument();
 
     const moved = getDb().chamados.find(
-      (t) =>
-        t.responsavel_id === thiago.id &&
-        t.status !== "resolvido" &&
-        t.status !== "fechado",
+      (t) => t.responsavel_id === thiago.id && isActive(t.status),
     )!;
     reassignTicket({
       ticketId: moved.id,

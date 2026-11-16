@@ -1,8 +1,6 @@
 import { useMemo, useRef } from "react";
 import { Checkbox, Group, Stack, Text } from "@mantine/core";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { pausedSince } from "@/domain/rules";
-import { slaInfo } from "@/domain/sla";
 import { useTickets } from "@/store/useTickets";
 import {
   LIST_MAX_HEIGHT,
@@ -11,7 +9,8 @@ import {
   ROW_OVERSCAN,
 } from "./constants";
 import { TicketRow } from "./row";
-import type { Props, RowItem } from "./types";
+import type { Props } from "./types";
+import { buildItems, isLocked, selectionScope } from "./utils";
 
 export function TicketQueue({
   tickets,
@@ -26,22 +25,9 @@ export function TicketQueue({
 }: Props) {
   const { history, people, groups } = useTickets();
 
-  const items = useMemo<RowItem[]>(
-    () =>
-      tickets.map((ticket) => {
-        const requester = people[ticket.solicitante_id];
-        const company = requester?.empresa ? ` · ${requester.empresa}` : "";
-        return {
-          ticket,
-          sla: slaInfo(ticket, now, pausedSince(ticket, history[ticket.id])),
-          requester: `${requester?.nome ?? ""}${company}`,
-          owner: ticket.responsavel_id
-            ? people[ticket.responsavel_id]?.nome
-            : undefined,
-          group: groups[ticket.grupo_id]?.nome ?? "",
-        };
-      }),
-    [tickets, now, history, people, groups],
+  const items = useMemo(
+    () => buildItems({ tickets, people, groups, history, now }),
+    [tickets, people, groups, history, now],
   );
 
   const parentRef = useRef<HTMLDivElement>(null);
@@ -52,9 +38,10 @@ export function TicketQueue({
     overscan: ROW_OVERSCAN,
   });
 
-  const targetGroupId = lockedGroupId ?? tickets[0]?.grupo_id;
-  const selectable = tickets.filter((t) => t.grupo_id === targetGroupId);
-  const mixed = selectable.length < tickets.length;
+  const { targetGroupId, selectable, mixed } = selectionScope(
+    tickets,
+    lockedGroupId,
+  );
   const allSelected =
     selectable.length > 0 && selectable.every((t) => selected.has(t.id));
   const someSelected = selectable.some((t) => selected.has(t.id));
@@ -121,10 +108,7 @@ export function TicketQueue({
                 <TicketRow
                   item={item}
                   selected={selected.has(item.ticket.id)}
-                  locked={
-                    lockedGroupId !== undefined &&
-                    item.ticket.grupo_id !== lockedGroupId
-                  }
+                  locked={isLocked(item.ticket, lockedGroupId)}
                   onOpen={onOpen}
                   onToggle={onToggle}
                 />

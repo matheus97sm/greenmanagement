@@ -7,7 +7,8 @@ import { MARINA_ID, rawData } from "@/test-data";
 import { loadStoreAs, renderRoutes } from "@/test-utils";
 import { TicketsPage } from ".";
 
-vi.mock("@/store/actions", () => ({
+vi.mock("@/store/actions", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/store/actions")>()),
   takeTicket: vi.fn(),
   sendMessage: vi.fn(),
   changeStatus: vi.fn(),

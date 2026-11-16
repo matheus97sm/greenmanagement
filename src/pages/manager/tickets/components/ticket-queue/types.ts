@@ -1,5 +1,5 @@
 import type { SlaInfo } from "@/domain/sla";
-import type { Ticket } from "@/domain/types";
+import type { Group, HistoryEntry, Person, Ticket } from "@/domain/types";
 
 export interface Props {
   tickets: Ticket[];
@@ -27,4 +27,18 @@ export interface RowProps {
   locked: boolean;
   onOpen: (ticketId: string) => void;
   onToggle: (ticketId: string) => void;
+}
+
+export interface BuildItemsInput {
+  tickets: Ticket[];
+  people: Record<string, Person>;
+  groups: Record<string, Group>;
+  history: Record<string, HistoryEntry[]>;
+  now: number;
+}
+
+export interface SelectionScope {
+  targetGroupId: string | undefined;
+  selectable: Ticket[];
+  mixed: boolean;
 }

@@ -1,9 +1,10 @@
-import { idleShare } from "@/domain/activity";
+import { idleShare, weekByConsultant } from "@/domain/activity";
 import { BUSINESS_TIME_ZONE, weekRange } from "@/domain/week";
+import { workloadByConsultant } from "@/domain/workload";
 import { formatDayMonth } from "@/lib/format";
 import { DAY_LABELS, WEEKS_BACK } from "./constants";
 import { SortKey } from "./enums";
-import type { Row, WeekOption } from "./types";
+import type { BuildRowsInput, Row, WeekOption } from "./types";
 
 const DAY = 24 * 3_600_000;
 
@@ -61,4 +62,29 @@ export function sortRows(rows: Row[], key: SortKey): Row[] {
 
 export function mostIdle(rows: Row[]): Row | undefined {
   return sortRows(rows, SortKey.Idle).find((r) => r.week.idleMs > 0);
+}
+
+export function buildRows({
+  consultants,
+  tickets,
+  history,
+  messages,
+  groups,
+  range,
+  now,
+}: BuildRowsInput): Row[] {
+  const weeks = weekByConsultant({
+    consultantIds: consultants.map((c) => c.id),
+    tickets,
+    history,
+    messages,
+    range,
+  });
+  const workloads = workloadByConsultant(tickets, consultants, now);
+  return consultants.map((consultant, index) => ({
+    consultant,
+    groupName: groups[consultant.grupo_id ?? ""]?.nome ?? "",
+    week: weeks[index],
+    workload: workloads[index],
+  }));
 }

@@ -1,31 +1,41 @@
 import { describe, expect, it } from "vitest";
-import { rawData } from "@/test-data";
-import { USERS } from "./users";
 import { Profile } from "@/domain/enums";
+import { rawData } from "@/test-data";
 import { Role } from "./enums";
+import { DEMO_PASSWORD, ROLE_LABEL, USERS } from "./users";
 
-const PROFILE = {
+const PROFILE_OF_ROLE: Record<Role, Profile> = {
   [Role.Consultant]: Profile.Consultant,
   [Role.Manager]: Profile.Manager,
   [Role.Customer]: Profile.Customer,
-} as const;
+};
 
-describe("demo users", () => {
-  it("are the people from the brief, exactly as they are in dados.json", () => {
-    for (const demo of USERS) {
-      const person = rawData.usuarios.find((u) => u.id === demo.id);
-      expect(person, demo.name).toBeDefined();
-      expect(person?.nome).toBe(demo.name);
-      expect(person?.email).toBe(demo.email);
-      expect(person?.perfil).toBe(PROFILE[demo.role]);
+describe("the demo users", () => {
+  it("are the three people of the brief, one per profile", () => {
+    expect(USERS.map((u) => u.role).sort()).toEqual(Object.values(Role).sort());
+  });
+
+  it("exist in the data with the same id, name, e-mail and profile", () => {
+    for (const user of USERS) {
+      const person = rawData.usuarios.find((p) => p.id === user.id);
+      expect(person, user.name).toBeDefined();
+      expect(person?.nome).toBe(user.name);
+      expect(person?.email).toBe(user.email);
+      expect(person?.perfil).toBe(PROFILE_OF_ROLE[user.role]);
     }
   });
 
-  it("cover the three profiles", () => {
-    expect(USERS.map((u) => u.role).sort()).toEqual([
-      Role.Consultant,
-      Role.Customer,
-      Role.Manager,
-    ]);
+  it("sign in with lower-case e-mails, as the sign-in compares them", () => {
+    for (const user of USERS) expect(user.email).toBe(user.email.toLowerCase());
+  });
+
+  it("have a label for every role", () => {
+    for (const role of Object.values(Role)) {
+      expect(ROLE_LABEL[role]).toBeTruthy();
+    }
+  });
+
+  it("share one demo password", () => {
+    expect(DEMO_PASSWORD).toBeTruthy();
   });
 });

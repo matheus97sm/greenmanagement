@@ -4,7 +4,7 @@ import { useNavigate, useParams } from "react-router";
 import { useCurrentUser } from "@/auth/auth-context";
 import { homePath } from "@/paths";
 import { LoadStatus } from "@/store/enums";
-import { ticketsStore } from "@/store/ticketsStore";
+import { markRead } from "@/store/actions";
 import { useTickets } from "@/store/useTickets";
 import { TicketDetail } from "@/components/ticket-detail";
 import { TicketList } from "./components/list";
@@ -18,7 +18,7 @@ export function TicketsPage() {
 
   const lastMessageId = id ? state.messages[id]?.at(-1)?.id : undefined;
   useEffect(() => {
-    if (id) ticketsStore.markRead(id);
+    if (id) markRead(id);
   }, [id, lastMessageId]);
 
   if (state.status === LoadStatus.Error) {

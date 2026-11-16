@@ -1,6 +1,8 @@
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { Status } from "@/domain/enums";
+import { isActive } from "@/domain/status";
 import { riskTickets } from "@/domain/workload";
 import { reassignTickets } from "@/store/actions";
 import { loadStoreAs, renderWithProviders } from "@/test-utils";
@@ -40,9 +42,7 @@ describe("manager tickets page", () => {
     expect(
       screen.getByRole("heading", { name: "Equipe e chamados" }),
     ).toBeInTheDocument();
-    const active = rawData.chamados.filter(
-      (t) => t.status !== "resolvido" && t.status !== "fechado",
-    ).length;
+    const active = rawData.chamados.filter((t) => isActive(t.status)).length;
     const card = screen
       .getByText("Chamados ativos")
       .closest(".mantine-Paper-root");
@@ -311,7 +311,7 @@ describe("manager tickets page", () => {
     it("searches every ticket, finished ones included, ignoring the current view", async () => {
       const user = userEvent.setup();
       const { container } = renderPage();
-      const closed = rawData.chamados.find((t) => t.status === "fechado")!;
+      const closed = rawData.chamados.find((t) => t.status === Status.Closed)!;
 
       await user.type(
         screen.getByLabelText("Buscar chamado"),

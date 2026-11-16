@@ -10,10 +10,10 @@ import {
   Title,
 } from "@mantine/core";
 import { useCurrentUser } from "@/auth/auth-context";
-import { teamWeek, weekByConsultant } from "@/domain/activity";
+import { teamWeek } from "@/domain/activity";
 import { groupIdsOf } from "@/domain/rules";
 import { weekRange } from "@/domain/week";
-import { consultantsOf, workloadByConsultant } from "@/domain/workload";
+import { consultantsOf } from "@/domain/workload";
 import { useNow } from "@/hooks/useNow";
 import { LoadStatus } from "@/store/enums";
 import { useTickets } from "@/store/useTickets";
@@ -21,8 +21,13 @@ import { WeekSummary } from "./components/week-summary";
 import { WeekTable } from "./components/week-table";
 import { ALL_GROUPS, SORT_LABEL } from "./constants";
 import { SortKey } from "./enums";
-import type { Row } from "./types";
-import { dayHeaders, mostIdle, sortRows, weekOptions } from "./utils";
+import {
+  buildRows,
+  dayHeaders,
+  mostIdle,
+  sortRows,
+  weekOptions,
+} from "./utils";
 
 export function DashboardPage() {
   const me = useCurrentUser();
@@ -55,30 +60,27 @@ export function DashboardPage() {
     [now, weeksAgo],
   );
 
-  const rows = useMemo<Row[]>(() => {
-    const weeks = weekByConsultant({
-      consultantIds: consultants.map((c) => c.id),
+  const rows = useMemo(
+    () =>
+      buildRows({
+        consultants,
+        tickets,
+        history: state.history,
+        messages: state.messages,
+        groups: state.groups,
+        range,
+        now,
+      }),
+    [
+      consultants,
       tickets,
-      history: state.history,
-      messages: state.messages,
+      state.history,
+      state.messages,
+      state.groups,
       range,
-    });
-    const workloads = workloadByConsultant(tickets, consultants, now);
-    return consultants.map((consultant, index) => ({
-      consultant,
-      groupName: state.groups[consultant.grupo_id ?? ""]?.nome ?? "",
-      week: weeks[index],
-      workload: workloads[index],
-    }));
-  }, [
-    consultants,
-    tickets,
-    state.history,
-    state.messages,
-    state.groups,
-    range,
-    now,
-  ]);
+      now,
+    ],
+  );
 
   const sorted = useMemo(() => sortRows(rows, sortKey), [rows, sortKey]);
   const team = useMemo(() => teamWeek(rows.map((r) => r.week)), [rows]);

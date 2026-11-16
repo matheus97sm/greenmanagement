@@ -19,6 +19,8 @@ async function run(call: () => Promise<DomainEvent[]>): Promise<boolean> {
   }
 }
 
+export const markRead = (ticketId: string) => ticketsStore.markRead(ticketId);
+
 export const takeTicket = (ticketId: string, consultantId: string) =>
   run(() => api.assumeTicket(ticketId, consultantId));
 

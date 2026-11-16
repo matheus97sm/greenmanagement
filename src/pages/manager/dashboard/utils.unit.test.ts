@@ -1,9 +1,19 @@
 import { describe, expect, it } from "vitest";
 import type { ConsultantWeek } from "@/domain/activity";
 import { LoadLevel, Profile } from "@/domain/enums";
+import type { Group, HistoryEntry, Message } from "@/domain/types";
+import { weekRange } from "@/domain/week";
+import { consultantsOf } from "@/domain/workload";
+import { rawData } from "@/test-data";
 import { SortKey } from "./enums";
 import type { Row } from "./types";
-import { dayHeaders, mostIdle, sortRows, weekOptions } from "./utils";
+import {
+  buildRows,
+  dayHeaders,
+  mostIdle,
+  sortRows,
+  weekOptions,
+} from "./utils";
 
 const HOUR = 3_600_000;
 const NOW = Date.parse("2026-11-03T13:00:00Z");
@@ -151,5 +161,87 @@ describe("mostIdle", () => {
   it("returns nobody when everyone had work all the time", () => {
     expect(mostIdle([row("A"), row("B")])).toBeUndefined();
     expect(mostIdle([])).toBeUndefined();
+  });
+});
+
+describe("buildRows", () => {
+  const history: Record<string, HistoryEntry[]> = {};
+  for (const entry of rawData.historico) {
+    (history[entry.chamado_id] ??= []).push(entry);
+  }
+  const messages: Record<string, Message[]> = {};
+  for (const message of rawData.mensagens) {
+    (messages[message.chamado_id] ??= []).push(message);
+  }
+  const groups: Record<string, Group> = Object.fromEntries(
+    rawData.grupos.map((g) => [g.id, g]),
+  );
+  const consultants = consultantsOf(
+    rawData.usuarios,
+    rawData.grupos.map((g) => g.id),
+  );
+  const now = Date.parse(rawData.meta.agora);
+
+  const rows = buildRows({
+    consultants,
+    tickets: rawData.chamados,
+    history,
+    messages,
+    groups,
+    range: weekRange(now),
+    now,
+  });
+
+  it("makes one row per consultant, in the same order", () => {
+    expect(rows.map((r) => r.consultant.id)).toEqual(
+      consultants.map((c) => c.id),
+    );
+  });
+
+  it("puts each consultant next to their own week and their own load", () => {
+    for (const row of rows) {
+      expect(row.week.consultantId).toBe(row.consultant.id);
+      expect(row.workload.consultant.id).toBe(row.consultant.id);
+    }
+  });
+
+  it("names the group of each consultant", () => {
+    const leandro = rows.find((r) => r.consultant.nome === "Leandro Alves")!;
+    const marina = rows.find((r) => r.consultant.nome === "Marina Almeida")!;
+    expect(leandro.groupName).toBe("Aplicações");
+    expect(marina.groupName).toBe("Infraestrutura");
+  });
+
+  it("carries the week of the range it was given", () => {
+    const leandro = rows.find((r) => r.consultant.nome === "Leandro Alves")!;
+    expect(leandro.week.idleMs).toBe(leandro.week.businessMs);
+    expect(leandro.workload.active).toBe(0);
+  });
+
+  it("leaves the group name empty when the group is unknown", () => {
+    const [row] = buildRows({
+      consultants: consultants.slice(0, 1),
+      tickets: [],
+      history: {},
+      messages: {},
+      groups: {},
+      range: weekRange(now),
+      now,
+    });
+    expect(row.groupName).toBe("");
+  });
+
+  it("makes no rows for no consultants", () => {
+    expect(
+      buildRows({
+        consultants: [],
+        tickets: rawData.chamados,
+        history,
+        messages,
+        groups,
+        range: weekRange(now),
+        now,
+      }),
+    ).toEqual([]);
   });
 });

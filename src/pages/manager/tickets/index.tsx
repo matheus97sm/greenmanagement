@@ -18,10 +18,7 @@ import { IconSearch } from "@tabler/icons-react";
 import { useNavigate, useParams } from "react-router";
 import { useCurrentUser } from "@/auth/auth-context";
 import { groupIdsOf } from "@/domain/rules";
-import { matchesSearch } from "@/domain/search";
-import { compareBySla } from "@/domain/sla";
 import {
-  activeTicketsOf,
   compareWorkload,
   consultantsOf,
   riskTickets,
@@ -41,7 +38,16 @@ import { TicketQueue } from "./components/ticket-queue";
 import { ALL_GROUPS, MAX_ROWS } from "./constants";
 import { FocusKind } from "./enums";
 import type { Focus } from "./types";
-import { filterByGroup } from "./utils";
+import {
+  filterByGroup,
+  findTickets,
+  focusAfterPicking,
+  keepVisible,
+  ticketsInFocus,
+  toggled,
+  unassignedCountByGroup,
+  viewOptions,
+} from "./utils";
 
 export function TicketsPage() {
   const me = useCurrentUser();
@@ -88,13 +94,10 @@ export function TicketsPage() {
     [tickets, now, groupFilter],
   );
 
-  const unassignedByGroup = useMemo(() => {
-    const counts: Record<string, number> = {};
-    for (const t of unassignedTickets(tickets, now)) {
-      counts[t.grupo_id] = (counts[t.grupo_id] ?? 0) + 1;
-    }
-    return counts;
-  }, [tickets, now]);
+  const unassignedByGroup = useMemo(
+    () => unassignedCountByGroup(tickets, now),
+    [tickets, now],
+  );
 
   const focusedConsultant =
     focus.kind === FocusKind.Consultant
@@ -105,29 +108,30 @@ export function TicketsPage() {
 
   const found = useMemo(
     () =>
-      filterByGroup(
-        tickets
-          .filter((t) => matchesSearch(t, search, state.people))
-          .sort(compareBySla(now)),
-        groupFilter,
-      ),
+      findTickets({
+        tickets,
+        term: search,
+        people: state.people,
+        now,
+        groupId: groupFilter,
+      }),
     [tickets, search, state.people, now, groupFilter],
   );
 
-  const shown = useMemo(() => {
-    if (searching) return found;
-    if (focus.kind === FocusKind.Consultant) {
-      return activeTicketsOf(tickets, focus.consultantId, now);
-    }
-    return focus.kind === FocusKind.Risk ? risk : unassigned;
-  }, [searching, found, focus, tickets, now, risk, unassigned]);
+  const shown = useMemo(
+    () =>
+      searching
+        ? found
+        : ticketsInFocus({ focus, tickets, now, risk, unassigned }),
+    [searching, found, focus, tickets, now, risk, unassigned],
+  );
 
   const visible = useMemo(() => shown.slice(0, MAX_ROWS), [shown]);
 
-  const effectiveSelection = useMemo(() => {
-    const ids = new Set(visible.map((t) => t.id));
-    return new Set([...selected].filter((id) => ids.has(id)));
-  }, [selected, visible]);
+  const effectiveSelection = useMemo(
+    () => keepVisible(selected, visible),
+    [selected, visible],
+  );
 
   const changeFocus = useCallback((next: Focus) => {
     setFocus(next);
@@ -136,12 +140,7 @@ export function TicketsPage() {
 
   const role = me.role;
   const toggle = useCallback(
-    (ticketId: string) =>
-      setSelected((current) => {
-        const next = new Set(current);
-        if (!next.delete(ticketId)) next.add(ticketId);
-        return next;
-      }),
+    (ticketId: string) => setSelected((current) => toggled(current, ticketId)),
     [],
   );
   const openTicket = useCallback(
@@ -149,12 +148,7 @@ export function TicketsPage() {
     [navigate, role],
   );
   const pickConsultant = useCallback((consultantId: string) => {
-    setFocus((current) =>
-      current.kind === FocusKind.Consultant &&
-      current.consultantId === consultantId
-        ? { kind: FocusKind.Risk }
-        : { kind: FocusKind.Consultant, consultantId },
-    );
+    setFocus((current) => focusAfterPicking(current, consultantId));
     setSelected(new Set());
   }, []);
   const showUnassigned = useCallback(
@@ -182,21 +176,12 @@ export function TicketsPage() {
 
   const selectedTickets = visible.filter((t) => effectiveSelection.has(t.id));
 
-  const views = [
-    { value: FocusKind.Risk, label: `Em risco (${risk.length})` },
-    {
-      value: FocusKind.Unassigned,
-      label: `Sem responsável (${unassigned.length})`,
-    },
-    ...(focusedConsultant
-      ? [
-          {
-            value: FocusKind.Consultant,
-            label: `${focusedConsultant.nome} (${shown.length})`,
-          },
-        ]
-      : []),
-  ];
+  const views = viewOptions({
+    riskCount: risk.length,
+    unassignedCount: unassigned.length,
+    consultant: focusedConsultant,
+    consultantCount: shown.length,
+  });
 
   return (
     <Stack gap="md">
