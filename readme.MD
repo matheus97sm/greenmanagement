@@ -94,10 +94,11 @@ A tela do gestor não é uma lista de chamados: ela mostra **a equipe e onde agi
 2. **Quadro da equipe:** um cartão por consultor, separado por grupo, com a carga (barra proporcional ao consultor mais ocupado) e os alertas dele: estourados, em risco e aguardando cliente. Quem precisa de atenção vem primeiro: quem está **sem chamados** e quem está **sobrecarregado** (a partir de 1,5x a média do próprio grupo, porque os grupos têm volumes diferentes). Chamados em "aguardando cliente" contam na carga, mas não como risco, porque o prazo está pausado;
 3. **Painel de chamados:** começa em "Em risco" (estourados e que vencem em menos de 4h, de toda a equipe, na mesma ordem da Marina). "Sem responsável" mostra a fila, e há um filtro por grupo. Clicar em um consultor no quadro mostra **tudo o que ele carrega**; clicar de novo volta;
 4. **Redistribuir:** marque um ou vários chamados (há "Selecionar todos") e clique em "Redistribuir". A lista de destinos mostra só os consultores do grupo dos chamados, do menos ao mais carregado, com a carga de cada um. Serve para cobrir quem faltou ou entregar a fila a quem está parado. Chamados de grupos diferentes não são redistribuídos juntos, e resolvidos ou fechados não podem ser movidos;
-5. **Limite da lista:** o painel mostra os 200 chamados mais urgentes e avisa quando há mais. "Selecionar todos" vale só para o que está na tela;
-6. **Tempo real:** o quadro e o resumo acompanham os eventos (chamados pegos, abertos, prazos que estouram) sem recarregar.
-
-O relatório semanal de tempo ocioso por consultor ainda não foi feito.
+5. **Limite da lista:** o painel mostra os 100 chamados mais urgentes e avisa quando há mais. A lista só desenha as linhas visíveis, então continua leve. Cada linha mostra o grupo do chamado;
+6. **Um grupo por vez:** ao marcar um chamado, os chamados de outro grupo ficam desabilitados, porque só dá para redistribuir para consultores do mesmo grupo. "Selecionar todos" marca só os chamados do grupo do primeiro da lista (ou do grupo já escolhido) e diz qual é o grupo quando a lista mistura os dois;
+7. **Conversa (escalonamento):** clique no título de um chamado para abrir a conversa ao lado da lista. O endereço muda para `/manager/tickets/<id>`, então o link pode ser enviado a alguém e abre direto na conversa. O gestor lê tudo, responde ao cliente, deixa nota interna para o consultor, altera o status (com motivo, e pode reabrir) e redistribui o chamado dali mesmo. Ele não "pega" chamado, porque a atribuição é feita pela redistribuição. Cada mensagem mostra quem escreveu: um selo **Cliente** (azul), **Consultor** (verde) ou **Gestor** (violeta), com a borda lateral na mesma cor e o fundo azul claro nas mensagens do cliente. Notas internas continuam em amarelo. Vale também para a Marina. O rascunho de resposta fica guardado ao trocar de chamado;
+8. **Busca:** o campo acima da lista procura entre **todos** os chamados (inclusive resolvidos e fechados, que o cliente pode escalar), por número, título, cliente ou empresa. Respeita o filtro de grupo. Enquanto há busca, as abas ficam desativadas;
+9. **Tempo real:** o quadro e o resumo acompanham os eventos (chamados pegos, abertos, prazos que estouram) sem recarregar.
 
 ## Como funciona o "backend" simulado
 
@@ -155,14 +156,14 @@ src/
   pages/         uma pasta por perfil e, dentro dela, uma pasta por página
     login/
     consultant/tickets/   visão da Marina (a página e seus components/)
-    manager/tickets/      visão do Ricardo (resumo, quadro da equipe, painel e redistribuição)
+    manager/tickets/      visão do Ricardo (resumo, quadro da equipe, painel, conversa e redistribuição)
     customer/tickets/     visão da Helena (a fazer)
-  components/    cabeçalho, layout autenticado e badges (usados por mais de um perfil)
+  components/    cabeçalho, layout, badges, tema claro/escuro e a conversa do chamado (usados por mais de um perfil)
   domain/        enums, tipos, status, SLA, carga da equipe e regras que alteram o chamado (sem React)
   lib/           relógio simulado e formatação
   server/        "backend" simulado (dados, regras, API, socket, simulador)
   store/         estado da tela, ações, ligação em tempo real e o enum LoadStatus
-  integration/   testes que exercitam o app inteiro (login, resposta, troca de usuário, visão do gestor)
+  integration/   testes que exercitam o app inteiro (login, resposta, troca de usuário, visão do gestor, conversa escalonada)
   test-*.ts(x)   configuração e utilitários de teste
 ```
 
@@ -192,7 +193,7 @@ Só entram os arquivos que o componente precisa. Quando um perfil ganhar outra p
 - **Enums no lugar de textos soltos:** todo conjunto fechado de valores (status, prioridade, perfis, tipos de evento, abas, estados de carregamento...) é um `enum`, para um erro de digitação virar erro de compilação e o editor completar o nome. Os enums de domínio ficam em `src/domain/enums.ts` e mantêm o valor que vem da API (por exemplo, `Status.InProgress` vale `"em_atendimento"`), então os dados e os eventos continuam iguais. Enums de um componente ficam no `enums.ts` dele. Por causa dos enums, o `erasableSyntaxOnly` do template do Vite está desligado no `tsconfig.app.json`.
 - **Imports:** dentro da mesma página, caminhos relativos (`./types`, `../composer`). Para qualquer outro módulo de `src/`, o alias `@/` (por exemplo, `@/domain/enums`).
 - **Testes:** ficam ao lado do que testam, com o sufixo `.unit.test.ts` (ou `.tsx`, quando renderizam). Rodam com Vitest em jsdom e Testing Library. `src/test-utils.tsx` tem `renderWithProviders`/`renderRoutes` (Mantine, autenticação e roteador) e `loadStoreAs(usuário)`, que carrega o store com os dados reais como aquele usuário os veria. Os componentes que chamam a API simulada têm `@/store/actions` substituído por um mock.
-- **Testes de integração:** ficam em `src/integration/*.integration.test.tsx` e sobem o app de verdade (roteador com guardas, login, store, API simulada, socket e filtro de visibilidade), trocando só o que atrapalharia: o simulador de atividade fica desligado, o gerador de números aleatórios é determinístico (`resetWorld`) e, nos testes de resposta, o socket entrega cada evento duas vezes, como o brief permite. Cobrem: do login até a página do perfil, a resposta a um chamado sem duplicar a mensagem, a troca de usuário sem vazar dados e a visão do gestor (redistribuir chamados e acompanhar o quadro em tempo real). Rodam com `npm run test:integration`; levam de menos de 1 a uns 5 segundos cada, por causa da latência simulada e da espera para o socket entregar tudo. Como esperam de verdade, têm um limite de tempo maior que o dos testes unitários.
+- **Testes de integração:** ficam em `src/integration/*.integration.test.tsx` e sobem o app de verdade (roteador com guardas, login, store, API simulada, socket e filtro de visibilidade), trocando só o que atrapalharia: o simulador de atividade fica desligado, o gerador de números aleatórios é determinístico (`resetWorld`) e, nos testes de resposta, o socket entrega cada evento duas vezes, como o brief permite. Cobrem: do login até a página do perfil, a resposta a um chamado sem duplicar a mensagem, a troca de usuário sem vazar dados e a visão do gestor (redistribuir chamados e acompanhar o quadro em tempo real), a conversa aberta pelo gestor. Rodam com `npm run test:integration`; levam de menos de 1 a uns 5 segundos cada, por causa da latência simulada e da espera para o socket entregar tudo. Como esperam de verdade, têm um limite de tempo maior que o dos testes unitários.
 
 ### Rotas e guardas
 

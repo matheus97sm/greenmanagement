@@ -27,3 +27,7 @@
 .team-row[data-selected] {
   background: var(--mantine-color-green-light);
 }
+
+.ticket-row[data-locked] {
+  opacity: 0.55;
+}

@@ -1,3 +1,4 @@
+import { memo } from "react";
 import {
   Anchor,
   Badge,
@@ -65,7 +66,7 @@ function ConsultantRow({ workload, maxActive, selected, onSelect }: RowProps) {
   );
 }
 
-export function TeamBoard({
+function TeamBoardView({
   groups,
   workloads,
   unassignedByGroup,
@@ -114,3 +115,5 @@ export function TeamBoard({
     </Stack>
   );
 }
+
+export const TeamBoard = memo(TeamBoardView);

@@ -14,8 +14,12 @@ vi.mock("@/store/actions", () => ({
 
 const NOW = Date.parse(rawData.meta.agora);
 
-function renderPage() {
-  return renderWithProviders(<TicketsPage />, { userId: RICARDO_ID });
+function renderPage(route = "/manager/tickets") {
+  return renderWithProviders(<TicketsPage />, {
+    userId: RICARDO_ID,
+    path: "/manager/tickets/:id?",
+    route,
+  });
 }
 
 const consultantRow = (nome: string) =>
@@ -54,16 +58,22 @@ describe("manager tickets page", () => {
     expect(rowsOf(container)[0]).toHaveTextContent(`#${risk[0].numero}`);
   });
 
-  it("lists at most the most urgent two hundred and says so", () => {
+  it("lists at most the two hundred most urgent and says so", () => {
     const { container } = renderPage();
     const risk = riskTickets(rawData.chamados, NOW);
     expect(risk.length).toBeGreaterThan(MAX_ROWS);
-    expect(rowsOf(container)).toHaveLength(MAX_ROWS);
+    expect(rowsOf(container).length).toBeGreaterThan(0);
     expect(
       screen.getByText(
         `Mostrando os ${MAX_ROWS} mais urgentes de ${risk.length}.`,
       ),
     ).toBeInTheDocument();
+  });
+
+  it("draws only the rows near the visible part of a long list", () => {
+    const { container } = renderPage();
+    expect(rowsOf(container).length).toBeGreaterThan(0);
+    expect(rowsOf(container).length).toBeLessThan(MAX_ROWS / 4);
   });
 
   it("shows the twelve consultants on the board", () => {
@@ -84,16 +94,17 @@ describe("manager tickets page", () => {
 
   it("narrows the list to one group", async () => {
     const user = userEvent.setup();
-    const { container } = renderPage();
+    renderPage();
     await user.click(screen.getByRole("radio", { name: /Sem responsável/ }));
-    const all = rowsOf(container).length;
+    expect(
+      screen.getByRole("radio", { name: /Sem responsável \(61\)/ }),
+    ).toBeChecked();
 
     await user.click(screen.getAllByLabelText("Grupo")[0]);
     await user.click(
       await screen.findByRole("option", { name: "Infraestrutura" }),
     );
 
-    expect(rowsOf(container).length).toBeLessThan(all);
     expect(
       screen.getByRole("radio", { name: /Sem responsável \(35\)/ }),
     ).toBeInTheDocument();
@@ -144,16 +155,71 @@ describe("manager tickets page", () => {
     ).toBeEnabled();
   });
 
-  it("selects every listed ticket at once", async () => {
+  it("selects every listed ticket of the first ticket's group at once", async () => {
     const user = userEvent.setup();
     renderPage();
+    const top = riskTickets(rawData.chamados, NOW).slice(0, MAX_ROWS);
+    const expected = top.filter((t) => t.grupo_id === top[0].grupo_id).length;
+    expect(expected).toBeLessThan(top.length);
+
     await user.click(
       screen.getByRole("checkbox", { name: "Selecionar todos" }),
     );
-    const count = screen.getAllByRole("checkbox").length - 1;
     expect(
-      screen.getByRole("button", { name: `Redistribuir (${count})` }),
+      screen.getByRole("button", { name: `Redistribuir (${expected})` }),
     ).toBeEnabled();
+  });
+
+  describe("one group at a time", () => {
+    const top = riskTickets(rawData.chamados, NOW).slice(0, 10);
+    const first = top[0];
+    const other = top.find((t) => t.grupo_id !== first.grupo_id)!;
+    const box = (numero: number) =>
+      screen.getByRole("checkbox", { name: `Selecionar chamado ${numero}` });
+
+    it("has tickets of both groups on top of the list to start with", () => {
+      expect(other).toBeDefined();
+    });
+
+    it("disables the tickets of the other group after ticking one", async () => {
+      const user = userEvent.setup();
+      renderPage();
+      expect(box(other.numero)).toBeEnabled();
+
+      await user.click(box(first.numero));
+      expect(box(other.numero)).toBeDisabled();
+      expect(box(first.numero)).toBeEnabled();
+      for (const t of top.filter((x) => x.grupo_id === first.grupo_id)) {
+        expect(box(t.numero)).toBeEnabled();
+      }
+    });
+
+    it("enables them again when the selection is cleared", async () => {
+      const user = userEvent.setup();
+      renderPage();
+      await user.click(box(first.numero));
+      await user.click(box(first.numero));
+      expect(box(other.numero)).toBeEnabled();
+    });
+
+    it("locks to the group of whatever was ticked, whichever it is", async () => {
+      const user = userEvent.setup();
+      renderPage();
+      await user.click(box(other.numero));
+      expect(box(first.numero)).toBeDisabled();
+    });
+
+    it("lifts the lock when the list changes", async () => {
+      const user = userEvent.setup();
+      renderPage();
+      await user.click(box(first.numero));
+      await user.click(screen.getByRole("radio", { name: /Sem responsável/ }));
+      expect(
+        screen
+          .queryAllByRole("checkbox", { name: /Selecionar chamado/ })
+          .every((c) => !(c as HTMLInputElement).disabled),
+      ).toBe(true);
+    });
   });
 
   it("drops the selection when the list changes", async () => {
@@ -193,5 +259,106 @@ describe("manager tickets page", () => {
       ).toBeDisabled(),
     );
     expect(screen.queryByText("Novo responsável")).not.toBeInTheDocument();
+  });
+
+  describe("reading a conversation", () => {
+    const ticket = rawData.chamados.find((t) => t.numero === 10503)!;
+
+    it("opens the conversation from the ticket title and puts it in the address", async () => {
+      const user = userEvent.setup();
+      const { router } = renderPage();
+      await user.click(
+        screen.getByRole("button", {
+          name: "Abrir conversa do chamado 10503",
+        }),
+      );
+      expect(router.state.location.pathname).toBe(
+        `/manager/tickets/${ticket.id}`,
+      );
+      expect(
+        await screen.findByRole("heading", { name: /#10503 · / }),
+      ).toBeInTheDocument();
+      expect(screen.getByText(ticket.descricao)).toBeInTheDocument();
+    });
+
+    it("opens straight from a shared link", async () => {
+      renderPage(`/manager/tickets/${ticket.id}`);
+      expect(
+        await screen.findByRole("heading", { name: /#10503 · / }),
+      ).toBeInTheDocument();
+    });
+
+    it("goes back to the team view when the conversation is closed", async () => {
+      const user = userEvent.setup();
+      const { router } = renderPage(`/manager/tickets/${ticket.id}`);
+      await user.click(
+        await screen.findByRole("button", { name: "Fechar conversa" }),
+      );
+      expect(router.state.location.pathname).toBe("/manager/tickets");
+    });
+
+    it("redistributes the open ticket from its conversation", async () => {
+      const user = userEvent.setup();
+      renderPage(`/manager/tickets/${ticket.id}`);
+      await user.click(
+        await screen.findByRole("button", { name: "Redistribuir" }),
+      );
+      expect(screen.getByText("Redistribuir chamado")).toBeInTheDocument();
+    });
+  });
+
+  describe("finding a ticket", () => {
+    it("searches every ticket, finished ones included, ignoring the current view", async () => {
+      const user = userEvent.setup();
+      const { container } = renderPage();
+      const closed = rawData.chamados.find((t) => t.status === "fechado")!;
+
+      await user.type(
+        screen.getByLabelText("Buscar chamado"),
+        String(closed.numero),
+      );
+
+      const rows = rowsOf(container);
+      expect(rows).toHaveLength(1);
+      expect(rows[0]).toHaveTextContent(`#${closed.numero}`);
+      expect(screen.getByText("1 chamado encontrado")).toBeInTheDocument();
+      expect(screen.getByRole("radio", { name: /Em risco/ })).toBeDisabled();
+    });
+
+    it("says when nothing matches and goes back to the view when cleared", async () => {
+      const user = userEvent.setup();
+      const { container } = renderPage();
+      const box = screen.getByLabelText("Buscar chamado");
+
+      await user.type(box, "99999999");
+      expect(
+        screen.getByText("Nenhum chamado encontrado."),
+      ).toBeInTheDocument();
+
+      await user.clear(box);
+      expect(rowsOf(container).length).toBeGreaterThan(0);
+      expect(screen.getByRole("radio", { name: /Em risco/ })).toBeEnabled();
+    });
+
+    it("respects the group filter while searching", async () => {
+      const user = userEvent.setup();
+      renderPage();
+      await user.type(screen.getByLabelText("Buscar chamado"), "104");
+      const found = () =>
+        Number(
+          /(\d+) chamados/.exec(
+            screen.getByText(/chamados encontrados/).textContent ?? "",
+          )?.[1],
+        );
+      const all = found();
+      expect(all).toBeGreaterThan(50);
+
+      await user.click(screen.getAllByLabelText("Grupo")[0]);
+      await user.click(
+        await screen.findByRole("option", { name: "Infraestrutura" }),
+      );
+      expect(found()).toBeLessThan(all);
+      expect(found()).toBeGreaterThan(0);
+    });
   });
 });

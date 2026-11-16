@@ -1,9 +1,23 @@
 import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { useCallback, useState } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { loadStoreAs, renderWithProviders } from "@/test-utils";
 import { RICARDO_ID, rawData } from "@/test-data";
 import { TicketQueue } from ".";
+
+const renders = vi.hoisted(() => ({ status: 0 }));
+
+vi.mock("@/components/Badges", async (importOriginal) => {
+  const original = await importOriginal<typeof import("@/components/Badges")>();
+  return {
+    ...original,
+    StatusBadge: (props: Parameters<typeof original.StatusBadge>[0]) => {
+      renders.status += 1;
+      return original.StatusBadge(props);
+    },
+  };
+});
 
 const NOW = Date.parse(rawData.meta.agora);
 const byNumber = (numero: number) =>
@@ -13,10 +27,12 @@ function renderQueue(
   props: {
     tickets?: typeof rawData.chamados;
     selected?: string[];
+    lockedGroupId?: string;
     total?: number;
   } = {},
 ) {
   const tickets = props.tickets ?? [byNumber(10503), byNumber(10001)];
+  const onOpen = vi.fn();
   const onToggle = vi.fn();
   const onToggleAll = vi.fn();
   const view = renderWithProviders(
@@ -24,14 +40,16 @@ function renderQueue(
       tickets={tickets}
       total={props.total ?? tickets.length}
       selected={new Set(props.selected ?? [])}
+      lockedGroupId={props.lockedGroupId}
       now={NOW}
       emptyText="Nada por aqui."
+      onOpen={onOpen}
       onToggle={onToggle}
       onToggleAll={onToggleAll}
     />,
     { userId: RICARDO_ID },
   );
-  return { ...view, onToggle, onToggleAll };
+  return { ...view, onOpen, onToggle, onToggleAll };
 }
 
 const rowsOf = (container: HTMLElement) =>
@@ -69,6 +87,17 @@ describe("TicketQueue", () => {
     expect(row).toHaveTextContent(/estourad/i);
   });
 
+  it("opens the conversation from the ticket title without selecting it", async () => {
+    const { onOpen, onToggle } = renderQueue();
+    await userEvent.click(
+      screen.getByRole("button", {
+        name: "Abrir conversa do chamado 10503",
+      }),
+    );
+    expect(onOpen).toHaveBeenCalledWith(byNumber(10503).id);
+    expect(onToggle).not.toHaveBeenCalled();
+  });
+
   it("reports a click on a ticket's checkbox", async () => {
     const { onToggle } = renderQueue();
     await userEvent.click(
@@ -92,7 +121,10 @@ describe("TicketQueue", () => {
     await userEvent.click(
       screen.getByRole("checkbox", { name: "Selecionar todos" }),
     );
-    expect(onToggleAll).toHaveBeenCalledWith(true);
+    expect(onToggleAll).toHaveBeenCalledWith(
+      [byNumber(10503).id, byNumber(10001).id],
+      true,
+    );
   });
 
   it("shows the select-all box as partly checked with some selected", () => {
@@ -113,5 +145,152 @@ describe("TicketQueue", () => {
     expect(
       screen.getByText("Mostrando os 2 mais urgentes de 225."),
     ).toBeInTheDocument();
+  });
+
+  describe("one group at a time", () => {
+    const infra = byNumber(10503);
+    const apps = rawData.chamados.find((t) => t.grupo_id !== infra.grupo_id)!;
+    const mixed = [infra, apps, byNumber(10001)];
+    const box = (numero: number) =>
+      screen.getByRole("checkbox", { name: `Selecionar chamado ${numero}` });
+
+    it("leaves every ticket enabled while nothing is locked", () => {
+      renderQueue({ tickets: mixed });
+      for (const t of mixed) expect(box(t.numero)).toBeEnabled();
+    });
+
+    it("disables the tickets of the other group once a group is locked", () => {
+      renderQueue({
+        tickets: mixed,
+        selected: [infra.id],
+        lockedGroupId: infra.grupo_id,
+      });
+      expect(box(infra.numero)).toBeEnabled();
+      expect(box(10001)).toBeEnabled();
+      expect(box(apps.numero)).toBeDisabled();
+    });
+
+    it("dims the locked rows and keeps the conversation reachable", async () => {
+      const { container, onOpen } = renderQueue({
+        tickets: mixed,
+        selected: [infra.id],
+        lockedGroupId: infra.grupo_id,
+      });
+      const locked = rowsOf(container).filter((r) =>
+        r.hasAttribute("data-locked"),
+      );
+      expect(locked).toHaveLength(1);
+      expect(locked[0]).toHaveTextContent(`#${apps.numero}`);
+
+      await userEvent.click(
+        screen.getByRole("button", {
+          name: `Abrir conversa do chamado ${apps.numero}`,
+        }),
+      );
+      expect(onOpen).toHaveBeenCalledWith(apps.id);
+    });
+
+    it("shows the group of each ticket", () => {
+      const { container } = renderQueue({ tickets: mixed });
+      const names = rowsOf(container).map((r) => r.textContent ?? "");
+      expect(names[0]).toContain("Infraestrutura");
+      expect(names[1]).toContain("Aplicações");
+    });
+
+    it("selects all only for the group of the first ticket when nothing is locked", async () => {
+      const { onToggleAll } = renderQueue({ tickets: mixed });
+      expect(screen.getByText("só Infraestrutura")).toBeInTheDocument();
+      await userEvent.click(
+        screen.getByRole("checkbox", { name: "Selecionar todos" }),
+      );
+      expect(onToggleAll).toHaveBeenCalledWith(
+        [infra.id, byNumber(10001).id],
+        true,
+      );
+    });
+
+    it("selects all inside the locked group even when it is not the first one", async () => {
+      const second = rawData.chamados.filter(
+        (t) => t.grupo_id === apps.grupo_id,
+      );
+      const list = [infra, second[0], second[1]];
+      const { onToggleAll } = renderQueue({
+        tickets: list,
+        selected: [second[0].id],
+        lockedGroupId: apps.grupo_id,
+      });
+      expect(screen.getByText("só Aplicações")).toBeInTheDocument();
+      await userEvent.click(
+        screen.getByRole("checkbox", { name: "Selecionar todos" }),
+      );
+      expect(onToggleAll).toHaveBeenCalledWith(
+        [second[0].id, second[1].id],
+        true,
+      );
+    });
+
+    it("does not mention a group when the whole list belongs to one", () => {
+      renderQueue();
+      expect(screen.queryByText(/^só /)).not.toBeInTheDocument();
+    });
+
+    it("counts the select-all box as ticked once its group is fully selected", () => {
+      renderQueue({
+        tickets: mixed,
+        selected: [infra.id, byNumber(10001).id],
+        lockedGroupId: infra.grupo_id,
+      });
+      expect(
+        screen.getByRole("checkbox", { name: "Selecionar todos" }),
+      ).toBeChecked();
+    });
+  });
+
+  describe("when one ticket is ticked", () => {
+    const tickets = rawData.chamados.slice(0, 12);
+
+    function Harness() {
+      const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
+      const toggle = useCallback(
+        (id: string) =>
+          setSelected((current) => {
+            const next = new Set(current);
+            if (!next.delete(id)) next.add(id);
+            return next;
+          }),
+        [],
+      );
+      const open = useCallback(() => {}, []);
+      const all = useCallback(() => {}, []);
+      return (
+        <TicketQueue
+          tickets={tickets}
+          total={tickets.length}
+          selected={selected}
+          lockedGroupId={undefined}
+          now={NOW}
+          emptyText="-"
+          onOpen={open}
+          onToggle={toggle}
+          onToggleAll={all}
+        />
+      );
+    }
+
+    it("redraws only that row, not the whole list", async () => {
+      renderWithProviders(<Harness />, { userId: RICARDO_ID });
+      const drawn = screen.getAllByRole("checkbox", {
+        name: /Selecionar chamado/,
+      });
+      expect(drawn.length).toBeGreaterThan(3);
+
+      const before = renders.status;
+      await userEvent.click(drawn[0]);
+      const redrawn = renders.status - before;
+
+      expect(drawn[0]).toBeChecked();
+      expect(redrawn).toBeGreaterThan(0);
+      expect(redrawn).toBeLessThanOrEqual(1);
+    });
   });
 });

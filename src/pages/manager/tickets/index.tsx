@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
   Alert,
   Button,
@@ -10,10 +10,16 @@ import {
   SegmentedControl,
   Select,
   Stack,
+  Text,
+  TextInput,
   Title,
 } from "@mantine/core";
+import { IconSearch } from "@tabler/icons-react";
+import { useNavigate, useParams } from "react-router";
 import { useCurrentUser } from "@/auth/auth-context";
 import { groupIdsOf } from "@/domain/rules";
+import { matchesSearch } from "@/domain/search";
+import { compareBySla } from "@/domain/sla";
 import {
   activeTicketsOf,
   compareWorkload,
@@ -24,8 +30,10 @@ import {
   workloadByConsultant,
 } from "@/domain/workload";
 import { useNow } from "@/hooks/useNow";
+import { homePath } from "@/paths";
 import { LoadStatus } from "@/store/enums";
 import { useTickets } from "@/store/useTickets";
+import { ConversationDrawer } from "./components/conversation-drawer";
 import { ReassignModal } from "./components/reassign-modal";
 import { Summary } from "./components/summary";
 import { TeamBoard } from "./components/team-board";
@@ -42,7 +50,10 @@ export function TicketsPage() {
   const [focus, setFocus] = useState<Focus>({ kind: FocusKind.Risk });
   const [groupFilter, setGroupFilter] = useState<string>(ALL_GROUPS);
   const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
-  const [reassigning, setReassigning] = useState(false);
+  const [reassignIds, setReassignIds] = useState<string[] | null>(null);
+  const [search, setSearch] = useState("");
+  const navigate = useNavigate();
+  const { id: openId } = useParams();
 
   const viewer = state.people[me.id];
   const groupIds = useMemo(() => (viewer ? groupIdsOf(viewer) : []), [viewer]);
@@ -90,12 +101,26 @@ export function TicketsPage() {
       ? state.people[focus.consultantId]
       : undefined;
 
+  const searching = search.trim().length > 0;
+
+  const found = useMemo(
+    () =>
+      filterByGroup(
+        tickets
+          .filter((t) => matchesSearch(t, search, state.people))
+          .sort(compareBySla(now)),
+        groupFilter,
+      ),
+    [tickets, search, state.people, now, groupFilter],
+  );
+
   const shown = useMemo(() => {
+    if (searching) return found;
     if (focus.kind === FocusKind.Consultant) {
       return activeTicketsOf(tickets, focus.consultantId, now);
     }
     return focus.kind === FocusKind.Risk ? risk : unassigned;
-  }, [focus, tickets, now, risk, unassigned]);
+  }, [searching, found, focus, tickets, now, risk, unassigned]);
 
   const visible = useMemo(() => shown.slice(0, MAX_ROWS), [shown]);
 
@@ -104,10 +129,41 @@ export function TicketsPage() {
     return new Set([...selected].filter((id) => ids.has(id)));
   }, [selected, visible]);
 
-  const changeFocus = (next: Focus) => {
+  const changeFocus = useCallback((next: Focus) => {
     setFocus(next);
     setSelected(new Set());
-  };
+  }, []);
+
+  const role = me.role;
+  const toggle = useCallback(
+    (ticketId: string) =>
+      setSelected((current) => {
+        const next = new Set(current);
+        if (!next.delete(ticketId)) next.add(ticketId);
+        return next;
+      }),
+    [],
+  );
+  const openTicket = useCallback(
+    (ticketId: string) => navigate(`${homePath(role)}/${ticketId}`),
+    [navigate, role],
+  );
+  const pickConsultant = useCallback((consultantId: string) => {
+    setFocus((current) =>
+      current.kind === FocusKind.Consultant &&
+      current.consultantId === consultantId
+        ? { kind: FocusKind.Risk }
+        : { kind: FocusKind.Consultant, consultantId },
+    );
+    setSelected(new Set());
+  }, []);
+  const showUnassigned = useCallback(
+    (groupId: string) => {
+      setGroupFilter(groupId);
+      changeFocus({ kind: FocusKind.Unassigned });
+    },
+    [changeFocus],
+  );
 
   if (state.status === LoadStatus.Error) {
     return <Alert color="red">Não foi possível carregar os chamados.</Alert>;
@@ -121,15 +177,8 @@ export function TicketsPage() {
     );
   }
 
-  const toggle = (ticketId: string) =>
-    setSelected((current) => {
-      const next = new Set(current);
-      if (!next.delete(ticketId)) next.add(ticketId);
-      return next;
-    });
-
-  const toggleAll = (checked: boolean) =>
-    setSelected(checked ? new Set(visible.map((t) => t.id)) : new Set());
+  const toggleAll = (ticketIds: string[], checked: boolean) =>
+    setSelected(checked ? new Set(ticketIds) : new Set());
 
   const selectedTickets = visible.filter((t) => effectiveSelection.has(t.id));
 
@@ -160,24 +209,27 @@ export function TicketsPage() {
             workloads={workloads}
             unassignedByGroup={unassignedByGroup}
             selectedId={focusedConsultant?.id}
-            onSelect={(consultantId) =>
-              changeFocus(
-                focusedConsultant?.id === consultantId
-                  ? { kind: FocusKind.Risk }
-                  : { kind: FocusKind.Consultant, consultantId },
-              )
-            }
-            onShowUnassigned={(groupId) => {
-              setGroupFilter(groupId);
-              changeFocus({ kind: FocusKind.Unassigned });
-            }}
+            onSelect={pickConsultant}
+            onShowUnassigned={showUnassigned}
           />
         </Grid.Col>
         <Grid.Col span={{ base: 12, md: 7 }}>
           <Paper withBorder>
             <Stack gap="xs" p="sm">
+              <TextInput
+                size="xs"
+                aria-label="Buscar chamado"
+                placeholder="Buscar em todos os chamados por nº, título ou cliente"
+                leftSection={<IconSearch size={14} />}
+                value={search}
+                onChange={(e) => {
+                  setSearch(e.currentTarget.value);
+                  setSelected(new Set());
+                }}
+              />
               <SegmentedControl
                 fullWidth
+                disabled={searching}
                 value={focus.kind}
                 onChange={(value) => {
                   if (value !== FocusKind.Consultant) {
@@ -186,6 +238,13 @@ export function TicketsPage() {
                 }}
                 data={views}
               />
+              {searching && (
+                <Text size="xs" c="dimmed">
+                  {shown.length === 1
+                    ? "1 chamado encontrado"
+                    : `${shown.length} chamados encontrados`}
+                </Text>
+              )}
               <Group justify="space-between" wrap="nowrap">
                 <Select
                   size="xs"
@@ -205,7 +264,9 @@ export function TicketsPage() {
                 <Button
                   size="xs"
                   disabled={selectedTickets.length === 0}
-                  onClick={() => setReassigning(true)}
+                  onClick={() =>
+                    setReassignIds(selectedTickets.map((t) => t.id))
+                  }
                 >
                   Redistribuir ({selectedTickets.length})
                 </Button>
@@ -213,9 +274,6 @@ export function TicketsPage() {
             </Stack>
             <div
               style={{
-                maxHeight: "calc(100dvh - 330px)",
-                minHeight: 320,
-                overflowY: "auto",
                 borderTop: "1px solid var(--mantine-color-default-border)",
               }}
             >
@@ -223,8 +281,14 @@ export function TicketsPage() {
                 tickets={visible}
                 total={shown.length}
                 selected={effectiveSelection}
+                lockedGroupId={selectedTickets[0]?.grupo_id}
                 now={now}
-                emptyText="Nenhum chamado por aqui."
+                emptyText={
+                  searching
+                    ? "Nenhum chamado encontrado."
+                    : "Nenhum chamado por aqui."
+                }
+                onOpen={openTicket}
                 onToggle={toggle}
                 onToggleAll={toggleAll}
               />
@@ -232,14 +296,20 @@ export function TicketsPage() {
           </Paper>
         </Grid.Col>
       </Grid>
-      {reassigning && (
+      <ConversationDrawer
+        ticketId={openId}
+        me={me}
+        onClose={() => navigate(homePath(me.role))}
+        onReassign={(ticketId) => setReassignIds([ticketId])}
+      />
+      {reassignIds && (
         <ReassignModal
-          tickets={selectedTickets}
+          tickets={reassignIds.flatMap((id) => state.tickets[id] ?? [])}
           workloads={workloads}
           managerId={me.id}
-          onClose={() => setReassigning(false)}
+          onClose={() => setReassignIds(null)}
           onDone={() => {
-            setReassigning(false);
+            setReassignIds(null);
             setSelected(new Set());
           }}
         />

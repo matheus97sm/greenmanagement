@@ -55,4 +55,11 @@ describe("route guards", () => {
     expect(await visit("/unknown")).toBe("/manager/tickets");
     expect(await visit("/manager")).toBe("/manager/tickets");
   });
+
+  it("lets the manager open a conversation", async () => {
+    signInAs(RICARDO_ID);
+    expect(await visit("/manager/tickets/ch-1000")).toBe(
+      "/manager/tickets/ch-1000",
+    );
+  });
 });

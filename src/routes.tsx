@@ -38,13 +38,13 @@ const fallbackLoader = () => {
   throw redirect(user ? homePath(user.role) : "/");
 };
 
-function profileRoute(role: Role, tickets: RouteObject): RouteObject {
+function profileRoute(role: Role, ...pages: RouteObject[]): RouteObject {
   return {
     path: role,
     loader: roleLoader(role),
     children: [
       { index: true, loader: () => redirect(homePath(role)) },
-      tickets,
+      ...pages,
     ],
   };
 }
@@ -60,7 +60,7 @@ export const routes: RouteObject[] = [
         Component: ConsultantTicketsPage,
       }),
       profileRoute(Role.Manager, {
-        path: "tickets",
+        path: "tickets/:id?",
         Component: ManagerTicketsPage,
       }),
       profileRoute(Role.Customer, {
