@@ -16,7 +16,7 @@ Estilo e idioma sem regra viram discussão em toda revisão e deixam o código i
 **Idioma.**
 
 - Identificadores, nomes de pastas e arquivos, mensagens de commit e nomes de testes em **inglês**.
-- Textos da interface, README e ADRs em **português do Brasil**.
+- Textos da interface vêm da tradução, em `pt-BR` e `en-US` ([ADR 0021](0021-textos-da-interface-em-i18n.md)). README e ADRs em **português do Brasil**.
 - Os campos que vêm do `dados.json` e os valores dos enums da API continuam em português (`chamado_id`, `em_atendimento`), porque são o contrato com a API.
 
 **Imports.** Dentro de uma página, caminhos relativos. Para qualquer outro módulo de `src/`, o alias `@/` (por exemplo, `@/domain/enums`).
@@ -33,7 +33,7 @@ Estilo e idioma sem regra viram discussão em toda revisão e deixam o código i
 
 - Rode `npm run format` antes de commitar.
 - Não escreva comentários no código de produção. Se algo precisa de explicação, renomeie, extraia uma função ou registre o porquê numa ADR.
-- Nomes novos em inglês. Textos da interface em português.
+- Nomes novos em inglês e que dizem o que são ([ADR 0022](0022-nomes-que-dizem-o-que-sao.md)). Textos da interface sempre pela tradução.
 - Alias `@/` fora da página, relativo dentro dela.
 
 ## Como é verificado

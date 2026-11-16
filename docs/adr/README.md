@@ -36,3 +36,5 @@ Parte das regras é conferida por `src/architecture.test.ts`, que roda junto com
 | [0018](0018-visao-do-cliente-sem-termos-internos.md) | A visão do cliente não mostra termos internos          | Aceita |
 | [0019](0019-chamados-parecidos-e-reabertura.md)      | Chamados parecidos e reabertura em vez de duplicata    | Aceita |
 | [0020](0020-marcas-de-leitura.md)                    | Marcas de leitura guardadas por pessoa                 | Aceita |
+| [0021](0021-textos-da-interface-em-i18n.md)          | Textos da interface em i18n, ao lado de quem os usa    | Aceita |
+| [0022](0022-nomes-que-dizem-o-que-sao.md)            | Nomes que dizem o que são                              | Aceita |
