@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { EventType, Status } from "@/domain/enums";
+import { ApiErrorCode, EventType, Status } from "@/domain/enums";
 import { HELENA_ID, MARINA_ID, rawData, RICARDO_ID } from "@/test-data";
 import { getDb, initDb } from "./db";
 import { addMessage, ApiError, reopenTicket } from "./ops";
@@ -45,7 +45,7 @@ describe("writing on a finished ticket", () => {
         text: "Oi",
         internal: false,
       }),
-    ).toThrow(/encerrado/);
+    ).toThrow(ApiErrorCode.TicketFinishedReopenToWrite);
   });
 
   it("is still allowed to the team, for notes after the ticket was closed", () => {
@@ -152,7 +152,7 @@ describe("reopenTicket", () => {
         ticket.solicitante_id === HELENA_ID &&
         ticket.status === Status.WaitingCustomer,
     );
-    expect(() => reopen(active.id)).toThrow(/em andamento/);
+    expect(() => reopen(active.id)).toThrow(ApiErrorCode.TicketStillActive);
   });
 
   it("asks for the reason and changes nothing without one", () => {

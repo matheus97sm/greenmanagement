@@ -1,3 +1,4 @@
+import { Language, setLanguage } from "@/i18n";
 import { describe, expect, it } from "vitest";
 import {
   formatDateTime,
@@ -15,6 +16,11 @@ describe("formatDuration", () => {
   it("says less than a minute below one minute", () => {
     expect(formatDuration(0)).toBe("menos de 1min");
     expect(formatDuration(MIN - 1)).toBe("menos de 1min");
+  });
+
+  it("says it in English when the language is switched", async () => {
+    await setLanguage(Language.EnUs);
+    expect(formatDuration(0)).toBe("less than 1min");
   });
 
   it("uses minutes below an hour", () => {
@@ -69,6 +75,10 @@ describe("formatHours", () => {
     expect(formatHours(2.5 * HOUR)).toBe("2,5 h");
   });
 
+  it("follows the language it is given", () => {
+    expect(formatHours(2.5 * HOUR, Language.EnUs)).toBe("2.5 h");
+  });
+
   it("rounds to one decimal", () => {
     expect(formatHours(1.04 * HOUR)).toBe("1 h");
     expect(formatHours(1.26 * HOUR)).toBe("1,3 h");
@@ -92,6 +102,12 @@ describe("formatDayMonth", () => {
     expect(formatDayMonth(Date.parse("2026-11-02T15:00:00Z"), "UTC")).toBe(
       "02/11",
     );
+  });
+
+  it("follows the language it is given", () => {
+    expect(
+      formatDayMonth(Date.parse("2026-11-02T15:00:00Z"), "UTC", Language.EnUs),
+    ).toBe("11/02");
   });
 
   it("uses the day of the given time zone", () => {

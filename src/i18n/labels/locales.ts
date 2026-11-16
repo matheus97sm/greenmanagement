@@ -1,0 +1,38 @@
+import { Language } from "../enums";
+
+export const locales = {
+  [Language.PtBr]: {
+    statusOpen: "Aberto",
+    statusInProgress: "Em atendimento",
+    statusWaitingCustomer: "Aguardando cliente",
+    statusResolved: "Resolvido",
+    statusClosed: "Fechado",
+    priorityCritical: "Crítica",
+    priorityHigh: "Alta",
+    priorityMedium: "Média",
+    priorityLow: "Baixa",
+    profileCustomer: "Cliente",
+    profileConsultant: "Consultor",
+    profileManager: "Gestor",
+    roleConsultant: "Consultora",
+    roleManager: "Gestor",
+    roleCustomer: "Cliente",
+  },
+  [Language.EnUs]: {
+    statusOpen: "Open",
+    statusInProgress: "In progress",
+    statusWaitingCustomer: "Waiting for customer",
+    statusResolved: "Resolved",
+    statusClosed: "Closed",
+    priorityCritical: "Critical",
+    priorityHigh: "High",
+    priorityMedium: "Medium",
+    priorityLow: "Low",
+    profileCustomer: "Customer",
+    profileConsultant: "Consultant",
+    profileManager: "Manager",
+    roleConsultant: "Consultant",
+    roleManager: "Manager",
+    roleCustomer: "Customer",
+  },
+};

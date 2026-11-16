@@ -1,6 +1,8 @@
 import { notifications } from "@mantine/notifications";
 import type { DomainEvent } from "@/domain/types";
 import * as api from "@/server/api";
+import { translateError, translatorFor } from "@/i18n";
+import { locales } from "./locales";
 import { ticketsStore } from "./ticketsStore";
 import { EventType, Priority, Status } from "@/domain/enums";
 
@@ -12,8 +14,8 @@ async function run(call: () => Promise<DomainEvent[]>): Promise<boolean> {
   } catch (error) {
     notifications.show({
       color: "red",
-      title: "Não foi possível concluir",
-      message: error instanceof Error ? error.message : "Erro inesperado.",
+      title: translatorFor(locales)("failedTitle"),
+      message: translateError(error),
     });
     return false;
   }
@@ -61,26 +63,21 @@ export async function reassignTickets(input: {
       );
       done += 1;
     } else {
-      errors.push(
-        result.reason instanceof Error
-          ? result.reason.message
-          : "Erro inesperado.",
-      );
+      errors.push(translateError(result.reason));
     }
   }
   if (done > 0) {
     notifications.show({
       color: "green",
-      message:
-        done === 1
-          ? "1 chamado redistribuído."
-          : `${done} chamados redistribuídos.`,
+      message: translatorFor(locales)("redistributed", { count: done }),
     });
   }
   if (errors.length > 0) {
     notifications.show({
       color: "red",
-      title: `${errors.length} não ${errors.length === 1 ? "foi redistribuído" : "foram redistribuídos"}`,
+      title: translatorFor(locales)("notRedistributed", {
+        count: errors.length,
+      }),
       message: errors[0],
     });
   }
@@ -104,8 +101,8 @@ export async function createTicket(input: {
   } catch (error) {
     notifications.show({
       color: "red",
-      title: "Não foi possível abrir o chamado",
-      message: error instanceof Error ? error.message : "Erro inesperado.",
+      title: translatorFor(locales)("createFailedTitle"),
+      message: translateError(error),
     });
     return null;
   }

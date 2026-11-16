@@ -15,8 +15,10 @@ import type {
 } from "@/domain/types";
 import { nowIso } from "@/lib/clock";
 import { getDb, nextTicketNumber } from "./db";
+import { ApiError } from "./errors";
 import { publish } from "./socket";
 import {
+  ApiErrorCode,
   Status,
   Priority,
   Profile,
@@ -24,7 +26,7 @@ import {
   HistoryType,
 } from "@/domain/enums";
 
-export class ApiError extends Error {}
+export { ApiError };
 
 const HOUR = 3_600_000;
 
@@ -32,15 +34,11 @@ function person(id: string): Person | undefined {
   return getDb().usuarios.find((currentPerson) => currentPerson.id === id);
 }
 
-function nameOf(id: string | null): string {
-  return (id && person(id)?.nome) || "outra pessoa";
-}
-
 function findTicket(id: string): Ticket {
   const ticket = getDb().chamados.find(
     (currentTicket) => currentTicket.id === id,
   );
-  if (!ticket) throw new ApiError("Chamado não encontrado.");
+  if (!ticket) throw new ApiError(ApiErrorCode.TicketNotFound);
   return ticket;
 }
 
@@ -130,21 +128,21 @@ export function openTicket(input: {
   const database = getDb();
   const requester = person(input.requesterId);
   if (requester?.perfil !== Profile.Customer) {
-    throw new ApiError("Só clientes abrem chamados.");
+    throw new ApiError(ApiErrorCode.OnlyCustomersOpenTickets);
   }
   const category = database.categorias.find(
     (currentCategory) => currentCategory.id === input.categoryId,
   );
-  if (!category) throw new ApiError("Categoria inválida.");
+  if (!category) throw new ApiError(ApiErrorCode.InvalidCategory);
   const title = input.title.trim();
   const description = input.description.trim();
   if (!title || !description) {
-    throw new ApiError("Informe o título e a descrição.");
+    throw new ApiError(ApiErrorCode.TitleAndDescriptionRequired);
   }
   const policy = database.sla.find(
     (slaPolicy) => slaPolicy.prioridade === input.priority,
   );
-  if (!policy) throw new ApiError("Prioridade inválida.");
+  if (!policy) throw new ApiError(ApiErrorCode.InvalidPriority);
 
   const at = nowIso();
   const opened = Date.parse(at);
@@ -190,16 +188,17 @@ export function assumeTicket(
   const ticket = findTicket(ticketId);
   const consultant = person(consultantId);
   if (consultant?.perfil !== Profile.Consultant) {
-    throw new ApiError("Só consultores pegam chamados.");
+    throw new ApiError(ApiErrorCode.OnlyConsultantsTakeTickets);
   }
   if (ticket.responsavel_id === consultantId) return [];
   if (ticket.responsavel_id) {
-    throw new ApiError(
-      `Este chamado já foi pego por ${nameOf(ticket.responsavel_id)}.`,
-    );
+    const holder = person(ticket.responsavel_id)?.nome;
+    throw holder
+      ? new ApiError(ApiErrorCode.TicketTakenByPerson, { name: holder })
+      : new ApiError(ApiErrorCode.TicketTakenBySomeone);
   }
   if (consultant.grupo_id !== ticket.grupo_id) {
-    throw new ApiError("Este chamado é de outro grupo de atendimento.");
+    throw new ApiError(ApiErrorCode.TicketOfOtherGroup);
   }
 
   const events: DomainEvent[] = [commitAssignment(ticket, consultantId)];
@@ -228,18 +227,16 @@ export function reassignTicket(input: {
     manager?.perfil !== Profile.Manager ||
     !groupIdsOf(manager).includes(ticket.grupo_id)
   ) {
-    throw new ApiError("Só o gestor do grupo redistribui chamados.");
+    throw new ApiError(ApiErrorCode.OnlyManagerReassigns);
   }
   if (consultant?.perfil !== Profile.Consultant) {
-    throw new ApiError("Só consultores recebem chamados.");
+    throw new ApiError(ApiErrorCode.OnlyConsultantsReceiveTickets);
   }
   if (consultant.grupo_id !== ticket.grupo_id) {
-    throw new ApiError("Este consultor é de outro grupo de atendimento.");
+    throw new ApiError(ApiErrorCode.ConsultantOfOtherGroup);
   }
   if (!isActive(ticket.status)) {
-    throw new ApiError(
-      "Chamados resolvidos ou fechados não são redistribuídos.",
-    );
+    throw new ApiError(ApiErrorCode.FinishedTicketsStay);
   }
   if (ticket.responsavel_id === consultant.id) return [];
   return [commitAssignment(ticket, consultant.id)];
@@ -255,27 +252,25 @@ export function addMessage(input: {
   const ticket = findTicket(input.ticketId);
   const author = person(input.authorId);
   const text = input.text.trim();
-  if (!author) throw new ApiError("Autor desconhecido.");
-  if (!text) throw new ApiError("A mensagem está vazia.");
+  if (!author) throw new ApiError(ApiErrorCode.UnknownAuthor);
+  if (!text) throw new ApiError(ApiErrorCode.EmptyMessage);
 
   if (author.perfil === Profile.Customer) {
     if (ticket.solicitante_id !== author.id) {
-      throw new ApiError("Este chamado não é seu.");
+      throw new ApiError(ApiErrorCode.NotYourTicket);
     }
     if (!isActive(ticket.status)) {
-      throw new ApiError(
-        "Este chamado foi encerrado. Reabra o chamado para escrever.",
-      );
+      throw new ApiError(ApiErrorCode.TicketFinishedReopenToWrite);
     }
     if (input.internal) {
-      throw new ApiError("Clientes não escrevem notas internas.");
+      throw new ApiError(ApiErrorCode.CustomersWriteNoInternalNotes);
     }
   } else if (
     !input.internal &&
     author.perfil === Profile.Consultant &&
     ticket.responsavel_id !== author.id
   ) {
-    throw new ApiError("Só quem atende o chamado responde ao cliente.");
+    throw new ApiError(ApiErrorCode.OnlyAssigneeRepliesToCustomer);
   }
 
   const message: Message = {
@@ -320,13 +315,13 @@ export function reopenTicket(input: {
     customer?.perfil !== Profile.Customer ||
     ticket.solicitante_id !== customer.id
   ) {
-    throw new ApiError("Este chamado não é seu.");
+    throw new ApiError(ApiErrorCode.NotYourTicket);
   }
   if (isActive(ticket.status)) {
-    throw new ApiError("Este chamado ainda está em andamento.");
+    throw new ApiError(ApiErrorCode.TicketStillActive);
   }
   const reason = input.reason.trim();
-  if (!reason) throw new ApiError("Conte o que continua errado.");
+  if (!reason) throw new ApiError(ApiErrorCode.ReopenReasonRequired);
 
   const reopened = commitStatus(
     ticket,
@@ -355,14 +350,14 @@ export function changeStatus(input: {
   const user = person(input.userId);
   const reason = input.reason.trim();
   if (!user || user.perfil === Profile.Customer) {
-    throw new ApiError("Você não pode alterar o status deste chamado.");
+    throw new ApiError(ApiErrorCode.CannotChangeStatus);
   }
   if (user.perfil === Profile.Consultant && ticket.responsavel_id !== user.id) {
-    throw new ApiError("Só quem atende o chamado altera o status.");
+    throw new ApiError(ApiErrorCode.OnlyAssigneeChangesStatus);
   }
-  if (!reason) throw new ApiError("Informe o motivo da mudança.");
+  if (!reason) throw new ApiError(ApiErrorCode.StatusReasonRequired);
   if (!TRANSITIONS[ticket.status].includes(input.to)) {
-    throw new ApiError("Essa mudança de status não é permitida.");
+    throw new ApiError(ApiErrorCode.StatusChangeNotAllowed);
   }
   const storedReason = isReopen(ticket.status, input.to)
     ? `Reaberto: ${reason}`

@@ -1,10 +1,13 @@
+import { Language, translatorFor } from "@/i18n";
+import { locales } from "./locales";
+
 const MIN = 60_000;
 const HOUR = 60 * MIN;
 const DAY = 24 * HOUR;
 
 export function formatDuration(ms: number): string {
   const abs = Math.abs(ms);
-  if (abs < MIN) return "menos de 1min";
+  if (abs < MIN) return translatorFor(locales)("lessThanMinute");
   if (abs < HOUR) return `${Math.floor(abs / MIN)}min`;
   if (abs < DAY) {
     const hours = Math.floor(abs / HOUR);
@@ -19,7 +22,7 @@ export function formatDuration(ms: number): string {
 export function formatDateTime(
   iso: string,
   timeZone?: string,
-  locale = "pt-BR",
+  locale: string = Language.PtBr,
 ): string {
   return new Intl.DateTimeFormat(locale, {
     dateStyle: "short",
@@ -28,17 +31,24 @@ export function formatDateTime(
   }).format(new Date(iso));
 }
 
-export function formatHours(ms: number): string {
+export function formatHours(
+  ms: number,
+  locale: string = Language.PtBr,
+): string {
   const hours = ms / HOUR;
-  return `${hours.toLocaleString("pt-BR", { maximumFractionDigits: 1 })} h`;
+  return `${hours.toLocaleString(locale, { maximumFractionDigits: 1 })} h`;
 }
 
 export function formatPercent(share: number): string {
   return `${Math.round(share * 100)}%`;
 }
 
-export function formatDayMonth(timestamp: number, timeZone?: string): string {
-  return new Intl.DateTimeFormat("pt-BR", {
+export function formatDayMonth(
+  timestamp: number,
+  timeZone?: string,
+  locale: string = Language.PtBr,
+): string {
+  return new Intl.DateTimeFormat(locale, {
     day: "2-digit",
     month: "2-digit",
     timeZone,

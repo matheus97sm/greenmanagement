@@ -1,0 +1,68 @@
+import { Language } from "../enums";
+
+export const locales = {
+  [Language.PtBr]: {
+    unexpected: "Erro inesperado.",
+    unknownUser: "Usuário desconhecido.",
+    ticketNotFound: "Chamado não encontrado.",
+    onlyCustomersOpenTickets: "Só clientes abrem chamados.",
+    invalidCategory: "Categoria inválida.",
+    invalidPriority: "Prioridade inválida.",
+    titleAndDescriptionRequired: "Informe o título e a descrição.",
+    onlyConsultantsTakeTickets: "Só consultores pegam chamados.",
+    ticketTakenByPerson: "Este chamado já foi pego por {{name}}.",
+    ticketTakenBySomeone: "Este chamado já foi pego por outra pessoa.",
+    ticketOfOtherGroup: "Este chamado é de outro grupo de atendimento.",
+    onlyManagerReassigns: "Só o gestor do grupo redistribui chamados.",
+    onlyConsultantsReceiveTickets: "Só consultores recebem chamados.",
+    consultantOfOtherGroup: "Este consultor é de outro grupo de atendimento.",
+    finishedTicketsStay:
+      "Chamados resolvidos ou fechados não são redistribuídos.",
+    unknownAuthor: "Autor desconhecido.",
+    emptyMessage: "A mensagem está vazia.",
+    notYourTicket: "Este chamado não é seu.",
+    ticketFinishedReopenToWrite:
+      "Este chamado foi encerrado. Reabra o chamado para escrever.",
+    customersWriteNoInternalNotes: "Clientes não escrevem notas internas.",
+    onlyAssigneeRepliesToCustomer:
+      "Só quem atende o chamado responde ao cliente.",
+    ticketStillActive: "Este chamado ainda está em andamento.",
+    reopenReasonRequired: "Conte o que continua errado.",
+    cannotChangeStatus: "Você não pode alterar o status deste chamado.",
+    onlyAssigneeChangesStatus: "Só quem atende o chamado altera o status.",
+    statusReasonRequired: "Informe o motivo da mudança.",
+    statusChangeNotAllowed: "Essa mudança de status não é permitida.",
+  },
+  [Language.EnUs]: {
+    unexpected: "Unexpected error.",
+    unknownUser: "Unknown user.",
+    ticketNotFound: "Ticket not found.",
+    onlyCustomersOpenTickets: "Only customers open tickets.",
+    invalidCategory: "Invalid category.",
+    invalidPriority: "Invalid priority.",
+    titleAndDescriptionRequired: "Enter the title and the description.",
+    onlyConsultantsTakeTickets: "Only consultants take tickets.",
+    ticketTakenByPerson: "This ticket was already taken by {{name}}.",
+    ticketTakenBySomeone: "This ticket was already taken by someone else.",
+    ticketOfOtherGroup: "This ticket belongs to another support group.",
+    onlyManagerReassigns: "Only the manager of the group reassigns tickets.",
+    onlyConsultantsReceiveTickets: "Only consultants receive tickets.",
+    consultantOfOtherGroup: "This consultant belongs to another support group.",
+    finishedTicketsStay: "Resolved or closed tickets are not reassigned.",
+    unknownAuthor: "Unknown author.",
+    emptyMessage: "The message is empty.",
+    notYourTicket: "This ticket is not yours.",
+    ticketFinishedReopenToWrite:
+      "This ticket was closed. Reopen the ticket to write.",
+    customersWriteNoInternalNotes: "Customers do not write internal notes.",
+    onlyAssigneeRepliesToCustomer:
+      "Only whoever handles the ticket replies to the customer.",
+    ticketStillActive: "This ticket is still in progress.",
+    reopenReasonRequired: "Tell us what is still wrong.",
+    cannotChangeStatus: "You cannot change the status of this ticket.",
+    onlyAssigneeChangesStatus:
+      "Only whoever handles the ticket changes the status.",
+    statusReasonRequired: "Enter the reason for the change.",
+    statusChangeNotAllowed: "That status change is not allowed.",
+  },
+};

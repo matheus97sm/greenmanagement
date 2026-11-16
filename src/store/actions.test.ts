@@ -1,8 +1,9 @@
 import { notifications } from "@mantine/notifications";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { EventType, Priority, Status } from "@/domain/enums";
+import { ApiErrorCode, EventType, Priority, Status } from "@/domain/enums";
 import type { DomainEvent, Ticket } from "@/domain/types";
 import * as api from "@/server/api";
+import { ApiError } from "@/server/errors";
 import { rawData } from "@/test-data";
 import {
   changeStatus,
@@ -80,7 +81,7 @@ describe("store actions", () => {
 
     it("show the server's message when it refuses, and report failure", async () => {
       vi.mocked(api.assumeTicket).mockRejectedValue(
-        new Error("Este chamado já foi pego por Rafael."),
+        new ApiError(ApiErrorCode.TicketTakenByPerson, { name: "Rafael" }),
       );
       expect(await takeTicket("t1", "c1")).toBe(false);
       expect(shown()).toEqual([
@@ -165,8 +166,10 @@ describe("store actions", () => {
     it("keeps going when some fail, and says how many and why", async () => {
       vi.mocked(api.reassignTicket)
         .mockResolvedValueOnce([event("a")])
-        .mockRejectedValueOnce(new Error("Este consultor é de outro grupo."))
-        .mockRejectedValueOnce(new Error("Outro erro."));
+        .mockRejectedValueOnce(
+          new ApiError(ApiErrorCode.ConsultantOfOtherGroup),
+        )
+        .mockRejectedValueOnce(new Error("anything else"));
       expect(await reassignTickets(input(["t1", "t2", "t3"]))).toEqual({
         done: 1,
         failed: 2,
@@ -176,7 +179,7 @@ describe("store actions", () => {
         expect.objectContaining({
           color: "red",
           title: "2 não foram redistribuídos",
-          message: "Este consultor é de outro grupo.",
+          message: "Este consultor é de outro grupo de atendimento.",
         }),
       ]);
     });
@@ -248,7 +251,7 @@ describe("store actions", () => {
 
     it("explains why it could not, and gives back nothing", async () => {
       vi.mocked(api.openTicket).mockRejectedValue(
-        new Error("Informe o título e a descrição."),
+        new ApiError(ApiErrorCode.TitleAndDescriptionRequired),
       );
       expect(await createTicket(input)).toBeNull();
       expect(shown()).toEqual([
@@ -279,7 +282,7 @@ describe("store actions", () => {
 
     it("shows what the server said when it refuses", async () => {
       vi.mocked(api.reopenTicket).mockRejectedValue(
-        new Error("Conte o que continua errado."),
+        new ApiError(ApiErrorCode.ReopenReasonRequired),
       );
       expect(await reopenTicket(input)).toBe(false);
       expect(shown()[0]).toMatchObject({
