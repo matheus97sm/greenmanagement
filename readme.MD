@@ -2,7 +2,7 @@
 
 Reescrita do sistema de gestão de serviços de TI (ITSM), focada na área de chamados. É um projeto de estudo: roda 100% no navegador, **sem backend**. A API e os eventos em tempo real (WebSocket) serão simulados no próprio front-end.
 
-> **Estado atual:** login, API/WebSocket simulados com o `dados.json` real e as três visões: **Marina (consultora)**, **Ricardo (gestor)**, com a página semanal da equipe, e **Helena (cliente)**, com o acompanhamento dos chamados.
+> **Estado atual:** login, API/WebSocket simulados com o `dados.json` real e as três visões: **Marina (consultora)**, **Ricardo (gestor)**, com a página semanal da equipe, e **Helena (cliente)**, com a abertura de chamados.
 
 ## Tecnologias
 
@@ -120,8 +120,10 @@ A Helena abre três ou quatro chamados por ano e não precisa saber como a equip
 2. **Resumo do chamado:** ao abrir um chamado, uma frase diz o que está acontecendo ("Marina Almeida está cuidando do seu chamado"), quem cuida, a previsão (primeira resposta prevista, depois solução prevista, e nada enquanto a equipe espera por ela; se a data passou, a tela diz) e a última atualização. Abaixo, "O que já aconteceu" lista os passos (aberto, assumido, aguardando resposta, resolvido, reaberto), para ela entender sem ler a conversa toda;
 3. **Conversa:** as mensagens com o selo de quem escreveu (Cliente, Consultor, Gestor). Ela responde sem a opção de nota interna. Responder a um chamado "Aguardando você" devolve o chamado ao atendimento;
 4. **Novidades:** um chamado com mensagens que ela ainda não viu mostra "N novas" na lista, e dentro dele essas mensagens levam "Novo". Isso vale mesmo depois de sair e voltar, porque a última leitura de cada chamado fica guardada no navegador por pessoa;
-5. **Reabrir:** em um chamado resolvido ou encerrado não há caixa de resposta, e sim "O problema continua ou voltou?". Ela conta o que está errado, o chamado volta ao atendimento do mesmo consultor e o texto dela vira a primeira mensagem. Reabrir um chamado fechado renova os prazos, e reabrir um resolvido não;
-6. **Tempo real:** respostas da equipe e mudanças de etapa aparecem sem recarregar.
+5. **Novo chamado:** o botão "Novo chamado" pede o resumo, o que está acontecendo, o assunto ("Rede e VPN", "E-mail"...) e "Quanto isso atrapalha o seu trabalho?". A resposta vira a prioridade internamente. Ao abrir, ela vai direto para o chamado;
+6. **Problema repetido:** se o que ela escreve se parece com um chamado que ela já abriu (por exemplo, "VPN não liga em casa", que lembra o #10612, fechado, e o #10614), a tela avisa e leva ao chamado antigo, em vez de abrir outro. O aviso não bloqueia;
+7. **Reabrir:** em um chamado resolvido ou encerrado não há caixa de resposta, e sim "O problema continua ou voltou?". Ela conta o que está errado, o chamado volta ao atendimento do mesmo consultor e o texto dela vira a primeira mensagem. Reabrir um chamado fechado renova os prazos, e reabrir um resolvido não;
+8. **Tempo real:** respostas da equipe e mudanças de etapa aparecem sem recarregar.
 
 ## Como funciona o "backend" simulado
 
@@ -187,7 +189,7 @@ src/
     consultant/tickets/   visão da Marina (a página e seus components/)
     manager/tickets/      visão do Ricardo (resumo, quadro da equipe, painel, conversa e redistribuição)
     manager/dashboard/    semana da equipe (tempo sem chamado e produção por consultor)
-    customer/tickets/     visão da Helena (lista, resumo, conversa e reabertura)
+    customer/tickets/     visão da Helena (lista, resumo, conversa, novo chamado e reabertura)
   components/    cabeçalho, layout, badges, tema claro/escuro e a conversa do chamado (usados por mais de um perfil)
   domain/        enums, tipos, status, SLA, carga da equipe e regras que alteram o chamado (sem React)
   lib/           relógio simulado e formatação
@@ -223,7 +225,7 @@ Só entram os arquivos que o componente precisa. Quando um perfil ganhar outra p
 - **Enums no lugar de textos soltos:** todo conjunto fechado de valores (status, prioridade, perfis, tipos de evento, abas, estados de carregamento...) é um `enum`, para um erro de digitação virar erro de compilação e o editor completar o nome. Os enums de domínio ficam em `src/domain/enums.ts` e mantêm o valor que vem da API (por exemplo, `Status.InProgress` vale `"em_atendimento"`), então os dados e os eventos continuam iguais. Enums de um componente ficam no `enums.ts` dele. Por causa dos enums, o `erasableSyntaxOnly` do template do Vite está desligado no `tsconfig.app.json`.
 - **Imports:** dentro da mesma página, caminhos relativos (`./types`, `../composer`). Para qualquer outro módulo de `src/`, o alias `@/` (por exemplo, `@/domain/enums`).
 - **Testes:** ficam ao lado do que testam, com o sufixo `.unit.test.ts` (ou `.tsx`, quando renderizam). Rodam com Vitest em jsdom e Testing Library. `src/test-utils.tsx` tem `renderWithProviders`/`renderRoutes` (Mantine, autenticação e roteador) e `loadStoreAs(usuário)`, que carrega o store com os dados reais como aquele usuário os veria. Os componentes que chamam a API simulada têm `@/store/actions` substituído por um mock.
-- **Testes de integração:** ficam em `src/integration/*.integration.test.tsx` e sobem o app de verdade (roteador com guardas, login, store, API simulada, socket e filtro de visibilidade), trocando só o que atrapalharia: o simulador de atividade fica desligado, o gerador de números aleatórios é determinístico (`resetWorld`) e, nos testes de resposta, o socket entrega cada evento duas vezes, como o brief permite. Cobrem: do login até a página do perfil, a resposta a um chamado sem duplicar a mensagem, a troca de usuário sem vazar dados e a visão do gestor (redistribuir chamados e acompanhar o quadro em tempo real), a conversa aberta pelo gestor, a página da semana da equipe e a visão do cliente (responder sem duplicar, reabrir e voltar depois de ter ficado fora). Rodam com `npm run test:integration`; levam de menos de 1 a uns 5 segundos cada, por causa da latência simulada e da espera para o socket entregar tudo. Como esperam de verdade, têm um limite de tempo maior que o dos testes unitários.
+- **Testes de integração:** ficam em `src/integration/*.integration.test.tsx` e sobem o app de verdade (roteador com guardas, login, store, API simulada, socket e filtro de visibilidade), trocando só o que atrapalharia: o simulador de atividade fica desligado, o gerador de números aleatórios é determinístico (`resetWorld`) e, nos testes de resposta, o socket entrega cada evento duas vezes, como o brief permite. Cobrem: do login até a página do perfil, a resposta a um chamado sem duplicar a mensagem, a troca de usuário sem vazar dados e a visão do gestor (redistribuir chamados e acompanhar o quadro em tempo real), a conversa aberta pelo gestor, a página da semana da equipe e a visão do cliente (responder sem duplicar, reabrir, abrir um chamado e voltar depois de ter ficado fora). Rodam com `npm run test:integration`; levam de menos de 1 a uns 5 segundos cada, por causa da latência simulada e da espera para o socket entregar tudo. Como esperam de verdade, têm um limite de tempo maior que o dos testes unitários.
 
 ### Rotas e guardas
 

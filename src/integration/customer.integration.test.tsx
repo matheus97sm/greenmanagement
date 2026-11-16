@@ -1,7 +1,7 @@
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { Status } from "@/domain/enums";
+import { Priority, Status } from "@/domain/enums";
 import type { DomainEvent } from "@/domain/types";
 import { getDb } from "@/server/db";
 import { addMessage } from "@/server/ops";
@@ -197,6 +197,105 @@ describe("the customer's tickets", () => {
         { timeout: LOAD_TIMEOUT },
       );
       expect(ticketOf(10612).responsavel_id).toBe(owner);
+    });
+  });
+
+  describe("opening a new ticket", () => {
+    async function fill(
+      user: ReturnType<typeof userEvent.setup>,
+      title: string,
+      description: string,
+    ) {
+      await user.click(screen.getByRole("button", { name: "Novo chamado" }));
+      await user.type(screen.getByLabelText(/Resumo do problema/), title);
+      await user.type(
+        screen.getByLabelText(/O que está acontecendo/),
+        description,
+      );
+    }
+
+    it("creates it from her words, with the category and priority worked out for her", async () => {
+      const { user, router, container } = await openHelenasPage();
+      const total = getDb().chamados.length;
+      await fill(
+        user,
+        "Impressora sem toner",
+        "Acabou o toner da impressora do 2º andar",
+      );
+      await user.click(screen.getAllByLabelText(/Sobre o quê/)[0]);
+      await user.click(
+        await screen.findByRole("option", { name: "Estação de trabalho" }),
+      );
+      await user.click(
+        screen.getByRole("radio", { name: "Não consigo trabalhar" }),
+      );
+      await user.click(screen.getByRole("button", { name: "Abrir chamado" }));
+
+      await waitFor(() => expect(getDb().chamados).toHaveLength(total + 1), {
+        timeout: LOAD_TIMEOUT,
+      });
+      const created = getDb().chamados.at(-1)!;
+      expect(created).toMatchObject({
+        titulo: "Impressora sem toner",
+        solicitante_id: HELENA_ID,
+        prioridade: Priority.High,
+        status: Status.Open,
+        responsavel_id: null,
+      });
+      expect(
+        getDb().categorias.find((c) => c.id === created.categoria_id)?.nome,
+      ).toBe("Estação de trabalho");
+
+      await waitFor(() =>
+        expect(router.state.location.pathname).toBe(
+          `/customer/tickets/${created.id}`,
+        ),
+      );
+      expect(
+        await screen.findByText(/Recebemos o seu chamado/),
+      ).toBeInTheDocument();
+      expect(rowsOf(container)).toHaveLength(5);
+    });
+
+    it("reaches the team: it is in the queue of the group of that topic", async () => {
+      const { user } = await openHelenasPage();
+      await fill(user, "Impressora sem toner", "Acabou o toner");
+      await user.click(screen.getAllByLabelText(/Sobre o quê/)[0]);
+      await user.click(
+        await screen.findByRole("option", { name: "Estação de trabalho" }),
+      );
+      await user.click(screen.getByRole("button", { name: "Abrir chamado" }));
+      await waitFor(() => expect(ticketOf(10614)).toBeDefined());
+
+      const created = getDb().chamados.at(-1)!;
+      const marina = getDb().usuarios.find((u) => u.id === MARINA_ID)!;
+      expect(created.grupo_id).toBe(marina.grupo_id);
+    });
+
+    it("warns her when she describes a problem she already reported, and does not open a duplicate", async () => {
+      const { user, router } = await openHelenasPage();
+      const total = getDb().chamados.length;
+      await user.click(screen.getByRole("button", { name: "Novo chamado" }));
+      await user.type(
+        screen.getByLabelText(/Resumo do problema/),
+        "VPN não liga em casa",
+      );
+
+      expect(
+        await screen.findByText("Você já abriu algo parecido"),
+      ).toBeInTheDocument();
+      const [first] = await screen.findAllByRole("button", {
+        name: "Abrir esse chamado",
+      });
+      await user.click(first);
+
+      await waitFor(() =>
+        expect(router.state.location.pathname).toMatch(
+          /^\/customer\/tickets\/.+/,
+        ),
+      );
+      expect(getDb().chamados).toHaveLength(total);
+      expect(screen.queryByText("Resumo do problema")).not.toBeInTheDocument();
     });
   });
 

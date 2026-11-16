@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import {
   Alert,
   Box,
+  Button,
   Center,
   Group,
   Loader,
@@ -10,6 +11,7 @@ import {
   Text,
   Title,
 } from "@mantine/core";
+import { IconPlus } from "@tabler/icons-react";
 import { useNavigate, useParams } from "react-router";
 import { useCurrentUser } from "@/auth/auth-context";
 import { homePath } from "@/paths";
@@ -17,6 +19,7 @@ import { markRead } from "@/store/actions";
 import { LoadStatus } from "@/store/enums";
 import { useTickets } from "@/store/useTickets";
 import { Conversation } from "./components/conversation";
+import { NewTicketModal } from "./components/new-ticket-modal";
 import { TicketList } from "./components/ticket-list";
 
 export function TicketsPage() {
@@ -25,6 +28,7 @@ export function TicketsPage() {
   const navigate = useNavigate();
   const { id } = useParams();
   const [drafts, setDrafts] = useState<Record<string, string>>({});
+  const [creating, setCreating] = useState(false);
 
   const known = id ? Boolean(state.tickets[id]) : false;
   const lastMessageId = id ? state.messages[id]?.at(-1)?.id : undefined;
@@ -54,7 +58,15 @@ export function TicketsPage() {
       h="calc(100dvh - 60px - 2 * var(--mantine-spacing-md))"
       style={{ minHeight: 0 }}
     >
-      <Title order={2}>Meus chamados</Title>
+      <Group justify="space-between">
+        <Title order={2}>Meus chamados</Title>
+        <Button
+          leftSection={<IconPlus size={16} />}
+          onClick={() => setCreating(true)}
+        >
+          Novo chamado
+        </Button>
+      </Group>
 
       <Group align="stretch" wrap="nowrap" gap="md" flex={1} mih={0}>
         <Paper withBorder w={420} style={{ flexShrink: 0, minHeight: 0 }}>
@@ -84,6 +96,17 @@ export function TicketsPage() {
           )}
         </Paper>
       </Group>
+
+      {creating && (
+        <NewTicketModal
+          me={me}
+          onClose={() => setCreating(false)}
+          onOpenTicket={(ticketId) => {
+            setCreating(false);
+            open(ticketId);
+          }}
+        />
+      )}
     </Stack>
   );
 }

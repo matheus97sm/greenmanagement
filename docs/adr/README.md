@@ -34,4 +34,5 @@ Parte das regras é conferida por `src/architecture.test.ts`, que roda junto com
 | [0016](0016-estilo-e-idioma.md)                      | Estilo de código e idioma                              | Aceita |
 | [0017](0017-stack.md)                                | Stack e versões                                        | Aceita |
 | [0018](0018-visao-do-cliente-sem-termos-internos.md) | A visão do cliente não mostra termos internos          | Aceita |
+| [0019](0019-chamados-parecidos-e-reabertura.md)      | Chamados parecidos e reabertura em vez de duplicata    | Aceita |
 | [0020](0020-marcas-de-leitura.md)                    | Marcas de leitura guardadas por pessoa                 | Aceita |

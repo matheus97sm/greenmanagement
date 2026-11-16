@@ -1,6 +1,7 @@
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { createTicket } from "@/store/actions";
 import { LoadStatus } from "@/store/enums";
 import { ticketsStore } from "@/store/ticketsStore";
 import { HELENA_ID, rawData } from "@/test-data";
@@ -9,6 +10,7 @@ import { TicketsPage } from ".";
 
 vi.mock("@/store/actions", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/store/actions")>()),
+  createTicket: vi.fn(),
   sendMessage: vi.fn(),
   reopenTicket: vi.fn(),
 }));
@@ -50,12 +52,16 @@ describe("customer tickets page", () => {
   describe("once loaded", () => {
     beforeEach(() => {
       loadStoreAs(HELENA_ID);
+      vi.mocked(createTicket).mockReset().mockResolvedValue(null);
     });
 
-    it("shows her tickets", () => {
+    it("shows her tickets and a way to open a new one", () => {
       const { container } = renderPage();
       expect(
         screen.getByRole("heading", { name: "Meus chamados" }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "Novo chamado" }),
       ).toBeInTheDocument();
       expect(rowsOf(container)).toHaveLength(4);
     });
@@ -122,6 +128,48 @@ describe("customer tickets page", () => {
       await user.click(rowsOf(container)[1]);
       await user.click(rowsOf(container)[0]);
       expect(box()).toHaveValue("Rascunho para a Juliana");
+    });
+
+    it("opens the form for a new ticket", async () => {
+      renderPage();
+      await userEvent.click(
+        screen.getByRole("button", { name: "Novo chamado" }),
+      );
+      expect(screen.getByText("Resumo do problema")).toBeInTheDocument();
+    });
+
+    it("closes the form without opening anything when she cancels", async () => {
+      renderPage();
+      await userEvent.click(
+        screen.getByRole("button", { name: "Novo chamado" }),
+      );
+      await userEvent.click(screen.getByRole("button", { name: "Cancelar" }));
+      expect(screen.queryByText("Resumo do problema")).not.toBeInTheDocument();
+    });
+
+    it("goes to the ticket that was just opened", async () => {
+      vi.mocked(createTicket).mockResolvedValue(idOf(10613));
+      const user = userEvent.setup();
+      const { router } = renderPage();
+      await user.click(screen.getByRole("button", { name: "Novo chamado" }));
+      await user.type(
+        screen.getByLabelText(/Resumo do problema/),
+        "Impressora sem toner",
+      );
+      await user.type(
+        screen.getByLabelText(/O que está acontecendo/),
+        "Acabou o toner",
+      );
+      await user.click(screen.getAllByLabelText(/Sobre o quê/)[0]);
+      await user.click(await screen.findByRole("option", { name: "ERP" }));
+      await user.click(screen.getByRole("button", { name: "Abrir chamado" }));
+
+      await waitFor(() =>
+        expect(router.state.location.pathname).toBe(
+          `/customer/tickets/${idOf(10613)}`,
+        ),
+      );
+      expect(screen.queryByText("Resumo do problema")).not.toBeInTheDocument();
     });
   });
 });

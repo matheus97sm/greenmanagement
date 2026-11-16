@@ -1,11 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { Profile, Status } from "@/domain/enums";
+import { EventType, Priority, Profile, Status } from "@/domain/enums";
 import { HELENA_ID, MARINA_ID, rawData, RICARDO_ID } from "@/test-data";
 import {
   ApiError,
   assumeTicket,
   changeStatus,
   fetchSnapshot,
+  openTicket,
   reassignTicket,
   reopenTicket,
   sendMessage,
@@ -133,6 +134,22 @@ describe("the simulated API", () => {
       expect(
         getDb().chamados.find((t) => t.id === ticket.id)?.responsavel_id,
       ).toBe(other.id);
+    });
+
+    it("openTicket creates a ticket for the customer after a delay", async () => {
+      const category = getDb().categorias[0];
+      const total = getDb().chamados.length;
+      const request = openTicket({
+        requesterId: HELENA_ID,
+        categoryId: category.id,
+        priority: Priority.High,
+        title: "Impressora sem toner",
+        description: "Acabou o toner",
+      });
+      expect(getDb().chamados).toHaveLength(total);
+      const events = await settle(request);
+      expect(events[0].tipo).toBe(EventType.TicketOpened);
+      expect(getDb().chamados).toHaveLength(total + 1);
     });
 
     it("reopenTicket brings a finished ticket of the customer back", async () => {

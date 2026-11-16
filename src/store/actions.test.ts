@@ -1,10 +1,12 @@
 import { notifications } from "@mantine/notifications";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { EventType, Status } from "@/domain/enums";
-import type { DomainEvent } from "@/domain/types";
+import { EventType, Priority, Status } from "@/domain/enums";
+import type { DomainEvent, Ticket } from "@/domain/types";
 import * as api from "@/server/api";
+import { rawData } from "@/test-data";
 import {
   changeStatus,
+  createTicket,
   markRead,
   reassignTickets,
   reopenTicket,
@@ -17,6 +19,7 @@ vi.mock("@mantine/notifications", () => ({ notifications: { show: vi.fn() } }));
 
 vi.mock("@/server/api", () => ({
   assumeTicket: vi.fn(),
+  openTicket: vi.fn(),
   reopenTicket: vi.fn(),
   reassignTicket: vi.fn(),
   sendMessage: vi.fn(),
@@ -204,6 +207,60 @@ describe("store actions", () => {
       const spy = vi.spyOn(ticketsStore, "markRead");
       markRead("t9");
       expect(spy).toHaveBeenCalledWith("t9");
+    });
+  });
+
+  describe("createTicket", () => {
+    const input = {
+      requesterId: "h",
+      categoryId: "c",
+      priority: Priority.Medium,
+      title: "Impressora",
+      description: "Sem toner",
+    };
+    const opened = (id: string): DomainEvent => ({
+      id: `e-${id}`,
+      tipo: EventType.TicketOpened,
+      ocorrido_em: "2026-11-03T13:00:00Z",
+      payload: { ...(rawData.chamados[0] as Ticket), id },
+    });
+
+    it("applies the events and gives back the id of the new ticket", async () => {
+      vi.mocked(api.openTicket).mockResolvedValue([opened("new-1")]);
+      expect(await createTicket(input)).toBe("new-1");
+      expect(api.openTicket).toHaveBeenCalledWith(input);
+      expect(ticketsStore.applyEvent).toHaveBeenCalledTimes(1);
+      expect(notifications.show).not.toHaveBeenCalled();
+    });
+
+    it("finds the new ticket among other events", async () => {
+      vi.mocked(api.openTicket).mockResolvedValue([event("a"), opened("n2")]);
+      expect(await createTicket(input)).toBe("n2");
+    });
+
+    it("gives back nothing when the server answers without a new ticket", async () => {
+      vi.mocked(api.openTicket).mockResolvedValue([event("a")]);
+      expect(await createTicket(input)).toBeNull();
+    });
+
+    it("explains why it could not, and gives back nothing", async () => {
+      vi.mocked(api.openTicket).mockRejectedValue(
+        new Error("Informe o título e a descrição."),
+      );
+      expect(await createTicket(input)).toBeNull();
+      expect(shown()).toEqual([
+        expect.objectContaining({
+          color: "red",
+          title: "Não foi possível abrir o chamado",
+          message: "Informe o título e a descrição.",
+        }),
+      ]);
+    });
+
+    it("uses a generic message when the failure is not an Error", async () => {
+      vi.mocked(api.openTicket).mockRejectedValue("boom");
+      await createTicket(input);
+      expect(shown()[0]).toMatchObject({ message: "Erro inesperado." });
     });
   });
 

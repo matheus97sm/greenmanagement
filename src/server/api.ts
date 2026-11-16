@@ -2,7 +2,7 @@ import type { DomainEvent, Snapshot } from "@/domain/types";
 import { ensureDb } from "./db";
 import * as ops from "./ops";
 import { scopedSnapshot } from "./visibility";
-import { Status } from "@/domain/enums";
+import { Priority, Status } from "@/domain/enums";
 
 export { ApiError } from "./ops";
 
@@ -35,6 +35,17 @@ export async function reassignTicket(input: {
 }): Promise<DomainEvent[]> {
   await latency();
   return ops.reassignTicket(input);
+}
+
+export async function openTicket(input: {
+  requesterId: string;
+  categoryId: string;
+  priority: Priority;
+  title: string;
+  description: string;
+}): Promise<DomainEvent[]> {
+  await latency();
+  return ops.openTicket(input);
 }
 
 export async function reopenTicket(input: {

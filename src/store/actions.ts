@@ -2,7 +2,7 @@ import { notifications } from "@mantine/notifications";
 import type { DomainEvent } from "@/domain/types";
 import * as api from "@/server/api";
 import { ticketsStore } from "./ticketsStore";
-import { Status } from "@/domain/enums";
+import { EventType, Priority, Status } from "@/domain/enums";
 
 async function run(call: () => Promise<DomainEvent[]>): Promise<boolean> {
   try {
@@ -83,6 +83,30 @@ export async function reassignTickets(input: {
     });
   }
   return { done, failed: errors.length };
+}
+
+export async function createTicket(input: {
+  requesterId: string;
+  categoryId: string;
+  priority: Priority;
+  title: string;
+  description: string;
+}): Promise<string | null> {
+  try {
+    const events = await api.openTicket(input);
+    events.forEach((e) => ticketsStore.applyEvent(e));
+    for (const event of events) {
+      if (event.tipo === EventType.TicketOpened) return event.payload.id;
+    }
+    return null;
+  } catch (error) {
+    notifications.show({
+      color: "red",
+      title: "Não foi possível abrir o chamado",
+      message: error instanceof Error ? error.message : "Erro inesperado.",
+    });
+    return null;
+  }
 }
 
 export const reopenTicket = (input: {
