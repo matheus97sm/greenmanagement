@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { HELENA_ID, MARINA_ID, RICARDO_ID } from "@/test-data";
 import { renderWithProviders } from "@/test-utils";
-import { AppHeader } from "./AppHeader";
+import { AppHeader } from ".";
 
 function renderHeader(userId: string, route: string) {
   return renderWithProviders(<AppHeader />, { userId, route });

@@ -11,7 +11,8 @@ import {
 } from "@mantine/core";
 import { IconSearch } from "@tabler/icons-react";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { SlaBadge, StatusBadge } from "@/components/Badges";
+import { SlaBadge } from "@/components/sla-badge";
+import { StatusBadge } from "@/components/status-badge";
 import { pausedSince } from "@/domain/rules";
 import { slaInfo } from "@/domain/sla";
 import { isActive } from "@/domain/status";

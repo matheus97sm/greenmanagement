@@ -1,11 +1,5 @@
 import { Paper, Text } from "@mantine/core";
-
-interface Props {
-  label: string;
-  value: string | number;
-  sub?: string;
-  color?: string;
-}
+import type { Props } from "./types";
 
 export function Stat({ label, value, sub, color }: Props) {
   return (

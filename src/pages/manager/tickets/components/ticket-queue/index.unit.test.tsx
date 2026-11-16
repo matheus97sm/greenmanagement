@@ -8,8 +8,9 @@ import { TicketQueue } from ".";
 
 const renders = vi.hoisted(() => ({ status: 0 }));
 
-vi.mock("@/components/Badges", async (importOriginal) => {
-  const original = await importOriginal<typeof import("@/components/Badges")>();
+vi.mock("@/components/status-badge", async (importOriginal) => {
+  const original =
+    await importOriginal<typeof import("@/components/status-badge")>();
   return {
     ...original,
     StatusBadge: (props: Parameters<typeof original.StatusBadge>[0]) => {

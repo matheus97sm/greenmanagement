@@ -3,7 +3,7 @@ import { AppShell } from "@mantine/core";
 import { Outlet } from "react-router";
 import { useAuth } from "@/auth/auth-context";
 import { startRealtime } from "@/store/realtime";
-import { AppHeader } from "./AppHeader";
+import { AppHeader } from "../app-header";
 
 export function AppLayout() {
   const { user } = useAuth();

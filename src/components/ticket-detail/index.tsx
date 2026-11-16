@@ -1,6 +1,7 @@
 import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Badge, Box, Button, Group, Stack, Text, Title } from "@mantine/core";
-import { SlaBadge, StatusBadge } from "@/components/Badges";
+import { SlaBadge } from "@/components/sla-badge";
+import { StatusBadge } from "@/components/status-badge";
 import { pausedSince } from "@/domain/rules";
 import { slaInfo } from "@/domain/sla";
 import { useNow } from "@/hooks/useNow";

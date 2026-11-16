@@ -1,5 +1,5 @@
 import { SimpleGrid } from "@mantine/core";
-import { Stat } from "@/components/Stat";
+import { Stat } from "@/components/stat";
 import { idleShare } from "@/domain/activity";
 import { formatHours, formatPercent } from "@/lib/format";
 import { IDLE_HIGH_SHARE, IDLE_WARNING_SHARE } from "../../constants";

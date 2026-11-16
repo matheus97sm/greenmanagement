@@ -13,7 +13,8 @@ import { Link, useLocation, useNavigate } from "react-router";
 import { useAuth } from "@/auth/auth-context";
 import { ROLE_LABEL } from "@/auth/users";
 import { navItemsFor } from "@/paths";
-import { ColorSchemeToggle } from "./ColorSchemeToggle";
+import { ColorSchemeToggle } from "../color-scheme-toggle";
+import { isCurrentPage } from "./utils";
 
 export function AppHeader() {
   const { user, signOut } = useAuth();
@@ -33,19 +34,22 @@ export function AppHeader() {
         <Title order={4}>Green Management</Title>
         {items.length > 0 && (
           <Group gap={4} ml="md" component="nav" aria-label="Páginas">
-            {items.map((item) => (
-              <Button
-                key={item.to}
-                component={Link}
-                to={item.to}
-                size="compact-sm"
-                variant={pathname.startsWith(item.to) ? "light" : "subtle"}
-                color={pathname.startsWith(item.to) ? "green" : "gray"}
-                aria-current={pathname.startsWith(item.to) ? "page" : undefined}
-              >
-                {item.label}
-              </Button>
-            ))}
+            {items.map((item) => {
+              const current = isCurrentPage(pathname, item.to);
+              return (
+                <Button
+                  key={item.to}
+                  component={Link}
+                  to={item.to}
+                  size="compact-sm"
+                  variant={current ? "light" : "subtle"}
+                  color={current ? "green" : "gray"}
+                  aria-current={current ? "page" : undefined}
+                >
+                  {item.label}
+                </Button>
+              );
+            })}
           </Group>
         )}
       </Group>

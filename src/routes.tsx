@@ -2,7 +2,7 @@ import { redirect } from "react-router";
 import type { RouteObject } from "react-router";
 import { getSessionUser } from "./auth/session";
 import type { User } from "./auth/users";
-import { AppLayout } from "./components/AppLayout";
+import { AppLayout } from "./components/app-layout";
 import { TicketsPage as ConsultantTicketsPage } from "./pages/consultant/tickets";
 import { TicketsPage as CustomerTicketsPage } from "./pages/customer/tickets";
 import { LoginPage } from "./pages/login";

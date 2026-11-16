@@ -8,7 +8,8 @@ import {
   Text,
   UnstyledButton,
 } from "@mantine/core";
-import { SlaBadge, StatusBadge } from "@/components/Badges";
+import { SlaBadge } from "@/components/sla-badge";
+import { StatusBadge } from "@/components/status-badge";
 import { PRIORITY_COLOR, PRIORITY_LABEL } from "@/domain/status";
 import type { RowProps } from "./types";
 

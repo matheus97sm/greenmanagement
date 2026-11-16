@@ -1,6 +1,6 @@
 import { memo } from "react";
 import { SimpleGrid } from "@mantine/core";
-import { Stat } from "@/components/Stat";
+import { Stat } from "@/components/stat";
 import type { Props } from "./types";
 
 function SummaryView({ active, breached, atRisk, unassigned, idle }: Props) {
