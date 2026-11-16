@@ -2,6 +2,7 @@ import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { Status } from "@/domain/enums";
+import { Language, setLanguage } from "@/i18n";
 import { changeStatus } from "@/store/actions";
 import { MARINA_ID, rawData } from "@/test-data";
 import { renderWithProviders } from "@/test-utils";
@@ -137,5 +138,15 @@ describe("StatusModal", () => {
       });
       await waitFor(() => expect(onClose).toHaveBeenCalled());
     });
+  });
+
+  it("shows the English text when the language changes", async () => {
+    await setLanguage(Language.EnUs);
+    renderModal(Status.InProgress);
+    expect(screen.getByText("Change status")).toBeInTheDocument();
+    expect(screen.getAllByLabelText(/New status/)[0]).toBeInTheDocument();
+    expect(screen.getByLabelText(/Reason/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Cancel" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Confirm" })).toBeInTheDocument();
   });
 });

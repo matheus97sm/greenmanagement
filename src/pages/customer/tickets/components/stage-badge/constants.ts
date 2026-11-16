@@ -1,12 +1,13 @@
 import { CustomerStage } from "@/domain/enums";
+import type { StageKey } from "./types";
 
-export const STAGE_LABEL: Record<CustomerStage, string> = {
-  [CustomerStage.Received]: "Recebido",
-  [CustomerStage.Assigned]: "Atribuído",
-  [CustomerStage.InProgress]: "Em atendimento",
-  [CustomerStage.WaitingYou]: "Aguardando você",
-  [CustomerStage.Resolved]: "Resolvido",
-  [CustomerStage.Closed]: "Encerrado",
+export const STAGE_KEY: Record<CustomerStage, StageKey> = {
+  [CustomerStage.Received]: "received",
+  [CustomerStage.Assigned]: "assigned",
+  [CustomerStage.InProgress]: "inProgress",
+  [CustomerStage.WaitingYou]: "waitingYou",
+  [CustomerStage.Resolved]: "resolved",
+  [CustomerStage.Closed]: "closed",
 };
 
 export const STAGE_COLOR: Record<CustomerStage, string> = {

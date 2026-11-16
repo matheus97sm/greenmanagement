@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { USERS } from "@/auth/users";
 import { Status } from "@/domain/enums";
+import { Language, setLanguage } from "@/i18n";
 import { loadStoreAs, renderWithProviders } from "@/test-utils";
 import { RICARDO_ID, rawData } from "@/test-data";
 import { ConversationDrawer } from ".";
@@ -115,5 +116,14 @@ describe("ConversationDrawer", () => {
 
     await user.click(screen.getByText("voltar"));
     expect(field()).toHaveValue("rascunho do gestor");
+  });
+
+  it("shows the drawer in English", async () => {
+    await setLanguage(Language.EnUs);
+    renderDrawer(byNumber(10503).id);
+    expect(screen.getByText("Ticket conversation")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Close conversation" }),
+    ).toBeInTheDocument();
   });
 });

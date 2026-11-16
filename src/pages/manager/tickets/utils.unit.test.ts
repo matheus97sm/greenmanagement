@@ -7,9 +7,11 @@ import {
   riskTickets,
   unassignedTickets,
 } from "@/domain/workload";
+import { translatorFor } from "@/i18n";
 import { rawData } from "@/test-data";
 import { ALL_GROUPS } from "./constants";
 import { FocusKind } from "./enums";
+import { locales } from "./locales";
 import type { Focus } from "./types";
 import {
   filterByGroup,
@@ -22,6 +24,7 @@ import {
   viewOptions,
 } from "./utils";
 
+const translate = translatorFor(locales);
 const NOW = Date.parse(rawData.meta.agora);
 const [infra, apps] = rawData.grupos;
 const people: Record<string, Person> = Object.fromEntries(
@@ -210,6 +213,7 @@ describe("viewOptions", () => {
         unassignedCount: 3,
         consultant: undefined,
         consultantCount: 0,
+        translate,
       }),
     ).toEqual([
       { value: FocusKind.Risk, label: "Em risco (7)" },
@@ -223,6 +227,7 @@ describe("viewOptions", () => {
       unassignedCount: 3,
       consultant: thiago,
       consultantCount: 75,
+      translate,
     });
     expect(options).toHaveLength(3);
     expect(options[2]).toEqual({

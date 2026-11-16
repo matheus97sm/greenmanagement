@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { USERS } from "@/auth/users";
 import { Profile, Status } from "@/domain/enums";
+import { Language, setLanguage } from "@/i18n";
 import { takeTicket } from "@/store/actions";
 import { MARINA_ID, RICARDO_ID, rawData } from "@/test-data";
 import { loadStoreAs, renderWithProviders } from "@/test-utils";
@@ -298,5 +299,20 @@ describe("TicketDetail for the manager", () => {
     expect(roles).toEqual(new Set([Profile.Customer, Profile.Consultant]));
     expect(screen.getAllByText("Cliente").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Consultor").length).toBeGreaterThan(0);
+  });
+
+  it("shows the English text when the language changes", async () => {
+    await setLanguage(Language.EnUs);
+    loadStoreAs(MARINA_ID);
+    const ticket = rawData.chamados.find(
+      (candidate) =>
+        candidate.responsavel_id === MARINA_ID &&
+        candidate.status === Status.InProgress,
+    )!;
+    renderDetail(ticket.id);
+    expect(screen.getByText(/Handled by you/)).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Change status" }),
+    ).toBeInTheDocument();
   });
 });

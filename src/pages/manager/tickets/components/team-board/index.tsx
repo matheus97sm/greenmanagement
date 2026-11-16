@@ -9,14 +9,17 @@ import {
   Text,
 } from "@mantine/core";
 import { UnstyledButton } from "@mantine/core";
+import { useTranslate } from "@/i18n";
 import { LEVEL_COLOR, LEVEL_LABEL } from "./constants";
+import { locales } from "./locales";
 import type { Props, RowProps } from "./types";
 import { barValue, sectionsOf } from "./utils";
 
 function ConsultantRow({ workload, maxActive, selected, onSelect }: RowProps) {
+  const translate = useTranslate(locales);
   const { consultant, active, breached, atRisk, waitingCustomer, level } =
     workload;
-  const levelLabel = LEVEL_LABEL[level];
+  const levelKey = LEVEL_LABEL[level];
 
   return (
     <UnstyledButton
@@ -38,27 +41,27 @@ function ConsultantRow({ workload, maxActive, selected, onSelect }: RowProps) {
         size="sm"
         value={barValue(active, maxActive)}
         color={LEVEL_COLOR[level]}
-        aria-label={`Carga de ${consultant.nome}`}
+        aria-label={translate("load", { name: consultant.nome })}
       />
       <Group gap={6} mt={6} mih={20}>
-        {levelLabel && (
+        {levelKey && (
           <Badge size="sm" variant="light" color={LEVEL_COLOR[level]}>
-            {levelLabel}
+            {translate(levelKey)}
           </Badge>
         )}
         {breached > 0 && (
           <Badge size="sm" color="red" variant="filled">
-            {breached} {breached === 1 ? "estourado" : "estourados"}
+            {translate("breached", { count: breached })}
           </Badge>
         )}
         {atRisk > 0 && (
           <Badge size="sm" color="orange" variant="light">
-            {atRisk} em risco
+            {translate("atRisk", { count: atRisk })}
           </Badge>
         )}
         {waitingCustomer > 0 && (
           <Text size="xs" c="dimmed">
-            {waitingCustomer} aguardando cliente
+            {translate("waitingCustomer", { count: waitingCustomer })}
           </Text>
         )}
       </Group>
@@ -74,6 +77,7 @@ function TeamBoardView({
   onSelect,
   onShowUnassigned,
 }: Props) {
+  const translate = useTranslate(locales);
   const maxActive = Math.max(
     0,
     ...workloads.map((workload) => workload.active),
@@ -95,11 +99,11 @@ function TeamBoardView({
                   size="xs"
                   onClick={() => onShowUnassigned(group.id)}
                 >
-                  {unassigned} sem responsável
+                  {translate("unassigned", { count: unassigned })}
                 </Anchor>
               ) : (
                 <Text size="xs" c="dimmed">
-                  Fila vazia
+                  {translate("emptyQueue")}
                 </Text>
               )}
             </Group>

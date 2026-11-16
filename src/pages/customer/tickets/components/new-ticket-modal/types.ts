@@ -1,4 +1,6 @@
 import type { User } from "@/auth/users";
+import type { Language, Translate } from "@/i18n";
+import type { locales } from "./locales";
 
 export interface Props {
   currentUser: User;
@@ -21,3 +23,8 @@ export interface FormState {
   description: string;
   topic: string | null;
 }
+
+export type ImpactKey =
+  "impactEveryone" | "impactBlocked" | "impactSlows" | "impactCanWait";
+
+export type ModalTranslate = Translate<(typeof locales)[Language.PtBr]>;

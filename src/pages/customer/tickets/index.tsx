@@ -14,6 +14,7 @@ import {
 import { IconPlus } from "@tabler/icons-react";
 import { useNavigate, useParams } from "react-router";
 import { useCurrentUser } from "@/auth/auth-context";
+import { useTranslate } from "@/i18n";
 import { homePath } from "@/paths";
 import { markRead } from "@/store/actions";
 import { LoadStatus } from "@/store/enums";
@@ -21,8 +22,10 @@ import { useTickets } from "@/store/useTickets";
 import { Conversation } from "./components/conversation";
 import { NewTicketModal } from "./components/new-ticket-modal";
 import { TicketList } from "./components/ticket-list";
+import { locales } from "./locales";
 
 export function TicketsPage() {
+  const translate = useTranslate(locales);
   const currentUser = useCurrentUser();
   const state = useTickets();
   const navigate = useNavigate();
@@ -37,7 +40,7 @@ export function TicketsPage() {
   }, [id, known, lastMessageId]);
 
   if (state.status === LoadStatus.Error) {
-    return <Alert color="red">Não foi possível carregar os chamados.</Alert>;
+    return <Alert color="red">{translate("loadError")}</Alert>;
   }
 
   if (state.status !== LoadStatus.Ready) {
@@ -59,12 +62,12 @@ export function TicketsPage() {
       style={{ minHeight: 0 }}
     >
       <Group justify="space-between">
-        <Title order={2}>Meus chamados</Title>
+        <Title order={2}>{translate("title")}</Title>
         <Button
           leftSection={<IconPlus size={16} />}
           onClick={() => setCreating(true)}
         >
-          Novo chamado
+          {translate("newTicket")}
         </Button>
       </Group>
 
@@ -91,9 +94,7 @@ export function TicketsPage() {
             <Box h="100%">
               <Center h="100%">
                 <Text c="dimmed" ta="center" maw={320}>
-                  {hasTickets
-                    ? "Escolha um chamado na lista para ver o andamento."
-                    : "Quando algo quebrar, abra um chamado e acompanhe tudo por aqui."}
+                  {translate(hasTickets ? "pickTicket" : "firstTicket")}
                 </Text>
               </Center>
             </Box>

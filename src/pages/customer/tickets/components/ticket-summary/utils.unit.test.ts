@@ -6,9 +6,12 @@ import {
   Status,
 } from "@/domain/enums";
 import type { HistoryEntry, Person, Ticket } from "@/domain/types";
+import { Language, setLanguage, translatorFor } from "@/i18n";
 import { HELENA_ID, rawData } from "@/test-data";
+import { locales } from "./locales";
 import { expectationText, progressEvents, summaryOf } from "./utils";
 
+const translate = translatorFor(locales);
 const NOW = Date.parse(rawData.meta.agora);
 const people: Record<string, Person> = Object.fromEntries(
   rawData.usuarios.map((person) => [person.id, person]),
@@ -28,11 +31,13 @@ const textsOf = (numero: number, meId = HELENA_ID) => {
     history: historyOf(ticket),
     people,
     meId,
+    translate,
   }).map((progressEvent) => progressEvent.text);
 };
 
 describe("summaryOf", () => {
-  const summary = (ticket: Ticket) => summaryOf({ ticket, people, now: NOW });
+  const summary = (ticket: Ticket) =>
+    summaryOf({ ticket, people, now: NOW, translate });
 
   it("tells the customer that nobody has taken a new ticket yet", () => {
     const result = summary(byNumber(10614));
@@ -84,6 +89,7 @@ describe("summaryOf", () => {
       ticket: byNumber(10611),
       people: {},
       now: NOW,
+      translate,
     });
     expect(result.handler).toBeNull();
     expect(result.headline).toBe("A equipe está cuidando do seu chamado.");
@@ -106,6 +112,7 @@ describe("expectationText", () => {
       expectationText(
         { kind: Expectation.None, at: null, overdue: false },
         format,
+        translate,
       ),
     ).toBeNull();
   });
@@ -115,6 +122,7 @@ describe("expectationText", () => {
       expectationText(
         { kind: Expectation.FirstResponse, at, overdue: false },
         format,
+        translate,
       ),
     ).toBe("Primeira resposta prevista até em 2026-11-04");
   });
@@ -124,6 +132,7 @@ describe("expectationText", () => {
       expectationText(
         { kind: Expectation.Resolution, at, overdue: false },
         format,
+        translate,
       ),
     ).toBe("Solução prevista até em 2026-11-04");
   });
@@ -133,6 +142,7 @@ describe("expectationText", () => {
       expectationText(
         { kind: Expectation.Resolution, at, overdue: true },
         format,
+        translate,
       ),
     ).toBe("Solução prevista até em 2026-11-04 (esse prazo já passou)");
   });
@@ -182,6 +192,7 @@ describe("progressEvents", () => {
       history: [{ ...reopening, usuario_id: HELENA_ID }],
       people,
       meId: HELENA_ID,
+      translate,
     }).map((progressEvent) => progressEvent.text);
     expect(texts).toContain("Você reabriu o chamado");
   });
@@ -201,9 +212,13 @@ describe("progressEvents", () => {
       },
     ];
     expect(
-      progressEvents({ ticket, history, people, meId: HELENA_ID }).map(
-        (progressEvent) => progressEvent.text,
-      ),
+      progressEvents({
+        ticket,
+        history,
+        people,
+        meId: HELENA_ID,
+        translate,
+      }).map((progressEvent) => progressEvent.text),
     ).toContain("Atendimento retomado");
   });
 
@@ -223,6 +238,7 @@ describe("progressEvents", () => {
       history: [...historyOf(ticket)].reverse(),
       people,
       meId: HELENA_ID,
+      translate,
     });
     expect(events.map((progressEvent) => progressEvent.at)).toEqual(
       [...events.map((progressEvent) => progressEvent.at)].sort(),
@@ -232,7 +248,13 @@ describe("progressEvents", () => {
   it("starts the list with only the opening when there is no history", () => {
     const ticket = byNumber(10613);
     expect(
-      progressEvents({ ticket, history: undefined, people, meId: HELENA_ID }),
+      progressEvents({
+        ticket,
+        history: undefined,
+        people,
+        meId: HELENA_ID,
+        translate,
+      }),
     ).toHaveLength(1);
   });
 
@@ -243,7 +265,67 @@ describe("progressEvents", () => {
       history: historyOf(ticket),
       people: {},
       meId: HELENA_ID,
+      translate,
     }).map((progressEvent) => progressEvent.text);
     expect(texts).toContain("A equipe assumiu o chamado");
+  });
+});
+
+describe("in English", () => {
+  const ticketOf = (numero: number) => byNumber(numero);
+
+  it("tells the story of a ticket in English", async () => {
+    await setLanguage(Language.EnUs);
+    expect(textsOf(10612)).toEqual([
+      "Ticket opened",
+      "Thiago Nascimento took the ticket",
+      "Thiago Nascimento marked the ticket as resolved",
+      "Ticket closed",
+    ]);
+  });
+
+  it("says who is looking after a ticket in English", async () => {
+    await setLanguage(Language.EnUs);
+    const result = summaryOf({
+      ticket: ticketOf(10611),
+      people,
+      now: NOW,
+      translate,
+    });
+    expect(result.headline).toBe(
+      "Marina Almeida is taking care of your ticket.",
+    );
+  });
+
+  it("promises a date in English", async () => {
+    await setLanguage(Language.EnUs);
+    expect(
+      expectationText(
+        {
+          kind: Expectation.Resolution,
+          at: "2026-11-04T09:00:00Z",
+          overdue: true,
+        },
+        (iso) => iso.slice(0, 10),
+        translate,
+      ),
+    ).toBe("Solution expected by 2026-11-04 (that date has already passed)");
+  });
+
+  it("never shows internal terms to the customer in English", async () => {
+    await setLanguage(Language.EnUs);
+    for (const numero of [10611, 10612, 10613, 10614]) {
+      const ticket = ticketOf(numero);
+      const headline = summaryOf({
+        ticket,
+        people,
+        now: NOW,
+        translate,
+      }).headline;
+      const joined = [headline, ...textsOf(numero)].join(" ");
+      expect(joined).not.toMatch(
+        /Reason|queue|priority|SLA|category|internal|status/i,
+      );
+    }
   });
 });

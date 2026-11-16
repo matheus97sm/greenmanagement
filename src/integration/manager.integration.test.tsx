@@ -38,7 +38,11 @@ describe("the manager's team view", () => {
     await screen.findByText("Thiago Nascimento", {}, { timeout: LOAD_TIMEOUT });
     expect(screen.getAllByText("Infraestrutura").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Aplicações").length).toBeGreaterThan(0);
-    expect(screen.getAllByRole("button", { pressed: false })).toHaveLength(12);
+    const languageGroup = screen.getByRole("group", { name: "Idioma" });
+    const consultantCards = screen
+      .getAllByRole("button", { pressed: false })
+      .filter((button) => !languageGroup.contains(button));
+    expect(consultantCards).toHaveLength(12);
   });
 
   it("points out who is overloaded and who has nothing to do", async () => {

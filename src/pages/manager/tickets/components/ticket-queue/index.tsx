@@ -1,6 +1,7 @@
 import { useMemo, useRef } from "react";
 import { Checkbox, Group, Stack, Text } from "@mantine/core";
 import { useVirtualizer } from "@tanstack/react-virtual";
+import { useTranslate } from "@/i18n";
 import { useTickets } from "@/store/useTickets";
 import {
   LIST_MAX_HEIGHT,
@@ -8,6 +9,7 @@ import {
   ROW_HEIGHT,
   ROW_OVERSCAN,
 } from "./constants";
+import { locales } from "./locales";
 import { TicketRow } from "./row";
 import type { Props } from "./types";
 import { buildItems, isLocked, selectionScope } from "./utils";
@@ -23,6 +25,7 @@ export function TicketQueue({
   onToggle,
   onToggleAll,
 }: Props) {
+  const translate = useTranslate(locales);
   const { history, people, groups } = useTickets();
 
   const items = useMemo(
@@ -59,7 +62,7 @@ export function TicketQueue({
         >
           <Checkbox
             size="xs"
-            label="Selecionar todos"
+            label={translate("selectAll")}
             checked={allSelected}
             indeterminate={someSelected && !allSelected}
             onChange={(event) =>
@@ -71,7 +74,9 @@ export function TicketQueue({
           />
           {mixed && (
             <Text size="xs" c="dimmed">
-              só {groups[targetGroupId ?? ""]?.nome}
+              {translate("onlyGroup", {
+                name: groups[targetGroupId ?? ""]?.nome ?? "",
+              })}
             </Text>
           )}
         </Group>
@@ -120,7 +125,7 @@ export function TicketQueue({
       </div>
       {total > tickets.length && (
         <Text size="xs" c="dimmed" ta="center" p="sm">
-          Mostrando os {tickets.length} mais urgentes de {total}.
+          {translate("showing", { shown: tickets.length, total })}
         </Text>
       )}
     </Stack>

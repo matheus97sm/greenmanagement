@@ -90,18 +90,25 @@ export function viewOptions({
   unassignedCount,
   consultant,
   consultantCount,
+  translate,
 }: ViewOptionsInput): ViewOption[] {
   return [
-    { value: FocusKind.Risk, label: `Em risco (${riskCount})` },
+    {
+      value: FocusKind.Risk,
+      label: translate("viewRisk", { count: riskCount }),
+    },
     {
       value: FocusKind.Unassigned,
-      label: `Sem responsável (${unassignedCount})`,
+      label: translate("viewUnassigned", { count: unassignedCount }),
     },
     ...(consultant
       ? [
           {
             value: FocusKind.Consultant,
-            label: `${consultant.nome} (${consultantCount})`,
+            label: translate("viewConsultant", {
+              name: consultant.nome,
+              count: consultantCount,
+            }),
           },
         ]
       : []),

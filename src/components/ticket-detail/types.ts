@@ -1,9 +1,11 @@
 import type { ReactNode } from "react";
 import type { Role } from "@/auth/enums";
 import type { User } from "@/auth/users";
-import type { Profile } from "@/domain/enums";
+import type { Profile, Status } from "@/domain/enums";
+import type { Language, Translate } from "@/i18n";
 import type { HistoryEntry, Message, Person, Ticket } from "@/domain/types";
-import type { TimelineKind } from "./enums";
+import type { EventKind, TimelineKind } from "./enums";
+import type { locales } from "./locales";
 
 export interface Props {
   ticketId: string;
@@ -27,7 +29,11 @@ export interface EventItem {
   kind: TimelineKind.Event;
   at: string;
   key: string;
-  text: string;
+  event: EventKind;
+  who: string;
+  from: Status | null;
+  to: Status | null;
+  reason: string | null;
 }
 
 export type TimelineItem = MessageItem | EventItem;
@@ -37,6 +43,7 @@ export interface BuildTimelineInput {
   messages: Message[] | undefined;
   history: HistoryEntry[] | undefined;
   people: Record<string, Person>;
+  unknownPerson: string;
 }
 
 export interface Actions {
@@ -50,6 +57,7 @@ export interface FooterHintInput {
   isClosed: boolean;
   canTake: boolean;
   nameOf: (id: string | null) => string;
+  translate: Translate<(typeof locales)[Language.PtBr]>;
 }
 
 export interface PermissionsInput {

@@ -1,5 +1,6 @@
 import { screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
+import { Language, setLanguage } from "@/i18n";
 import { renderWithProviders } from "@/test-utils";
 import { Summary } from ".";
 
@@ -31,5 +32,12 @@ describe("Summary", () => {
       <Summary active={0} breached={0} atRisk={0} unassigned={0} idle={0} />,
     );
     expect(valueOf("Prazo estourado")).toHaveTextContent("0");
+  });
+
+  it("shows the labels in English", async () => {
+    await setLanguage(Language.EnUs);
+    renderWithProviders(<Summary {...figures} />);
+    expect(valueOf("Active tickets")).toHaveTextContent("412");
+    expect(valueOf("Unassigned")).toHaveTextContent("61");
   });
 });

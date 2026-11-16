@@ -2,6 +2,7 @@ import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import type { SimilarTicket } from "@/domain/similarity";
+import { Language, setLanguage } from "@/i18n";
 import { rawData } from "@/test-data";
 import { renderWithProviders } from "@/test-utils";
 import { SimilarTickets } from ".";
@@ -25,6 +26,18 @@ describe("SimilarTickets", () => {
     expect(
       screen.queryByText("Você já abriu algo parecido"),
     ).not.toBeInTheDocument();
+  });
+
+  it("warns in English when the language is English", async () => {
+    await setLanguage(Language.EnUs);
+    renderHits([hit(10612)]);
+    expect(
+      screen.getByText("You already opened something similar"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Open that ticket" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/you can reopen that ticket/)).toBeInTheDocument();
   });
 
   it("lists the tickets that look alike, with where each one stands", () => {

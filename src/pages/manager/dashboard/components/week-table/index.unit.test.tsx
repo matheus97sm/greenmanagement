@@ -1,5 +1,6 @@
 import { screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
+import { Language, setLanguage } from "@/i18n";
 import { LoadLevel, Profile } from "@/domain/enums";
 import { renderWithProviders } from "@/test-utils";
 import type { Row } from "../../types";
@@ -133,6 +134,23 @@ describe("WeekTable", () => {
     ).not.toBeInTheDocument();
     expect(within(rowOf("Bia")).getByText("9 chamados")).toBeInTheDocument();
     expect(within(rowOf("Bia")).getByText("3 estourados")).toBeInTheDocument();
+  });
+
+  it("shows the texts in English when the language is switched", async () => {
+    await setLanguage(Language.EnUs);
+    renderWithProviders(
+      <WeekTable
+        rows={[row("Leo", { idle: 12, breached: 2, active: 1 })]}
+        dayHeaders={headers}
+      />,
+    );
+    expect(
+      screen.getByRole("columnheader", { name: "Consultant" }),
+    ).toBeInTheDocument();
+    const leo = rowOf("Leo");
+    expect(within(leo).getByText("100% of working time")).toBeInTheDocument();
+    expect(within(leo).getByText("1 ticket")).toBeInTheDocument();
+    expect(within(leo).getByText("2 breached")).toBeInTheDocument();
   });
 
   it("keeps the order of the rows it was given", () => {

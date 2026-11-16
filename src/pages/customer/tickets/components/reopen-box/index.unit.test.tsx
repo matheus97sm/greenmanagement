@@ -2,6 +2,7 @@ import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { reopenTicket } from "@/store/actions";
+import { Language, setLanguage } from "@/i18n";
 import { HELENA_ID } from "@/test-data";
 import { renderWithProviders } from "@/test-utils";
 import { ReopenBox } from ".";
@@ -32,6 +33,18 @@ describe("ReopenBox", () => {
     ).toBeInTheDocument();
     expect(
       screen.getByText(/reabrir este chamado e avisar quem cuidou dele/),
+    ).toBeInTheDocument();
+  });
+
+  it("asks in English when the language is English", async () => {
+    await setLanguage(Language.EnUs);
+    renderBox();
+    expect(
+      screen.getByText("Is the problem still there or did it come back?"),
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText(/What is wrong now/)).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Reopen ticket" }),
     ).toBeInTheDocument();
   });
 

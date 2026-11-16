@@ -2,7 +2,9 @@ import { useState } from "react";
 import type { KeyboardEvent } from "react";
 import { Button, Group, Stack, Switch, Textarea } from "@mantine/core";
 import { IconSend } from "@tabler/icons-react";
+import { useTranslate } from "@/i18n";
 import { sendMessage } from "@/store/actions";
+import { locales } from "./locales";
 import type { Props } from "./types";
 
 export function Composer({
@@ -11,8 +13,9 @@ export function Composer({
   draft,
   onDraftChange,
   allowNotes = true,
-  placeholder = "Responder ao cliente (Ctrl+Enter envia)",
+  placeholder,
 }: Props) {
+  const translate = useTranslate(locales);
   const [wantsNote, setWantsNote] = useState(false);
   const internal = allowNotes && wantsNote;
   const [sending, setSending] = useState(false);
@@ -51,7 +54,9 @@ export function Composer({
         minRows={2}
         maxRows={8}
         placeholder={
-          internal ? "Nota interna: o cliente não vai ver" : placeholder
+          internal
+            ? translate("notePlaceholder")
+            : (placeholder ?? translate("placeholder"))
         }
         value={draft}
         onChange={(event) => onDraftChange(event.currentTarget.value)}
@@ -60,7 +65,7 @@ export function Composer({
       <Group justify={allowNotes ? "space-between" : "flex-end"}>
         {allowNotes && (
           <Switch
-            label="Nota interna"
+            label={translate("internalNote")}
             checked={internal}
             onChange={(event) => setWantsNote(event.currentTarget.checked)}
           />
@@ -72,7 +77,7 @@ export function Composer({
           disabled={!draft.trim()}
           color={internal ? "yellow" : undefined}
         >
-          {internal ? "Salvar nota" : "Enviar"}
+          {translate(internal ? "saveNote" : "send")}
         </Button>
       </Group>
     </Stack>

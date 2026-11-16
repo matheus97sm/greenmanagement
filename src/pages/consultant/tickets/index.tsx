@@ -2,14 +2,17 @@ import { useEffect, useState } from "react";
 import { Alert, Box, Center, Group, Loader, Paper, Text } from "@mantine/core";
 import { useNavigate, useParams } from "react-router";
 import { useCurrentUser } from "@/auth/auth-context";
+import { useTranslate } from "@/i18n";
 import { homePath } from "@/paths";
 import { LoadStatus } from "@/store/enums";
 import { markRead } from "@/store/actions";
 import { useTickets } from "@/store/useTickets";
 import { TicketDetail } from "@/components/ticket-detail";
 import { TicketList } from "./components/list";
+import { locales } from "./locales";
 
 export function TicketsPage() {
+  const translate = useTranslate(locales);
   const currentUser = useCurrentUser();
   const state = useTickets();
   const navigate = useNavigate();
@@ -22,7 +25,7 @@ export function TicketsPage() {
   }, [id, lastMessageId]);
 
   if (state.status === LoadStatus.Error) {
-    return <Alert color="red">Não foi possível carregar os chamados.</Alert>;
+    return <Alert color="red">{translate("loadError")}</Alert>;
   }
 
   if (state.status !== LoadStatus.Ready) {
@@ -63,7 +66,7 @@ export function TicketsPage() {
         ) : (
           <Box h="100%">
             <Center h="100%">
-              <Text c="dimmed">Selecione um chamado na lista.</Text>
+              <Text c="dimmed">{translate("selectTicket")}</Text>
             </Center>
           </Box>
         )}

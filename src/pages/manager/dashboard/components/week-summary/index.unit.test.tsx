@@ -1,6 +1,7 @@
 import { screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import type { TeamWeek } from "@/domain/activity";
+import { Language, setLanguage } from "@/i18n";
 import { LoadLevel, Profile } from "@/domain/enums";
 import { renderWithProviders } from "@/test-utils";
 import type { Row } from "../../types";
@@ -78,6 +79,16 @@ describe("WeekSummary", () => {
     const who = card("Mais tempo sem chamado");
     expect(within(who).getByText("Leandro")).toBeInTheDocument();
     expect(within(who).getByText("12 h · 100%")).toBeInTheDocument();
+  });
+
+  it("shows the texts in English when the language is switched", async () => {
+    await setLanguage(Language.EnUs);
+    renderWithProviders(<WeekSummary team={team} mostIdle={undefined} />);
+    const hours = card("Hours without tickets");
+    expect(
+      within(hours).getByText("of 120 h of working time"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Nobody")).toBeInTheDocument();
   });
 
   it("says nobody was idle when that is the case", () => {

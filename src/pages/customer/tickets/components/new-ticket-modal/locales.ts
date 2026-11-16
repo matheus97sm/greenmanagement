@@ -1,0 +1,36 @@
+import { Language } from "@/i18n";
+
+export const locales = {
+  [Language.PtBr]: {
+    modalTitle: "Novo chamado",
+    titleLabel: "Resumo do problema",
+    titlePlaceholder: "Ex.: A VPN não liga",
+    descriptionLabel: "O que está acontecendo?",
+    descriptionHint: "Quanto mais detalhes, mais rápido conseguimos ajudar.",
+    topicLabel: "Sobre o quê?",
+    topicPlaceholder: "Escolha um assunto",
+    impactLabel: "Quanto isso atrapalha o seu trabalho?",
+    impactEveryone: "Toda a empresa está parada",
+    impactBlocked: "Não consigo trabalhar",
+    impactSlows: "Atrapalha, mas consigo trabalhar",
+    impactCanWait: "Pode esperar",
+    cancel: "Cancelar",
+    submit: "Abrir chamado",
+  },
+  [Language.EnUs]: {
+    modalTitle: "New ticket",
+    titleLabel: "Summary of the problem",
+    titlePlaceholder: "E.g.: The VPN will not connect",
+    descriptionLabel: "What is going on?",
+    descriptionHint: "The more details, the faster we can help.",
+    topicLabel: "About what?",
+    topicPlaceholder: "Choose a subject",
+    impactLabel: "How much does this get in the way of your work?",
+    impactEveryone: "The whole company is stopped",
+    impactBlocked: "I cannot work",
+    impactSlows: "It gets in the way, but I can work",
+    impactCanWait: "It can wait",
+    cancel: "Cancel",
+    submit: "Open ticket",
+  },
+};

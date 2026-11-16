@@ -29,11 +29,3 @@ export function listItems({ state, meId, search }: ListInput): ListItem[] {
         second.ticket.atualizado_em.localeCompare(first.ticket.atualizado_em),
     );
 }
-
-export function handlerLine(handler: string | null): string {
-  return handler ? `Com ${handler}` : "Ainda sem responsável";
-}
-
-export function unreadLabel(unread: number): string {
-  return unread === 1 ? "1 nova" : `${unread} novas`;
-}

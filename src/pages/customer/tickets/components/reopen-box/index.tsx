@@ -1,9 +1,12 @@
 import { useState } from "react";
 import { Button, Group, Stack, Text, Textarea } from "@mantine/core";
+import { useTranslate } from "@/i18n";
 import { reopenTicket } from "@/store/actions";
+import { locales } from "./locales";
 import type { Props } from "./types";
 
 export function ReopenBox({ ticketId, customerId }: Props) {
+  const translate = useTranslate(locales);
   const [reason, setReason] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -22,11 +25,11 @@ export function ReopenBox({ ticketId, customerId }: Props) {
       style={{ borderTop: "1px solid var(--mantine-color-default-border)" }}
     >
       <Text size="sm" fw={500}>
-        O problema continua ou voltou?
+        {translate("question")}
       </Text>
       <Textarea
-        label="O que está errado agora?"
-        description="Vamos reabrir este chamado e avisar quem cuidou dele."
+        label={translate("reasonLabel")}
+        description={translate("reasonHint")}
         autosize
         minRows={2}
         maxRows={6}
@@ -35,7 +38,7 @@ export function ReopenBox({ ticketId, customerId }: Props) {
       />
       <Group justify="flex-end">
         <Button onClick={submit} loading={saving} disabled={!reason.trim()}>
-          Reabrir chamado
+          {translate("reopen")}
         </Button>
       </Group>
     </Stack>

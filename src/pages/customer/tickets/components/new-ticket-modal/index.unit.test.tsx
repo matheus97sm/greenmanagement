@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { USERS } from "@/auth/users";
 import { Priority } from "@/domain/enums";
+import { Language, setLanguage } from "@/i18n";
 import { createTicket } from "@/store/actions";
 import { HELENA_ID, rawData } from "@/test-data";
 import { loadStoreAs, renderWithProviders } from "@/test-utils";
@@ -49,6 +50,18 @@ describe("NewTicketModal", () => {
   beforeEach(() => {
     loadStoreAs(HELENA_ID);
     vi.mocked(createTicket).mockReset().mockResolvedValue("new-ticket-id");
+  });
+
+  it("shows the form in English", async () => {
+    await setLanguage(Language.EnUs);
+    renderModal();
+    expect(screen.getByLabelText(/Summary of the problem/)).toBeInTheDocument();
+    expect(screen.getByLabelText(/What is going on/)).toBeInTheDocument();
+    expect(screen.getByLabelText("I cannot work")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Open ticket" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Cancel" })).toBeInTheDocument();
   });
 
   it("asks only what she can answer, in plain words", () => {

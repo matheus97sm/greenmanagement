@@ -1,6 +1,8 @@
 import { SlaClock, SlaKind } from "@/domain/enums";
 import type { SlaInfo } from "@/domain/sla";
+import type { Language, Translate } from "@/i18n";
 import { formatDuration } from "@/lib/format";
+import type { locales } from "./locales";
 import type { SlaBadgeView } from "./types";
 
 const UPCOMING_COLOR: Partial<Record<SlaKind, string>> = {
@@ -9,7 +11,10 @@ const UPCOMING_COLOR: Partial<Record<SlaKind, string>> = {
   [SlaKind.Ok]: "gray",
 };
 
-export function slaBadgeView(sla: SlaInfo): SlaBadgeView {
+export function slaBadgeView(
+  sla: SlaInfo,
+  translate: Translate<(typeof locales)[Language.PtBr]>,
+): SlaBadgeView {
   const duration = formatDuration(sla.remainingMs);
   const firstResponse = sla.clock === SlaClock.FirstResponse;
 
@@ -18,9 +23,9 @@ export function slaBadgeView(sla: SlaInfo): SlaBadgeView {
       return {
         color: "red",
         variant: "filled",
-        label: firstResponse
-          ? `1ª resposta estourada há ${duration}`
-          : `Estourado há ${duration}`,
+        label: translate(firstResponse ? "breachedFirstResponse" : "breached", {
+          duration,
+        }),
       };
     case SlaKind.Critical:
     case SlaKind.Warning:
@@ -28,11 +33,17 @@ export function slaBadgeView(sla: SlaInfo): SlaBadgeView {
       return {
         color: UPCOMING_COLOR[sla.kind] ?? "gray",
         variant: "light",
-        label: firstResponse ? `1ª resposta em ${duration}` : duration,
+        label: firstResponse
+          ? translate("dueFirstResponse", { duration })
+          : duration,
       };
     case SlaKind.Paused:
-      return { color: "blue", variant: "outline", label: "Prazo pausado" };
+      return { color: "blue", variant: "outline", label: translate("paused") };
     case SlaKind.Finished:
-      return { color: "gray", variant: "outline", label: "Encerrado" };
+      return {
+        color: "gray",
+        variant: "outline",
+        label: translate("finished"),
+      };
   }
 }

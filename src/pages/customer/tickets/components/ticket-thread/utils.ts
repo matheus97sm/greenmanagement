@@ -1,5 +1,4 @@
 import type { Message } from "@/domain/types";
-import { UNKNOWN_AUTHOR } from "./constants";
 import type { ThreadInput, ThreadItem } from "./types";
 
 export function threadItems({
@@ -8,6 +7,7 @@ export function threadItems({
   people,
   meId,
   since,
+  translate,
 }: ThreadInput): ThreadItem[] {
   const itemOf = (
     key: string,
@@ -19,7 +19,7 @@ export function threadItems({
     return {
       key,
       at,
-      author: people[authorId]?.nome ?? UNKNOWN_AUTHOR,
+      author: people[authorId]?.nome ?? translate("unknownAuthor"),
       role: people[authorId]?.perfil,
       isOwn,
       text,

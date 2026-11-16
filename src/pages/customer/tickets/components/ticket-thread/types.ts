@@ -1,5 +1,7 @@
 import type { User } from "@/auth/users";
 import type { Profile } from "@/domain/enums";
+import type { Language, Translate } from "@/i18n";
+import type { locales } from "./locales";
 import type { Message, Person, Ticket } from "@/domain/types";
 
 export interface Props {
@@ -24,4 +26,5 @@ export interface ThreadInput {
   people: Record<string, Person>;
   meId: string;
   since: string;
+  translate: Translate<(typeof locales)[Language.PtBr]>;
 }

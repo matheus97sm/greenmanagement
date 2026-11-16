@@ -1,8 +1,10 @@
 import { SimpleGrid } from "@mantine/core";
 import { Stat } from "@/components/stat";
 import { idleShare } from "@/domain/activity";
+import { useLanguage, useTranslate } from "@/i18n";
 import { formatHours, formatPercent } from "@/lib/format";
 import { IDLE_HIGH_SHARE, IDLE_WARNING_SHARE } from "../../constants";
+import { locales } from "./locales";
 import type { Props } from "./types";
 
 function toneOf(share: number): string | undefined {
@@ -12,27 +14,34 @@ function toneOf(share: number): string | undefined {
 }
 
 export function WeekSummary({ team, mostIdle }: Props) {
+  const translate = useTranslate(locales);
+  const { language } = useLanguage();
+  const hours = (ms: number) => formatHours(ms, language);
   return (
     <SimpleGrid cols={{ base: 2, sm: 5 }} spacing="sm">
       <Stat
-        label="Horas sem chamado"
-        value={formatHours(team.idleMs)}
-        sub={`de ${formatHours(team.businessMs)} de expediente`}
+        label={translate("idleHours")}
+        value={hours(team.idleMs)}
+        sub={translate("idleOf", { hours: hours(team.businessMs) })}
       />
       <Stat
-        label="Ociosidade da equipe"
+        label={translate("teamIdleness")}
         value={formatPercent(team.idleShare)}
         color={toneOf(team.idleShare)}
       />
-      <Stat label="Chamados atribuídos" value={team.assigned} />
-      <Stat label="Chamados resolvidos" value={team.resolved} />
+      <Stat label={translate("assigned")} value={team.assigned} />
+      <Stat label={translate("resolved")} value={team.resolved} />
       <Stat
-        label="Mais tempo sem chamado"
-        value={mostIdle ? mostIdle.consultant.nome.split(" ")[0] : "Ninguém"}
+        label={translate("mostIdle")}
+        value={
+          mostIdle
+            ? mostIdle.consultant.nome.split(" ")[0]
+            : translate("nobody")
+        }
         sub={
           mostIdle
-            ? `${formatHours(mostIdle.week.idleMs)} · ${formatPercent(idleShare(mostIdle.week))}`
-            : "Todos tiveram chamados"
+            ? `${hours(mostIdle.week.idleMs)} · ${formatPercent(idleShare(mostIdle.week))}`
+            : translate("everyoneHadTickets")
         }
         color={mostIdle ? toneOf(idleShare(mostIdle.week)) : undefined}
       />

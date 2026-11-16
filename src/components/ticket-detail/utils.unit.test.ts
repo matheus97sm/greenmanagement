@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { Role } from "@/auth/enums";
 import { HistoryType, Priority, Profile, Status } from "@/domain/enums";
+import { Language, setLanguage, translatorFor } from "@/i18n";
 import type { HistoryEntry, Message, Person, Ticket } from "@/domain/types";
-import { TimelineKind } from "./enums";
+import { EventKind, TimelineKind } from "./enums";
+import { locales } from "./locales";
 import {
   availableActions,
   buildTimeline,
@@ -11,6 +13,9 @@ import {
   permissionsFor,
   personName,
 } from "./utils";
+
+const translate = translatorFor(locales);
+const UNKNOWN = "Desconhecido";
 
 const at = (minutes: number) =>
   new Date(
@@ -85,12 +90,12 @@ const entry = (
 
 describe("personName", () => {
   it("returns the name of a known person", () => {
-    expect(personName(people, "consultant")).toBe("Marina");
+    expect(personName(people, "consultant", UNKNOWN)).toBe("Marina");
   });
 
   it("falls back for an unknown or missing person", () => {
-    expect(personName(people, "ghost")).toBe("Desconhecido");
-    expect(personName(people, null)).toBe("Desconhecido");
+    expect(personName(people, "ghost", UNKNOWN)).toBe(UNKNOWN);
+    expect(personName(people, null, UNKNOWN)).toBe(UNKNOWN);
   });
 });
 
@@ -115,6 +120,7 @@ describe("buildTimeline", () => {
       ],
       history: [],
       people,
+      unknownPerson: UNKNOWN,
     });
     const profiles = items.map((timelineItem) =>
       timelineItem.kind === TimelineKind.Message
@@ -135,6 +141,7 @@ describe("buildTimeline", () => {
       messages: [],
       history: [],
       people,
+      unknownPerson: UNKNOWN,
     });
     expect(first).toMatchObject({
       kind: TimelineKind.Message,
@@ -159,6 +166,7 @@ describe("buildTimeline", () => {
         }),
       ],
       people,
+      unknownPerson: UNKNOWN,
     });
     expect(items.map((timelineItem) => timelineItem.key)).toEqual([
       "description",
@@ -180,12 +188,17 @@ describe("buildTimeline", () => {
         }),
       ],
       people,
+      unknownPerson: UNKNOWN,
     });
     const event = items.find((timelineItem) => timelineItem.key === "h1");
     expect(event).toMatchObject({ kind: TimelineKind.Event });
-    expect(event?.text).toBe(
-      "Marina alterou o status de Em atendimento para Resolvido. Motivo: Correcao aplicada",
-    );
+    expect(event).toMatchObject({
+      event: EventKind.StatusChanged,
+      who: "Marina",
+      from: Status.InProgress,
+      to: Status.Resolved,
+      reason: "Correcao aplicada",
+    });
   });
 
   it("hides the assignment row when it is just taking the ticket from the queue", () => {
@@ -202,6 +215,7 @@ describe("buildTimeline", () => {
         entry("take", 5, {}),
       ],
       people,
+      unknownPerson: UNKNOWN,
     });
     expect(items.map((timelineItem) => timelineItem.key)).toEqual([
       "description",
@@ -223,10 +237,11 @@ describe("buildTimeline", () => {
         }),
       ],
       people,
+      unknownPerson: UNKNOWN,
     });
     expect(
-      items.find((timelineItem) => timelineItem.key === "assign")?.text,
-    ).toBe("Rafael assumiu o chamado.");
+      items.find((timelineItem) => timelineItem.key === "assign"),
+    ).toMatchObject({ event: EventKind.Assigned, who: "Rafael" });
   });
 
   it("ignores status entries that miss the from or to status", () => {
@@ -235,6 +250,7 @@ describe("buildTimeline", () => {
       messages: [],
       history: [entry("broken", 5, { de: null })],
       people,
+      unknownPerson: UNKNOWN,
     });
     expect(items.map((timelineItem) => timelineItem.key)).toEqual([
       "description",
@@ -247,6 +263,7 @@ describe("buildTimeline", () => {
       messages: [message("note", 10, { interna: true })],
       history: [],
       people,
+      unknownPerson: UNKNOWN,
     });
     expect(
       items.find((timelineItem) => timelineItem.key === "note"),
@@ -262,6 +279,7 @@ describe("buildTimeline", () => {
         messages: undefined,
         history: undefined,
         people,
+        unknownPerson: UNKNOWN,
       }),
     ).toHaveLength(1);
   });
@@ -299,7 +317,7 @@ describe("availableActions", () => {
 });
 
 describe("footerHint", () => {
-  const nameOf = (id: string | null) => personName(people, id);
+  const nameOf = (id: string | null) => personName(people, id, UNKNOWN);
   const hint = (
     overrides: Partial<Ticket>,
     flags: { isMine?: boolean; isClosed?: boolean; canTake?: boolean },
@@ -310,6 +328,7 @@ describe("footerHint", () => {
       isClosed: flags.isClosed ?? false,
       canTake: flags.canTake ?? false,
       nameOf,
+      translate,
     });
 
   it("invites to take an unassigned ticket of the own group", () => {
@@ -338,6 +357,14 @@ describe("footerHint", () => {
 
   it("names who is handling an active ticket of someone else", () => {
     expect(hint({}, {})).toBe("Atendido por Marina.");
+  });
+
+  it("writes the hints in English after the language changes", async () => {
+    await setLanguage(Language.EnUs);
+    expect(hint({}, {})).toBe("Handled by Marina.");
+    expect(hint({ responsavel_id: null }, { canTake: true })).toBe(
+      "Take the ticket to reply.",
+    );
   });
 });
 

@@ -1,6 +1,7 @@
 import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
+import { Language, setLanguage } from "@/i18n";
 import { consultantsOf, workloadByConsultant } from "@/domain/workload";
 import { rawData } from "@/test-data";
 import { renderWithProviders } from "@/test-utils";
@@ -113,5 +114,12 @@ describe("TeamBoard", () => {
     );
     expect(onShowUnassigned).toHaveBeenCalledWith(infra.id);
     expect(screen.getByText("Fila vazia")).toBeInTheDocument();
+  });
+
+  it("shows the board in English", async () => {
+    await setLanguage(Language.EnUs);
+    renderBoard();
+    expect(screen.getByText("35 unassigned")).toBeInTheDocument();
+    expect(screen.getAllByText("Overloaded")[0]).toBeInTheDocument();
   });
 });

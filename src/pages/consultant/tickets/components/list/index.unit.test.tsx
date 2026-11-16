@@ -2,6 +2,7 @@ import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { USERS } from "@/auth/users";
+import { Language, setLanguage } from "@/i18n";
 import { loadStoreAs, renderWithProviders } from "@/test-utils";
 import { MARINA_ID, rawData } from "@/test-data";
 import { TicketList } from ".";
@@ -113,5 +114,14 @@ describe("TicketList", () => {
   it("only renders the rows that fit, thanks to virtualization", () => {
     const { container } = renderList();
     expect(rowsOf(container).length).toBeLessThan(42);
+  });
+
+  it("shows the English text after switching the language", async () => {
+    await setLanguage(Language.EnUs);
+    renderList();
+    expect(
+      screen.getByPlaceholderText("Search by no., title or customer"),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/^Group queue \(/)).toBeInTheDocument();
   });
 });

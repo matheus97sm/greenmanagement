@@ -4,7 +4,7 @@ import { ticketsStore } from "@/store/ticketsStore";
 import { HELENA_ID, rawData } from "@/test-data";
 import { loadStoreAs } from "@/test-utils";
 import type { ListItem } from "./types";
-import { attentionRank, handlerLine, listItems, unreadLabel } from "./utils";
+import { attentionRank, listItems } from "./utils";
 
 const idOf = (numero: number) =>
   rawData.chamados.find((ticket) => ticket.numero === numero)!.id;
@@ -92,17 +92,5 @@ describe("attentionRank", () => {
 
   it("ranks news on a finished ticket above the quiet active ones", () => {
     expect(attentionRank(item(CustomerStage.Closed, 1))).toBe(1);
-  });
-});
-
-describe("handlerLine and unreadLabel", () => {
-  it("says who has the ticket, or that nobody does", () => {
-    expect(handlerLine("Marina Almeida")).toBe("Com Marina Almeida");
-    expect(handlerLine(null)).toBe("Ainda sem responsável");
-  });
-
-  it("uses the singular for one new message", () => {
-    expect(unreadLabel(1)).toBe("1 nova");
-    expect(unreadLabel(3)).toBe("3 novas");
   });
 });

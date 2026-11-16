@@ -1,6 +1,7 @@
 import { screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { Profile } from "@/domain/enums";
+import { Language, setLanguage } from "@/i18n";
 import { renderWithProviders } from "@/test-utils";
 import { MessageBubble } from ".";
 import type { Props } from "./types";
@@ -132,5 +133,16 @@ describe("MessageBubble", () => {
       expect(screen.getByText("Novo")).toBeInTheDocument();
       expect(screen.getByText("Nota interna")).toBeInTheDocument();
     });
+  });
+
+  it("shows the English text when the language changes", async () => {
+    await setLanguage(Language.EnUs);
+    renderWithProviders(
+      <MessageBubble {...base} internal highlight isOwn author="Marina" />,
+    );
+    expect(screen.getByText("You")).toBeInTheDocument();
+    expect(screen.getByText("Customer")).toBeInTheDocument();
+    expect(screen.getByText("Internal note")).toBeInTheDocument();
+    expect(screen.getByText("New")).toBeInTheDocument();
   });
 });

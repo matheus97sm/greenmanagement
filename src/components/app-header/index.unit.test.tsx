@@ -1,6 +1,7 @@
 import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
+import { Language, setLanguage } from "@/i18n";
 import { HELENA_ID, MARINA_ID, RICARDO_ID } from "@/test-data";
 import { renderWithProviders } from "@/test-utils";
 import { AppHeader } from ".";
@@ -61,5 +62,20 @@ describe("AppHeader", () => {
       screen.getByRole("link", { name: "Semana da equipe" }),
     );
     expect(router.state.location.pathname).toBe("/manager/dashboard");
+  });
+
+  it("shows the English text when the language changes", async () => {
+    await setLanguage(Language.EnUs);
+    renderHeader(RICARDO_ID, "/manager/tickets");
+    expect(
+      screen.getByRole("navigation", { name: "Pages" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "Team and tickets" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Manager")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Sign out" }),
+    ).toBeInTheDocument();
   });
 });

@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { USERS } from "@/auth/users";
 import { sendMessage } from "@/store/actions";
 import { ticketsStore } from "@/store/ticketsStore";
+import { Language, setLanguage } from "@/i18n";
 import { HELENA_ID, rawData } from "@/test-data";
 import { loadStoreAs, renderWithProviders } from "@/test-utils";
 import { Conversation } from ".";
@@ -45,6 +46,21 @@ describe("Conversation", () => {
   beforeEach(() => {
     loadStoreAs(HELENA_ID);
     vi.mocked(sendMessage).mockReset().mockResolvedValue(true);
+  });
+
+  it("shows the conversation in English", async () => {
+    await setLanguage(Language.EnUs);
+    renderConversation(10611);
+    expect(screen.getByText(/Opened on/)).toBeInTheDocument();
+    expect(
+      screen.getByPlaceholderText("Write your message (Ctrl+Enter sends)"),
+    ).toBeInTheDocument();
+  });
+
+  it("says so in English when the ticket is not found", async () => {
+    await setLanguage(Language.EnUs);
+    renderWithProviders(<Harness ticketId="unknown" />, { userId: HELENA_ID });
+    expect(screen.getByText("Ticket not found.")).toBeInTheDocument();
   });
 
   it("shows the title, when it was opened and where it stands", () => {

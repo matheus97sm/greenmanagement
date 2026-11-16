@@ -1,6 +1,7 @@
 import { screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it } from "vitest";
 import { USERS } from "@/auth/users";
+import { Language, setLanguage } from "@/i18n";
 import { HELENA_ID, rawData } from "@/test-data";
 import { loadStoreAs, renderWithProviders } from "@/test-utils";
 import { TicketSummary } from ".";
@@ -28,6 +29,20 @@ describe("TicketSummary", () => {
       screen.getByText("Marina Almeida está cuidando do seu chamado."),
     ).toBeInTheDocument();
     expect(screen.getByText("Quem está cuidando")).toBeInTheDocument();
+  });
+
+  it("says it in English without the internal terms", async () => {
+    await setLanguage(Language.EnUs);
+    const { container } = renderSummary(10611);
+    expect(screen.getByText("Being handled")).toBeInTheDocument();
+    expect(
+      screen.getByText("Marina Almeida is taking care of your ticket."),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Who is taking care of it")).toBeInTheDocument();
+    expect(screen.getByText("What has happened so far")).toBeInTheDocument();
+    expect(container.textContent).not.toMatch(
+      /Reason|queue|priority|SLA|category|internal/i,
+    );
   });
 
   it("makes clear when the team is waiting for her", () => {

@@ -2,6 +2,7 @@ import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { consultantsOf, workloadByConsultant } from "@/domain/workload";
+import { Language, setLanguage } from "@/i18n";
 import { reassignTickets } from "@/store/actions";
 import { RICARDO_ID, rawData } from "@/test-data";
 import { renderWithProviders } from "@/test-utils";
@@ -116,5 +117,12 @@ describe("ReassignModal", () => {
     expect(screen.getByText(/grupos diferentes/)).toBeInTheDocument();
     expect(screen.queryByLabelText(/Novo responsável/)).not.toBeInTheDocument();
     expect(confirm()).toBeDisabled();
+  });
+
+  it("shows the dialog in English", async () => {
+    await setLanguage(Language.EnUs);
+    renderModal();
+    expect(screen.getByText("Reassign 3 tickets")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Reassign" })).toBeDisabled();
   });
 });

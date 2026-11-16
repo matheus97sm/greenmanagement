@@ -5,12 +5,15 @@ import {
   useMantineColorScheme,
 } from "@mantine/core";
 import { IconMoon, IconSun } from "@tabler/icons-react";
+import { useTranslate } from "@/i18n";
+import { locales } from "./locales";
 
 export function ColorSchemeToggle() {
+  const translate = useTranslate(locales);
   const { setColorScheme } = useMantineColorScheme();
   const scheme = useComputedColorScheme("light");
   const dark = scheme === "dark";
-  const label = dark ? "Mudar para o tema claro" : "Mudar para o tema escuro";
+  const label = translate(dark ? "toLight" : "toDark");
 
   return (
     <Tooltip label={label}>

@@ -2,6 +2,7 @@ import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { USERS } from "@/auth/users";
+import { Language, setLanguage } from "@/i18n";
 import { ticketsStore } from "@/store/ticketsStore";
 import { HELENA_ID, rawData } from "@/test-data";
 import { loadStoreAs, renderWithProviders } from "@/test-utils";
@@ -37,6 +38,25 @@ describe("TicketList", () => {
   it("shows her four tickets, what needs her first", () => {
     const { container } = renderList();
     expect(numbersOf(container)).toEqual(["10613", "10614", "10611", "10612"]);
+  });
+
+  it("shows the list in English", async () => {
+    await setLanguage(Language.EnUs);
+    const { container } = renderList();
+    const [waiting, received] = rowsOf(container);
+    expect(within(waiting).getByText("Waiting for you")).toBeInTheDocument();
+    expect(waiting).toHaveTextContent("With Juliana Pereira");
+    expect(received).toHaveTextContent("No one assigned yet");
+    expect(
+      screen.getByPlaceholderText("Search by number or title"),
+    ).toBeInTheDocument();
+  });
+
+  it("counts the news in English", async () => {
+    await setLanguage(Language.EnUs);
+    ticketsStore.restoreRead({ [idOf(10611)]: "2026-10-20T00:00:00.000Z" });
+    renderList();
+    expect(screen.getByText("2 new")).toBeInTheDocument();
   });
 
   it("says in plain words where each one stands", () => {

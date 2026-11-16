@@ -1,8 +1,13 @@
 import type { Priority } from "@/domain/enums";
 import type { Category } from "@/domain/types";
-import { IMPACT_LABEL, IMPACT_PRIORITY } from "./constants";
+import { IMPACT_KEY, IMPACT_PRIORITY } from "./constants";
 import { Impact } from "./enums";
-import type { FormState, ImpactOption, TopicOption } from "./types";
+import type {
+  FormState,
+  ImpactOption,
+  ModalTranslate,
+  TopicOption,
+} from "./types";
 
 export function topicOptions(
   categories: Record<string, Category>,
@@ -12,10 +17,10 @@ export function topicOptions(
     .sort((first, second) => first.label.localeCompare(second.label, "pt"));
 }
 
-export function impactOptions(): ImpactOption[] {
+export function impactOptions(translate: ModalTranslate): ImpactOption[] {
   return Object.values(Impact).map((impact) => ({
     value: impact,
-    label: IMPACT_LABEL[impact],
+    label: translate(IMPACT_KEY[impact]),
   }));
 }
 

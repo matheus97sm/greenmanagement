@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { findTextLiterals } from "./test-literals";
 
 const modules = import.meta.glob<string>("/src/**/*.{ts,tsx}", {
   query: "?raw",
@@ -7,7 +8,7 @@ const modules = import.meta.glob<string>("/src/**/*.{ts,tsx}", {
 });
 
 const NOT_PRODUCTION =
-  /\.test\.tsx?$|\/test-(setup|utils|data)\.tsx?$|\/integration\//;
+  /\.test\.tsx?$|\/test-(setup|utils|data|literals)\.tsx?$|\/integration\//;
 
 const IMPORT =
   /(?:^|\n)\s*(?:import|export)\s[^;]*?\sfrom\s+["']([^"']+)["']|(?:^|\n)\s*import\s+["']([^"']+)["']/g;
@@ -102,6 +103,7 @@ describe("the checker itself", () => {
       "/src/server/",
       "/src/store/",
       "/src/lib/",
+      "/src/i18n/",
       "/src/components/",
       "/src/pages/",
     ]) {
@@ -169,6 +171,28 @@ describe("layers (ADR 0002)", () => {
           "/src/pages/",
           "/src/components/",
         ]),
+      ),
+    ).toEqual([]);
+  });
+
+  it("keeps i18n free of the store, the server and the screen", () => {
+    expect(
+      violations(within("/src/i18n/"), (_, imported) =>
+        startsWithAny(imported, [
+          "/src/store/",
+          "/src/server/",
+          "/src/pages/",
+          "/src/components/",
+        ]),
+      ),
+    ).toEqual([]);
+  });
+
+  it("keeps the domain and the simulated server from writing for the screen", () => {
+    expect(
+      violations(
+        [...within("/src/domain/"), ...within("/src/server/")],
+        (_, imported) => imported.startsWith("/src/i18n/"),
       ),
     ).toEqual([]);
   });
@@ -315,5 +339,27 @@ describe("enums (ADR 0008)", () => {
       .filter(([, text]) => loose.test(text))
       .map(([path]) => path);
     expect(offenders).toEqual([]);
+  });
+});
+
+describe("interface text (ADR 0021)", () => {
+  const NAMES_BRAND_AND_SYSTEM_DATA = new Set([
+    "Marina Almeida",
+    "Ricardo Monteiro",
+    "Helena Fernandes",
+    "Green Management",
+    "Assumido para atendimento",
+    "Cliente respondeu",
+  ]);
+
+  it("keeps every text in a locales.ts, never written in the code", () => {
+    const found = sources
+      .filter((source) => !source.path.endsWith("/locales.ts"))
+      .flatMap((source) =>
+        findTextLiterals(source.path, source.text)
+          .filter((item) => !NAMES_BRAND_AND_SYSTEM_DATA.has(item.text))
+          .map((item) => `${source.path}:${item.line} ${item.text}`),
+      );
+    expect(found, found.join("\n")).toEqual([]);
   });
 });

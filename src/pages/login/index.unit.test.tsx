@@ -1,7 +1,9 @@
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
+import { Role } from "@/auth/enums";
 import { DEMO_PASSWORD, USERS } from "@/auth/users";
+import { Language, setLanguage } from "@/i18n";
 import { MARINA_ID } from "@/test-data";
 import { renderRoutes } from "@/test-utils";
 import { LoginPage } from ".";
@@ -39,7 +41,7 @@ describe("login page", () => {
   it("rejects a wrong password and stays on the page", async () => {
     const user = userEvent.setup();
     const { router } = renderRoutes(routes);
-    await user.type(email(), demo("consultant").email);
+    await user.type(email(), demo(Role.Consultant).email);
     await user.type(password(), "errada");
     await user.click(submit());
 
@@ -60,7 +62,7 @@ describe("login page", () => {
   it("signs the consultant in and sends her to her own page", async () => {
     const user = userEvent.setup();
     const { router } = renderRoutes(routes);
-    await user.type(email(), demo("consultant").email);
+    await user.type(email(), demo(Role.Consultant).email);
     await user.type(password(), DEMO_PASSWORD);
     await user.click(submit());
 
@@ -74,7 +76,7 @@ describe("login page", () => {
   it("fills the form when a demo user is clicked, and sends each profile home", async () => {
     const user = userEvent.setup();
     const { router } = renderRoutes(routes);
-    const manager = demo("manager");
+    const manager = demo(Role.Manager);
 
     await user.click(screen.getByText(new RegExp(manager.name)));
     expect(email()).toHaveValue(manager.email);
@@ -94,9 +96,19 @@ describe("login page", () => {
     await user.click(submit());
     expect(screen.getByText("E-mail ou senha inválidos.")).toBeInTheDocument();
 
-    await user.click(screen.getByText(new RegExp(demo("customer").name)));
+    await user.click(screen.getByText(new RegExp(demo(Role.Customer).name)));
     expect(
       screen.queryByText("E-mail ou senha inválidos."),
     ).not.toBeInTheDocument();
+  });
+
+  it("shows the English text after switching the language", async () => {
+    await setLanguage(Language.EnUs);
+    renderRoutes(routes);
+    expect(screen.getByRole("button", { name: "Sign in" })).toBeInTheDocument();
+    expect(screen.getByText("Handles tickets")).toBeInTheDocument();
+    expect(
+      screen.getByText(`Everyone's password: ${DEMO_PASSWORD}`),
+    ).toBeInTheDocument();
   });
 });

@@ -1,11 +1,13 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import type { ConsultantWeek } from "@/domain/activity";
+import { Language, setLanguage, translatorFor } from "@/i18n";
 import { LoadLevel, Profile } from "@/domain/enums";
 import type { Group, HistoryEntry, Message } from "@/domain/types";
 import { weekRange } from "@/domain/week";
 import { consultantsOf } from "@/domain/workload";
 import { rawData } from "@/test-data";
 import { SortKey } from "./enums";
+import { locales } from "./locales";
 import type { Row } from "./types";
 import {
   buildRows,
@@ -16,6 +18,7 @@ import {
 } from "./utils";
 
 const HOUR = 3_600_000;
+const translate = translatorFor(locales);
 const NOW = Date.parse("2026-11-03T13:00:00Z");
 
 function row(
@@ -59,7 +62,7 @@ const names = (rows: Row[]) =>
   rows.map((currentRow) => currentRow.consultant.nome);
 
 describe("weekOptions", () => {
-  const options = weekOptions(NOW);
+  const options = weekOptions(NOW, translate, Language.PtBr);
 
   it("offers the current week and the seven before it", () => {
     expect(options).toHaveLength(8);
@@ -87,12 +90,37 @@ describe("weekOptions", () => {
 
 describe("dayHeaders", () => {
   it("labels the five working days with their dates", () => {
-    expect(dayHeaders(Date.parse("2026-11-02T03:00:00Z"))).toEqual([
+    expect(
+      dayHeaders(Date.parse("2026-11-02T03:00:00Z"), translate, Language.PtBr),
+    ).toEqual([
       "Seg 02/11",
       "Ter 03/11",
       "Qua 04/11",
       "Qui 05/11",
       "Sex 06/11",
+    ]);
+  });
+});
+
+describe("in English", () => {
+  beforeEach(() => setLanguage(Language.EnUs));
+
+  it("names the weeks in English", () => {
+    const options = weekOptions(NOW, translate, Language.EnUs);
+    expect(options[0].label).toBe("This week (11/02 to 11/08)");
+    expect(options[1].label).toBe("Last week (10/26 to 11/01)");
+    expect(options[2].label).toBe("Week of 10/19 to 10/25");
+  });
+
+  it("labels the working days in English", () => {
+    expect(
+      dayHeaders(Date.parse("2026-11-02T03:00:00Z"), translate, Language.EnUs),
+    ).toEqual([
+      "Mon 11/02",
+      "Tue 11/03",
+      "Wed 11/04",
+      "Thu 11/05",
+      "Fri 11/06",
     ]);
   });
 });

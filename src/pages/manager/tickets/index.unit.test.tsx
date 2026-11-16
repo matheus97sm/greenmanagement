@@ -2,6 +2,7 @@ import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { Status } from "@/domain/enums";
+import { Language, setLanguage } from "@/i18n";
 import { isActive } from "@/domain/status";
 import { riskTickets } from "@/domain/workload";
 import { reassignTickets } from "@/store/actions";
@@ -35,6 +36,15 @@ describe("manager tickets page", () => {
     vi.mocked(reassignTickets)
       .mockReset()
       .mockResolvedValue({ done: 1, failed: 0 });
+  });
+
+  it("shows the page in English when the language changes", async () => {
+    await setLanguage(Language.EnUs);
+    renderPage();
+    expect(
+      screen.getByRole("heading", { name: "Team and tickets" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^Reassign/ })).toBeDisabled();
   });
 
   it("starts with the figures of the whole team", () => {

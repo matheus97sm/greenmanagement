@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { Role } from "./auth/enums";
-import { homePath, MANAGER_DASHBOARD_PATH, navItemsFor } from "./paths";
+import {
+  homePath,
+  MANAGER_DASHBOARD_PATH,
+  NavPage,
+  navItemsFor,
+} from "./paths";
 
 describe("homePath", () => {
   it("sends each profile to its own tickets area", () => {
@@ -13,8 +18,8 @@ describe("homePath", () => {
 describe("navItemsFor", () => {
   it("gives the manager the team view and the weekly dashboard", () => {
     expect(navItemsFor(Role.Manager)).toEqual([
-      { label: "Equipe e chamados", to: "/manager/tickets" },
-      { label: "Semana da equipe", to: MANAGER_DASHBOARD_PATH },
+      { page: NavPage.Team, to: "/manager/tickets" },
+      { page: NavPage.Dashboard, to: MANAGER_DASHBOARD_PATH },
     ]);
   });
 

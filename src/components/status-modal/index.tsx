@@ -1,12 +1,15 @@
 import { useState } from "react";
 import { Button, Group, Modal, Select, Stack, Textarea } from "@mantine/core";
 import type { Status } from "@/domain/enums";
-import { STATUS_LABEL } from "@/domain/status";
+import { useLabels, useTranslate } from "@/i18n";
 import { changeStatus } from "@/store/actions";
+import { locales } from "./locales";
 import type { Props } from "./types";
 import { targetOptions } from "./utils";
 
 export function StatusModal({ ticket, userId, reopen, onClose }: Props) {
+  const translate = useTranslate(locales);
+  const labels = useLabels();
   const options = targetOptions(ticket.status, reopen);
   const [to, setTo] = useState<Status | null>(options[0] ?? null);
   const [reason, setReason] = useState("");
@@ -29,24 +32,24 @@ export function StatusModal({ ticket, userId, reopen, onClose }: Props) {
     <Modal
       opened
       onClose={onClose}
-      title={reopen ? "Reabrir chamado" : "Alterar status"}
+      title={translate(reopen ? "reopenTitle" : "changeTitle")}
     >
       <Stack>
         {!reopen && (
           <Select
-            label="Novo status"
+            label={translate("newStatus")}
             allowDeselect={false}
             value={to}
             onChange={(value) => setTo(value as Status | null)}
             data={options.map((status) => ({
               value: status,
-              label: STATUS_LABEL[status],
+              label: labels.status(status),
             }))}
           />
         )}
         <Textarea
-          label="Motivo"
-          description="Registrado no histórico do chamado."
+          label={translate("reason")}
+          description={translate("reasonHint")}
           required
           autosize
           minRows={3}
@@ -56,14 +59,14 @@ export function StatusModal({ ticket, userId, reopen, onClose }: Props) {
         />
         <Group justify="flex-end">
           <Button variant="default" onClick={onClose}>
-            Cancelar
+            {translate("cancel")}
           </Button>
           <Button
             onClick={submit}
             loading={saving}
             disabled={!to || !reason.trim()}
           >
-            {reopen ? "Reabrir" : "Confirmar"}
+            {translate(reopen ? "reopen" : "confirm")}
           </Button>
         </Group>
       </Stack>

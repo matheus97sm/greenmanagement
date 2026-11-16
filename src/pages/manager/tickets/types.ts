@@ -1,5 +1,7 @@
 import type { Person, Ticket } from "@/domain/types";
+import type { Language, Translate } from "@/i18n";
 import type { FocusKind } from "./enums";
+import type { locales } from "./locales";
 
 export type Focus =
   | { kind: FocusKind.Risk }
@@ -27,6 +29,7 @@ export interface ViewOptionsInput {
   unassignedCount: number;
   consultant: Person | undefined;
   consultantCount: number;
+  translate: Translate<(typeof locales)[Language.PtBr]>;
 }
 
 export interface ViewOption {

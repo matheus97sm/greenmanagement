@@ -14,13 +14,15 @@ import { teamWeek } from "@/domain/activity";
 import { groupIdsOf } from "@/domain/rules";
 import { weekRange } from "@/domain/week";
 import { consultantsOf } from "@/domain/workload";
+import { useLanguage, useTranslate } from "@/i18n";
 import { useNow } from "@/hooks/useNow";
 import { LoadStatus } from "@/store/enums";
 import { useTickets } from "@/store/useTickets";
 import { WeekSummary } from "./components/week-summary";
 import { WeekTable } from "./components/week-table";
-import { ALL_GROUPS, SORT_LABEL } from "./constants";
+import { ALL_GROUPS, SORT_LABEL_KEY } from "./constants";
 import { SortKey } from "./enums";
+import { locales } from "./locales";
 import {
   buildRows,
   dayHeaders,
@@ -30,6 +32,8 @@ import {
 } from "./utils";
 
 export function DashboardPage() {
+  const translate = useTranslate(locales);
+  const { language } = useLanguage();
   const currentUser = useCurrentUser();
   const state = useTickets();
   const now = useNow();
@@ -89,7 +93,7 @@ export function DashboardPage() {
   const team = useMemo(() => teamWeek(rows.map((row) => row.week)), [rows]);
 
   if (state.status === LoadStatus.Error) {
-    return <Alert color="red">Não foi possível carregar os dados.</Alert>;
+    return <Alert color="red">{translate("loadError")}</Alert>;
   }
 
   if (state.status !== LoadStatus.Ready) {
@@ -104,32 +108,30 @@ export function DashboardPage() {
     <Stack gap="md">
       <Group justify="space-between" align="flex-end">
         <div>
-          <Title order={2}>Semana da equipe</Title>
+          <Title order={2}>{translate("title")}</Title>
           <Text size="sm" c="dimmed" maw={680}>
-            Tempo sem chamado é o expediente (segunda a sexta, das 8h às 18h,
-            horário de Brasília) em que o consultor não teve nenhum chamado
-            ativo atribuído. Chamados aguardando cliente contam como atribuídos.
+            {translate("description")}
           </Text>
         </div>
         <Group gap="sm">
           <Select
             size="sm"
             w={260}
-            label="Semana"
+            label={translate("weekLabel")}
             allowDeselect={false}
             value={weeksAgo}
             onChange={(value) => setWeeksAgo(value ?? "0")}
-            data={weekOptions(now)}
+            data={weekOptions(now, translate, language)}
           />
           <Select
             size="sm"
             w={180}
-            label="Grupo"
+            label={translate("groupLabel")}
             allowDeselect={false}
             value={groupFilter}
             onChange={(value) => setGroupFilter(value ?? ALL_GROUPS)}
             data={[
-              { value: ALL_GROUPS, label: "Todos os grupos" },
+              { value: ALL_GROUPS, label: translate("allGroups") },
               ...groups.map((group) => ({
                 value: group.id,
                 label: group.nome,
@@ -139,20 +141,23 @@ export function DashboardPage() {
           <Select
             size="sm"
             w={210}
-            label="Ordenar por"
+            label={translate("sortLabel")}
             allowDeselect={false}
             value={sortKey}
             onChange={(value) => setSortKey((value as SortKey) ?? SortKey.Idle)}
             data={Object.values(SortKey).map((key) => ({
               value: key,
-              label: SORT_LABEL[key],
+              label: translate(SORT_LABEL_KEY[key]),
             }))}
           />
         </Group>
       </Group>
 
       <WeekSummary team={team} mostIdle={mostIdle(rows)} />
-      <WeekTable rows={sorted} dayHeaders={dayHeaders(range.start)} />
+      <WeekTable
+        rows={sorted}
+        dayHeaders={dayHeaders(range.start, translate, language)}
+      />
     </Stack>
   );
 }

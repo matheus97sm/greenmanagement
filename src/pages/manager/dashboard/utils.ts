@@ -1,33 +1,49 @@
+import type { Language } from "@/i18n";
 import { idleShare, weekByConsultant } from "@/domain/activity";
 import { BUSINESS_TIME_ZONE, weekRange } from "@/domain/week";
 import { workloadByConsultant } from "@/domain/workload";
 import { formatDayMonth } from "@/lib/format";
-import { DAY_LABELS, WEEKS_BACK } from "./constants";
+import { DAY_LABEL_KEYS, WEEKS_BACK } from "./constants";
 import { SortKey } from "./enums";
-import type { BuildRowsInput, Row, WeekOption } from "./types";
+import type {
+  BuildRowsInput,
+  DashboardTranslate,
+  Row,
+  WeekOption,
+} from "./types";
 
 const DAY = 24 * 3_600_000;
 
-const dayMonth = (timestamp: number) =>
-  formatDayMonth(timestamp, BUSINESS_TIME_ZONE);
+const dayMonth = (timestamp: number, language: Language) =>
+  formatDayMonth(timestamp, BUSINESS_TIME_ZONE, language);
 
-export function weekOptions(now: number, count = WEEKS_BACK): WeekOption[] {
+export function weekOptions(
+  now: number,
+  translate: DashboardTranslate,
+  language: Language,
+  count = WEEKS_BACK,
+): WeekOption[] {
   return Array.from({ length: count }, (_, ago) => {
     const { start } = weekRange(now, ago);
-    const period = `${dayMonth(start)} a ${dayMonth(start + 6 * DAY)}`;
-    const label =
-      ago === 0
-        ? `Esta semana (${period})`
-        : ago === 1
-          ? `Semana passada (${period})`
-          : `Semana de ${period}`;
-    return { value: String(ago), label };
+    const period = translate("period", {
+      start: dayMonth(start, language),
+      end: dayMonth(start + 6 * DAY, language),
+    });
+    const key = ago === 0 ? "thisWeek" : ago === 1 ? "lastWeek" : "weekOf";
+    return { value: String(ago), label: translate(key, { period }) };
   });
 }
 
-export function dayHeaders(weekStartTs: number): string[] {
-  return DAY_LABELS.map(
-    (label, day) => `${label} ${dayMonth(weekStartTs + day * DAY)}`,
+export function dayHeaders(
+  weekStartTs: number,
+  translate: DashboardTranslate,
+  language: Language,
+): string[] {
+  return DAY_LABEL_KEYS.map((key, day) =>
+    translate("dayHeader", {
+      day: translate(key),
+      date: dayMonth(weekStartTs + day * DAY, language),
+    }),
   );
 }
 

@@ -2,6 +2,7 @@ import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useCallback, useState } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { Language, setLanguage } from "@/i18n";
 import { loadStoreAs, renderWithProviders } from "@/test-utils";
 import { RICARDO_ID, rawData } from "@/test-data";
 import { TicketQueue } from ".";
@@ -74,6 +75,14 @@ describe("TicketQueue", () => {
     expect(row).toHaveTextContent(`#10503 · ${ticket.titulo}`);
     expect(row).toHaveTextContent(requester.nome);
     expect(row).toHaveTextContent(`com ${owner.nome}`);
+  });
+
+  it("shows the row texts in English", async () => {
+    await setLanguage(Language.EnUs);
+    const queued = rawData.chamados.find((ticket) => !ticket.responsavel_id)!;
+    const { container } = renderQueue({ tickets: [queued] });
+    expect(rowsOf(container)[0]).toHaveTextContent("unassigned");
+    expect(screen.getByText("Select all")).toBeInTheDocument();
   });
 
   it("says when nobody has the ticket", () => {

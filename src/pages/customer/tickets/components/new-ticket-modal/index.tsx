@@ -9,16 +9,19 @@ import {
   Textarea,
   TextInput,
 } from "@mantine/core";
+import { useTranslate } from "@/i18n";
 import { similarTickets } from "@/domain/similarity";
 import { createTicket } from "@/store/actions";
 import { useTickets } from "@/store/useTickets";
 import { SimilarTickets } from "../similar-tickets";
 import { DEFAULT_IMPACT } from "./constants";
 import { Impact } from "./enums";
+import { locales } from "./locales";
 import type { Props } from "./types";
 import { impactOptions, isComplete, priorityOf, topicOptions } from "./utils";
 
 export function NewTicketModal({ currentUser, onClose, onOpenTicket }: Props) {
+  const translate = useTranslate(locales);
   const state = useTickets();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -51,19 +54,19 @@ export function NewTicketModal({ currentUser, onClose, onOpenTicket }: Props) {
   };
 
   return (
-    <Modal opened onClose={onClose} title="Novo chamado" size="lg">
+    <Modal opened onClose={onClose} title={translate("modalTitle")} size="lg">
       <Stack>
         <TextInput
-          label="Resumo do problema"
-          placeholder="Ex.: A VPN não liga"
+          label={translate("titleLabel")}
+          placeholder={translate("titlePlaceholder")}
           required
           data-autofocus
           value={title}
           onChange={(event) => setTitle(event.currentTarget.value)}
         />
         <Textarea
-          label="O que está acontecendo?"
-          description="Quanto mais detalhes, mais rápido conseguimos ajudar."
+          label={translate("descriptionLabel")}
+          description={translate("descriptionHint")}
           required
           autosize
           minRows={3}
@@ -73,8 +76,8 @@ export function NewTicketModal({ currentUser, onClose, onOpenTicket }: Props) {
         />
         <SimilarTickets hits={hits} onOpen={onOpenTicket} />
         <Select
-          label="Sobre o quê?"
-          placeholder="Escolha um assunto"
+          label={translate("topicLabel")}
+          placeholder={translate("topicPlaceholder")}
           required
           allowDeselect={false}
           data={topics}
@@ -82,12 +85,12 @@ export function NewTicketModal({ currentUser, onClose, onOpenTicket }: Props) {
           onChange={setTopic}
         />
         <Radio.Group
-          label="Quanto isso atrapalha o seu trabalho?"
+          label={translate("impactLabel")}
           value={impact}
           onChange={(value) => setImpact(value as Impact)}
         >
           <Stack gap="xs" mt="xs">
-            {impactOptions().map((option) => (
+            {impactOptions(translate).map((option) => (
               <Radio
                 key={option.value}
                 value={option.value}
@@ -98,14 +101,14 @@ export function NewTicketModal({ currentUser, onClose, onOpenTicket }: Props) {
         </Radio.Group>
         <Group justify="flex-end">
           <Button variant="default" onClick={onClose}>
-            Cancelar
+            {translate("cancel")}
           </Button>
           <Button
             onClick={submit}
             loading={saving}
             disabled={!isComplete({ title, description, topic })}
           >
-            Abrir chamado
+            {translate("submit")}
           </Button>
         </Group>
       </Stack>

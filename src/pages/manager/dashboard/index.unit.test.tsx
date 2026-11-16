@@ -1,6 +1,7 @@
 import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it } from "vitest";
+import { Language, setLanguage } from "@/i18n";
 import { loadStoreAs, renderWithProviders } from "@/test-utils";
 import { RICARDO_ID } from "@/test-data";
 import { DashboardPage } from ".";
@@ -38,6 +39,16 @@ describe("manager weekly dashboard", () => {
     ).toBeInTheDocument();
     expect(screen.getByText(/das 8h às 18h/)).toBeInTheDocument();
     expect(screen.getByText(/aguardando cliente contam/)).toBeInTheDocument();
+  });
+
+  it("shows the page in English when the language is switched", async () => {
+    await setLanguage(Language.EnUs);
+    renderPage();
+    expect(
+      screen.getByRole("heading", { name: "Team week" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/8am to 6pm/)).toBeInTheDocument();
+    expect(screen.getAllByLabelText("Sort by")[0]).toBeInTheDocument();
   });
 
   it("shows the twelve consultants, with their working days of the week", () => {

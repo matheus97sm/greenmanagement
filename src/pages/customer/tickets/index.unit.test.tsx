@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createTicket } from "@/store/actions";
 import { LoadStatus } from "@/store/enums";
 import { ticketsStore } from "@/store/ticketsStore";
+import { Language, setLanguage } from "@/i18n";
 import { HELENA_ID, rawData } from "@/test-data";
 import { loadStoreAs, renderWithProviders } from "@/test-utils";
 import { TicketsPage } from ".";
@@ -64,6 +65,20 @@ describe("customer tickets page", () => {
         screen.getByRole("button", { name: "Novo chamado" }),
       ).toBeInTheDocument();
       expect(rowsOf(container)).toHaveLength(4);
+    });
+
+    it("speaks English when the language is English", async () => {
+      await setLanguage(Language.EnUs);
+      renderPage();
+      expect(
+        screen.getByRole("heading", { name: "My tickets" }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "New ticket" }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText("Pick a ticket from the list to see how it is going."),
+      ).toBeInTheDocument();
     });
 
     it("asks her to pick a ticket before any is open", () => {

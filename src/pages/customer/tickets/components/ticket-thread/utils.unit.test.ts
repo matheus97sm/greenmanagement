@@ -1,8 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { Profile } from "@/domain/enums";
 import type { Message, Person, Ticket } from "@/domain/types";
+import { Language, setLanguage, translatorFor } from "@/i18n";
 import { HELENA_ID, rawData } from "@/test-data";
+import { locales } from "./locales";
 import { threadItems } from "./utils";
+
+const translate = translatorFor(locales);
 
 const people: Record<string, Person> = Object.fromEntries(
   rawData.usuarios.map((person) => [person.id, person]),
@@ -35,6 +39,7 @@ const items = (
     people,
     meId: HELENA_ID,
     since,
+    translate,
   });
 };
 
@@ -106,6 +111,14 @@ describe("threadItems", () => {
     expect(list.at(-1)).toMatchObject({ author: "Equipe", role: undefined });
   });
 
+  it("names an unknown author in English when the language is English", async () => {
+    await setLanguage(Language.EnUs);
+    const list = items(10611, "2026-12-01T00:00:00Z", [
+      { autor_id: "nobody", criada_em: "2026-11-03T11:00:00Z" },
+    ]);
+    expect(list.at(-1)?.author).toBe("Team");
+  });
+
   it("copes with a ticket that has no messages", () => {
     const list = threadItems({
       ticket: byNumber(10614),
@@ -113,6 +126,7 @@ describe("threadItems", () => {
       people,
       meId: HELENA_ID,
       since: "2026-01-01T00:00:00Z",
+      translate,
     });
     expect(list.map((threadItem) => threadItem.key)).toEqual(["description"]);
   });

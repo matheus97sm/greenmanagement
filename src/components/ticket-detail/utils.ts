@@ -1,9 +1,8 @@
 import { Role } from "@/auth/enums";
 import { HistoryType, Status } from "@/domain/enums";
-import { isReopen, STATUS_LABEL, TRANSITIONS } from "@/domain/status";
+import { isReopen, TRANSITIONS } from "@/domain/status";
 import type { Person } from "@/domain/types";
-import { UNKNOWN_PERSON } from "./constants";
-import { TimelineKind } from "./enums";
+import { EventKind, TimelineKind } from "./enums";
 import type {
   Actions,
   BuildTimelineInput,
@@ -16,8 +15,9 @@ import type {
 export function personName(
   people: Record<string, Person>,
   id: string | null,
+  unknownPerson: string,
 ): string {
-  return (id && people[id]?.nome) || UNKNOWN_PERSON;
+  return (id && people[id]?.nome) || unknownPerson;
 }
 
 export function isClosedStatus(status: Status): boolean {
@@ -29,6 +29,7 @@ export function buildTimeline({
   messages,
   history,
   people,
+  unknownPerson,
 }: BuildTimelineInput): TimelineItem[] {
   const entries = history ?? [];
 
@@ -65,7 +66,7 @@ export function buildTimeline({
       internal: message.interna,
     })),
     ...entries.flatMap((historyEntry): TimelineItem[] => {
-      const who = personName(people, historyEntry.usuario_id);
+      const who = personName(people, historyEntry.usuario_id, unknownPerson);
       if (historyEntry.tipo === HistoryType.Assignment) {
         if (
           takenAt.has(`${historyEntry.usuario_id}|${historyEntry.ocorrido_em}`)
@@ -76,7 +77,11 @@ export function buildTimeline({
             kind: TimelineKind.Event,
             key: historyEntry.id,
             at: historyEntry.ocorrido_em,
-            text: `${who} assumiu o chamado.`,
+            event: EventKind.Assigned,
+            who,
+            from: null,
+            to: null,
+            reason: null,
           },
         ];
       }
@@ -86,7 +91,11 @@ export function buildTimeline({
           kind: TimelineKind.Event,
           key: historyEntry.id,
           at: historyEntry.ocorrido_em,
-          text: `${who} alterou o status de ${STATUS_LABEL[historyEntry.de]} para ${STATUS_LABEL[historyEntry.para]}. Motivo: ${historyEntry.motivo ?? "não informado"}`,
+          event: EventKind.StatusChanged,
+          who,
+          from: historyEntry.de,
+          to: historyEntry.para,
+          reason: historyEntry.motivo,
         },
       ];
     }),
@@ -131,16 +140,15 @@ export function footerHint({
   isClosed,
   canTake,
   nameOf,
+  translate,
 }: FooterHintInput): string {
   if (!ticket.responsavel_id) {
-    return canTake
-      ? "Pegue o chamado para responder."
-      : "Este chamado ainda não tem responsável.";
+    return canTake ? translate("hintTake") : translate("hintNoOwner");
   }
   if (isClosed) {
     return isMine
-      ? "Chamado encerrado. Reabra para voltar a responder."
-      : `Chamado encerrado (atendido por ${nameOf(ticket.responsavel_id)}).`;
+      ? translate("hintClosedMine")
+      : translate("hintClosedOther", { name: nameOf(ticket.responsavel_id) });
   }
-  return `Atendido por ${nameOf(ticket.responsavel_id)}.`;
+  return translate("hintHandledBy", { name: nameOf(ticket.responsavel_id) });
 }

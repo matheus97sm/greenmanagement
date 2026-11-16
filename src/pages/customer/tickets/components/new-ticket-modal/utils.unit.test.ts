@@ -1,10 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { Priority } from "@/domain/enums";
 import type { Category } from "@/domain/types";
+import { Language, setLanguage, translatorFor } from "@/i18n";
 import { rawData } from "@/test-data";
-import { IMPACT_LABEL, IMPACT_PRIORITY } from "./constants";
+import { IMPACT_KEY, IMPACT_PRIORITY } from "./constants";
 import { Impact } from "./enums";
+import { locales } from "./locales";
 import { impactOptions, isComplete, priorityOf, topicOptions } from "./utils";
+
+const translate = translatorFor(locales);
 
 const categories: Record<string, Category> = Object.fromEntries(
   rawData.categorias.map((category) => [category.id, category]),
@@ -50,7 +54,7 @@ describe("topicOptions", () => {
 describe("impact", () => {
   it("has a question in plain words for every level", () => {
     for (const impact of Object.values(Impact)) {
-      expect(IMPACT_LABEL[impact]).toBeTruthy();
+      expect(translate(IMPACT_KEY[impact])).toBeTruthy();
     }
   });
 
@@ -67,16 +71,25 @@ describe("impact", () => {
   });
 
   it("offers the answers from the most to the least serious", () => {
-    expect(impactOptions().map((impactOption) => impactOption.value)).toEqual([
-      Impact.Everyone,
-      Impact.Blocked,
-      Impact.Slows,
-      Impact.CanWait,
-    ]);
+    expect(
+      impactOptions(translate).map((impactOption) => impactOption.value),
+    ).toEqual([Impact.Everyone, Impact.Blocked, Impact.Slows, Impact.CanWait]);
+  });
+
+  it("words the answers in English when the language is English", async () => {
+    await setLanguage(Language.EnUs);
+    expect(
+      impactOptions(translate).map((impactOption) => impactOption.label),
+    ).toContain("I cannot work");
+    for (const option of impactOptions(translate)) {
+      expect(option.label).not.toMatch(
+        /critical|high|medium|low|priority|SLA/i,
+      );
+    }
   });
 
   it("does not use the internal words in the labels", () => {
-    for (const option of impactOptions()) {
+    for (const option of impactOptions(translate)) {
       expect(option.label).not.toMatch(
         /crítica|alta|média|baixa|prioridade|SLA/i,
       );

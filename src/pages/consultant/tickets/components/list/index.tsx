@@ -14,17 +14,21 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import { SlaBadge } from "@/components/sla-badge";
 import { StatusBadge } from "@/components/status-badge";
 import { pausedSince } from "@/domain/rules";
+import { useLabels, useTranslate } from "@/i18n";
 import { slaInfo } from "@/domain/sla";
 import { isActive } from "@/domain/status";
 import { useNow } from "@/hooks/useNow";
 import { unreadCount } from "@/store/ticketsStore";
 import { useTickets } from "@/store/useTickets";
+import { locales } from "./locales";
 import { ROW_HEIGHT, ROW_OVERSCAN } from "./constants";
 import { StatusOption, Tab } from "./enums";
 import type { Props, StatusFilter } from "./types";
 import { selectRows, splitTickets, statusFilterOptions } from "./utils";
 
 export function TicketList({ currentUser, selectedId, onSelect }: Props) {
+  const translate = useTranslate(locales);
+  const labels = useLabels();
   const state = useTickets();
   const now = useNow();
   const [tab, setTab] = useState<Tab>(Tab.Mine);
@@ -71,15 +75,21 @@ export function TicketList({ currentUser, selectedId, onSelect }: Props) {
         value={tab}
         onChange={(value) => setTab(value as Tab)}
         data={[
-          { value: Tab.Mine, label: `Meus (${myActiveCount})` },
-          { value: Tab.Queue, label: `Fila do grupo (${queue.length})` },
+          {
+            value: Tab.Mine,
+            label: translate("tabMine", { count: myActiveCount }),
+          },
+          {
+            value: Tab.Queue,
+            label: translate("tabQueue", { count: queue.length }),
+          },
         ]}
       />
       <Group gap="xs" wrap="nowrap">
         <TextInput
           flex={1}
           size="xs"
-          placeholder="Buscar por nº, título ou cliente"
+          placeholder={translate("searchPlaceholder")}
           leftSection={<IconSearch size={14} />}
           value={search}
           onChange={(event) => setSearch(event.currentTarget.value)}
@@ -92,7 +102,7 @@ export function TicketList({ currentUser, selectedId, onSelect }: Props) {
           onChange={(value) =>
             setStatusFilter((value as StatusFilter) ?? StatusOption.Active)
           }
-          data={statusFilterOptions()}
+          data={statusFilterOptions(translate, labels.status)}
         />
       </Group>
 
@@ -108,7 +118,7 @@ export function TicketList({ currentUser, selectedId, onSelect }: Props) {
       >
         {rows.length === 0 ? (
           <Text c="dimmed" size="sm" ta="center" p="lg">
-            Nenhum chamado por aqui.
+            {translate("empty")}
           </Text>
         ) : (
           <div

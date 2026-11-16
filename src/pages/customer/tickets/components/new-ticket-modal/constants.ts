@@ -1,11 +1,12 @@
 import { Priority } from "@/domain/enums";
 import { Impact } from "./enums";
+import type { ImpactKey } from "./types";
 
-export const IMPACT_LABEL: Record<Impact, string> = {
-  [Impact.Everyone]: "Toda a empresa está parada",
-  [Impact.Blocked]: "Não consigo trabalhar",
-  [Impact.Slows]: "Atrapalha, mas consigo trabalhar",
-  [Impact.CanWait]: "Pode esperar",
+export const IMPACT_KEY: Record<Impact, ImpactKey> = {
+  [Impact.Everyone]: "impactEveryone",
+  [Impact.Blocked]: "impactBlocked",
+  [Impact.Slows]: "impactSlows",
+  [Impact.CanWait]: "impactCanWait",
 };
 
 export const IMPACT_PRIORITY: Record<Impact, Priority> = {

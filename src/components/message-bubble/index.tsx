@@ -1,6 +1,8 @@
 import { Badge, Group, Paper, Text } from "@mantine/core";
 import { Profile } from "@/domain/enums";
-import { ROLE_COLOR, ROLE_LABEL } from "./constants";
+import { useLabels, useTranslate } from "@/i18n";
+import { ROLE_COLOR } from "./constants";
+import { locales } from "./locales";
 import type { Props } from "./types";
 
 function backgroundOf(
@@ -22,6 +24,8 @@ export function MessageBubble({
   at,
   highlight = false,
 }: Props) {
+  const translate = useTranslate(locales);
+  const labels = useLabels();
   const color = role ? ROLE_COLOR[role] : "gray";
 
   return (
@@ -37,21 +41,21 @@ export function MessageBubble({
     >
       <Group gap="xs" mb={2}>
         <Text size="xs" fw={600}>
-          {isOwn ? "Você" : author}
+          {isOwn ? translate("you") : author}
         </Text>
         {role && (
           <Badge size="xs" color={color} variant="light">
-            {ROLE_LABEL[role]}
+            {labels.profile(role)}
           </Badge>
         )}
         {internal && (
           <Badge size="xs" color="yellow" variant="filled">
-            Nota interna
+            {translate("internalNote")}
           </Badge>
         )}
         {highlight && (
           <Badge size="xs" color="green" variant="filled">
-            Novo
+            {translate("new")}
           </Badge>
         )}
         <Text size="xs" c="dimmed">

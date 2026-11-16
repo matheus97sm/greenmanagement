@@ -7,7 +7,17 @@ import type {
   Ticket,
 } from "@/domain/types";
 import type { WeekRange } from "@/domain/week";
+import type { Language, Translate } from "@/i18n";
 import type { Workload } from "@/domain/workload";
+import type { locales } from "./locales";
+
+export type DashboardTranslate = Translate<(typeof locales)[Language.PtBr]>;
+
+export type SortLabelKey =
+  "sortIdle" | "sortResolved" | "sortAssigned" | "sortReplies" | "sortName";
+
+export type DayLabelKey =
+  "dayMonday" | "dayTuesday" | "dayWednesday" | "dayThursday" | "dayFriday";
 
 export interface Row {
   consultant: Person;

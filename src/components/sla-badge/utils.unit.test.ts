@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { SlaClock, SlaKind } from "@/domain/enums";
 import type { SlaInfo } from "@/domain/sla";
+import { Language, setLanguage, translatorFor } from "@/i18n";
+import { locales } from "./locales";
 import { slaBadgeView } from "./utils";
+
+const translate = translatorFor(locales);
+
+const viewOf = (info: SlaInfo) => slaBadgeView(info, translate);
 
 const HOUR = 3_600_000;
 
@@ -16,7 +22,7 @@ describe("slaBadgeView", () => {
   describe("a breached deadline", () => {
     it("says for how long the resolution is overdue, in solid red", () => {
       expect(
-        slaBadgeView(sla({ kind: SlaKind.Breached, remainingMs: -2 * HOUR })),
+        viewOf(sla({ kind: SlaKind.Breached, remainingMs: -2 * HOUR })),
       ).toEqual({
         color: "red",
         variant: "filled",
@@ -26,7 +32,7 @@ describe("slaBadgeView", () => {
 
     it("says it is the first response that is overdue when that is the pending clock", () => {
       expect(
-        slaBadgeView(
+        viewOf(
           sla({
             kind: SlaKind.Breached,
             clock: SlaClock.FirstResponse,
@@ -43,21 +49,20 @@ describe("slaBadgeView", () => {
       [SlaKind.Warning, "orange"],
       [SlaKind.Ok, "gray"],
     ])("colours a %s deadline %s", (kind, color) => {
-      const view = slaBadgeView(sla({ kind }));
+      const view = viewOf(sla({ kind }));
       expect(view.color).toBe(color);
       expect(view.variant).toBe("light");
     });
 
     it("shows the time left", () => {
       expect(
-        slaBadgeView(sla({ kind: SlaKind.Warning, remainingMs: 2.5 * HOUR }))
-          .label,
+        viewOf(sla({ kind: SlaKind.Warning, remainingMs: 2.5 * HOUR })).label,
       ).toBe("2h 30min");
     });
 
     it("says it is the first response that is due when that is the pending clock", () => {
       expect(
-        slaBadgeView(
+        viewOf(
           sla({
             kind: SlaKind.Critical,
             clock: SlaClock.FirstResponse,
@@ -69,7 +74,7 @@ describe("slaBadgeView", () => {
   });
 
   it("shows a paused clock as an outlined blue note", () => {
-    expect(slaBadgeView(sla({ kind: SlaKind.Paused }))).toEqual({
+    expect(viewOf(sla({ kind: SlaKind.Paused }))).toEqual({
       color: "blue",
       variant: "outline",
       label: "Prazo pausado",
@@ -77,10 +82,18 @@ describe("slaBadgeView", () => {
   });
 
   it("shows a finished ticket as an outlined grey note", () => {
-    expect(slaBadgeView(sla({ kind: SlaKind.Finished }))).toEqual({
+    expect(viewOf(sla({ kind: SlaKind.Finished }))).toEqual({
       color: "gray",
       variant: "outline",
       label: "Encerrado",
     });
+  });
+
+  it("writes the labels in English after the language changes", async () => {
+    await setLanguage(Language.EnUs);
+    expect(
+      viewOf(sla({ kind: SlaKind.Breached, remainingMs: -2 * HOUR })).label,
+    ).toBe("Overdue by 2h");
+    expect(viewOf(sla({ kind: SlaKind.Paused })).label).toBe("Deadline paused");
   });
 });

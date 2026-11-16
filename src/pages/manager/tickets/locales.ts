@@ -1,0 +1,38 @@
+import { Language } from "@/i18n";
+
+export const locales = {
+  [Language.PtBr]: {
+    loadError: "Não foi possível carregar os chamados.",
+    title: "Equipe e chamados",
+    searchLabel: "Buscar chamado",
+    searchPlaceholder: "Buscar em todos os chamados por nº, título ou cliente",
+    found_zero: "{{count}} chamados encontrados",
+    found_one: "{{count}} chamado encontrado",
+    found_other: "{{count}} chamados encontrados",
+    groupLabel: "Grupo",
+    allGroups: "Todos os grupos",
+    reassign: "Redistribuir ({{count}})",
+    emptySearch: "Nenhum chamado encontrado.",
+    emptyQueue: "Nenhum chamado por aqui.",
+    viewRisk: "Em risco ({{count}})",
+    viewUnassigned: "Sem responsável ({{count}})",
+    viewConsultant: "{{name}} ({{count}})",
+  },
+  [Language.EnUs]: {
+    loadError: "Could not load the tickets.",
+    title: "Team and tickets",
+    searchLabel: "Search ticket",
+    searchPlaceholder: "Search all tickets by number, title or customer",
+    found_zero: "{{count}} tickets found",
+    found_one: "{{count}} ticket found",
+    found_other: "{{count}} tickets found",
+    groupLabel: "Group",
+    allGroups: "All groups",
+    reassign: "Reassign ({{count}})",
+    emptySearch: "No tickets found.",
+    emptyQueue: "No tickets here.",
+    viewRisk: "At risk ({{count}})",
+    viewUnassigned: "Unassigned ({{count}})",
+    viewConsultant: "{{name}} ({{count}})",
+  },
+};

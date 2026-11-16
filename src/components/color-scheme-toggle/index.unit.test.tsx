@@ -1,6 +1,7 @@
 import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
+import { Language, setLanguage } from "@/i18n";
 import { renderWithProviders } from "@/test-utils";
 import { ColorSchemeToggle } from ".";
 
@@ -29,5 +30,13 @@ describe("ColorSchemeToggle", () => {
       screen.getByRole("button", { name: "Mudar para o tema claro" }),
     );
     expect(scheme()).toBe("light");
+  });
+
+  it("shows the English text when the language changes", async () => {
+    await setLanguage(Language.EnUs);
+    renderWithProviders(<ColorSchemeToggle />);
+    expect(
+      screen.getByRole("button", { name: "Switch to the dark theme" }),
+    ).toBeInTheDocument();
   });
 });

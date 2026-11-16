@@ -4,6 +4,7 @@ import { SlaBadge } from "@/components/sla-badge";
 import { StatusBadge } from "@/components/status-badge";
 import { pausedSince } from "@/domain/rules";
 import { slaInfo } from "@/domain/sla";
+import { useLabels, useTranslate } from "@/i18n";
 import { useNow } from "@/hooks/useNow";
 import { formatDateTime } from "@/lib/format";
 import { lastItems } from "@/lib/list";
@@ -12,9 +13,14 @@ import { useTickets } from "@/store/useTickets";
 import { Composer } from "../composer";
 import { MessageBubble } from "../message-bubble";
 import { StatusModal } from "../status-modal";
-import { PAGE_SIZE, STICK_TO_BOTTOM_THRESHOLD } from "./constants";
-import { ModalKind, TimelineKind } from "./enums";
-import type { Props } from "./types";
+import {
+  DETAIL_SEPARATOR,
+  PAGE_SIZE,
+  STICK_TO_BOTTOM_THRESHOLD,
+} from "./constants";
+import { EventKind, ModalKind, TimelineKind } from "./enums";
+import { locales } from "./locales";
+import type { EventItem, Props } from "./types";
 import {
   availableActions,
   buildTimeline,
@@ -31,6 +37,8 @@ export function TicketDetail({
   onDraftChange,
   extraActions,
 }: Props) {
+  const translate = useTranslate(locales);
+  const labels = useLabels();
   const state = useTickets();
   const now = useNow();
   const ticket = state.tickets[ticketId];
@@ -39,7 +47,9 @@ export function TicketDetail({
   const [shown, setShown] = useState(PAGE_SIZE);
 
   const viewer = state.people[currentUser.id];
-  const nameOf = (id: string | null) => personName(state.people, id);
+  const unknownPerson = translate("unknownPerson");
+  const nameOf = (id: string | null) =>
+    personName(state.people, id, unknownPerson);
   const formatDate = (iso: string) =>
     formatDateTime(iso, viewer?.zoneinfo, viewer?.locale);
 
@@ -49,9 +59,15 @@ export function TicketDetail({
   const items = useMemo(
     () =>
       ticket
-        ? buildTimeline({ ticket, messages, history, people: state.people })
+        ? buildTimeline({
+            ticket,
+            messages,
+            history,
+            people: state.people,
+            unknownPerson: translate("unknownPerson"),
+          })
         : [],
-    [ticket, messages, history, state.people],
+    [ticket, messages, history, state.people, translate],
   );
 
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -65,7 +81,7 @@ export function TicketDetail({
   if (!ticket) {
     return (
       <Text c="dimmed" p="lg">
-        Chamado não encontrado.
+        {translate("notFound")}
       </Text>
     );
   }
@@ -84,6 +100,16 @@ export function TicketDetail({
   const isClosed = isClosedStatus(ticket.status);
   const { canAdvance, canReopen } = availableActions(ticket.status);
   const { hidden, visible } = lastItems(items, shown);
+
+  const eventText = (item: EventItem) =>
+    item.event === EventKind.Assigned
+      ? translate("eventAssigned", { who: item.who })
+      : translate("eventStatusChanged", {
+          who: item.who,
+          from: item.from ? labels.status(item.from) : "",
+          to: item.to ? labels.status(item.to) : "",
+          reason: item.reason ?? translate("noReason"),
+        });
 
   const take = async () => {
     setTaking(true);
@@ -114,7 +140,7 @@ export function TicketDetail({
           <Group gap="xs" wrap="nowrap">
             {canTake && (
               <Button onClick={take} loading={taking}>
-                Pegar chamado
+                {translate("take")}
               </Button>
             )}
             {canChangeStatus && canAdvance && (
@@ -122,7 +148,7 @@ export function TicketDetail({
                 variant="default"
                 onClick={() => setModal(ModalKind.Status)}
               >
-                Alterar status
+                {translate("changeStatus")}
               </Button>
             )}
             {canChangeStatus && canReopen && (
@@ -130,7 +156,7 @@ export function TicketDetail({
                 variant="default"
                 onClick={() => setModal(ModalKind.Reopen)}
               >
-                Reabrir
+                {translate("reopen")}
               </Button>
             )}
             {extraActions}
@@ -140,16 +166,30 @@ export function TicketDetail({
           <StatusBadge status={ticket.status} />
           <SlaBadge sla={sla} />
           <Badge variant="outline" color="gray" size="sm">
-            Prioridade {ticket.prioridade}
+            {translate("priority", {
+              priority: labels.priority(ticket.prioridade),
+            })}
           </Badge>
           <Text size="xs" c="dimmed">
-            {ticket.primeira_resposta_em
-              ? ""
-              : `1ª resposta até ${formatDate(ticket.prazo_primeira_resposta)} · `}
-            Resolução até {formatDate(ticket.prazo_resolucao)} ·{" "}
-            {ticket.responsavel_id
-              ? `Atendido por ${isMine ? "você" : nameOf(ticket.responsavel_id)}`
-              : "Sem responsável"}
+            {[
+              ticket.primeira_resposta_em
+                ? null
+                : translate("firstResponseDue", {
+                    date: formatDate(ticket.prazo_primeira_resposta),
+                  }),
+              translate("resolutionDue", {
+                date: formatDate(ticket.prazo_resolucao),
+              }),
+              ticket.responsavel_id
+                ? isMine
+                  ? translate("handledByYou")
+                  : translate("handledBy", {
+                      name: nameOf(ticket.responsavel_id),
+                    })
+                : translate("unassigned"),
+            ]
+              .filter(Boolean)
+              .join(DETAIL_SEPARATOR)}
           </Text>
         </Group>
       </Stack>
@@ -175,13 +215,15 @@ export function TicketDetail({
                 setShown((current) => current + PAGE_SIZE);
               }}
             >
-              Mostrar mensagens anteriores ({hidden})
+              {translate("showPrevious", { count: hidden })}
             </Button>
           )}
           {visible.map((item) =>
             item.kind === TimelineKind.Event ? (
               <Text key={item.key} size="xs" c="dimmed" ta="center">
-                {item.text} · {formatDate(item.at)}
+                {eventText(item)}
+                {DETAIL_SEPARATOR}
+                {formatDate(item.at)}
               </Text>
             ) : (
               <MessageBubble
@@ -214,7 +256,14 @@ export function TicketDetail({
           p="sm"
           style={{ borderTop: "1px solid var(--mantine-color-default-border)" }}
         >
-          {footerHint({ ticket, isMine, isClosed, canTake, nameOf })}
+          {footerHint({
+            ticket,
+            isMine,
+            isClosed,
+            canTake,
+            nameOf,
+            translate,
+          })}
         </Text>
       )}
 

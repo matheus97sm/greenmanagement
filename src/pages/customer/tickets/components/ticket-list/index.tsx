@@ -8,13 +8,16 @@ import {
   UnstyledButton,
 } from "@mantine/core";
 import { IconSearch } from "@tabler/icons-react";
+import { useTranslate } from "@/i18n";
 import { formatDateTime } from "@/lib/format";
 import { useTickets } from "@/store/useTickets";
 import { StageBadge } from "../stage-badge";
+import { locales } from "./locales";
 import type { Props } from "./types";
-import { handlerLine, listItems, unreadLabel } from "./utils";
+import { listItems } from "./utils";
 
 export function TicketList({ currentUser, selectedId, onSelect }: Props) {
+  const translate = useTranslate(locales);
   const state = useTickets();
   const [search, setSearch] = useState("");
   const viewer = state.people[currentUser.id];
@@ -28,8 +31,8 @@ export function TicketList({ currentUser, selectedId, onSelect }: Props) {
     <Stack gap="xs" p="sm" h="100%" style={{ minHeight: 0 }}>
       <TextInput
         size="xs"
-        aria-label="Buscar chamado"
-        placeholder="Buscar por número ou título"
+        aria-label={translate("searchLabel")}
+        placeholder={translate("searchPlaceholder")}
         leftSection={<IconSearch size={14} />}
         value={search}
         onChange={(event) => setSearch(event.currentTarget.value)}
@@ -45,9 +48,7 @@ export function TicketList({ currentUser, selectedId, onSelect }: Props) {
       >
         {items.length === 0 ? (
           <Text c="dimmed" size="sm" ta="center" p="lg">
-            {search.trim()
-              ? "Nenhum chamado encontrado."
-              : "Você ainda não abriu nenhum chamado."}
+            {translate(search.trim() ? "noneFound" : "noneYet")}
           </Text>
         ) : (
           items.map(({ ticket, stage, handler, unread }) => (
@@ -64,17 +65,21 @@ export function TicketList({ currentUser, selectedId, onSelect }: Props) {
                 </Text>
                 {unread > 0 && (
                   <Badge size="sm" color="green" variant="filled">
-                    {unreadLabel(unread)}
+                    {translate("unread", { count: unread })}
                   </Badge>
                 )}
               </Group>
               <Text size="xs" c="dimmed" truncate>
-                {handlerLine(handler)} · atualizado em{" "}
-                {formatDateTime(
-                  ticket.atualizado_em,
-                  viewer?.zoneinfo,
-                  viewer?.locale,
-                )}
+                {translate("handlerAndUpdate", {
+                  handler: handler
+                    ? translate("withHandler", { name: handler })
+                    : translate("withoutHandler"),
+                  date: formatDateTime(
+                    ticket.atualizado_em,
+                    viewer?.zoneinfo,
+                    viewer?.locale,
+                  ),
+                })}
               </Text>
               <Group gap="xs" mt={4}>
                 <StageBadge stage={stage} />

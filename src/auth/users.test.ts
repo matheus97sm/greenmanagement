@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { Profile } from "@/domain/enums";
 import { rawData } from "@/test-data";
 import { Role } from "./enums";
-import { DEMO_PASSWORD, ROLE_LABEL, USERS } from "./users";
+import { DEMO_PASSWORD, USERS } from "./users";
 
 const PROFILE_OF_ROLE: Record<Role, Profile> = {
   [Role.Consultant]: Profile.Consultant,
@@ -31,12 +31,6 @@ describe("the demo users", () => {
 
   it("sign in with lower-case e-mails, as the sign-in compares them", () => {
     for (const user of USERS) expect(user.email).toBe(user.email.toLowerCase());
-  });
-
-  it("have a label for every role", () => {
-    for (const role of Object.values(Role)) {
-      expect(ROLE_LABEL[role]).toBeTruthy();
-    }
   });
 
   it("share one demo password", () => {

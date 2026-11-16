@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { Status } from "@/domain/enums";
+import { translatorFor } from "@/i18n";
 import type { Person, Ticket } from "@/domain/types";
 import { MARINA_ID, rawData } from "@/test-data";
 import { StatusOption, Tab } from "./enums";
+import { locales } from "./locales";
 import {
   matchesStatus,
   selectRows,
@@ -123,7 +125,10 @@ describe("selectRows", () => {
 
 describe("statusFilterOptions", () => {
   it("offers the two shortcuts followed by every status", () => {
-    const options = statusFilterOptions();
+    const options = statusFilterOptions(
+      translatorFor(locales),
+      (status) => `status:${status}`,
+    );
     expect(
       options.slice(0, 2).map((statusFilterOption) => statusFilterOption.value),
     ).toEqual([StatusOption.Active, StatusOption.All]);
@@ -133,6 +138,12 @@ describe("statusFilterOptions", () => {
         (statusFilterOption) =>
           statusFilterOption.value === Status.WaitingCustomer,
       )?.label,
-    ).toBe("Aguardando cliente");
+    ).toBe(`status:${Status.WaitingCustomer}`);
+  });
+
+  it("translates the two shortcuts", () => {
+    const options = statusFilterOptions(translatorFor(locales), String);
+    expect(options[0].label).toBe("Em andamento");
+    expect(options[1].label).toBe("Todos");
   });
 });

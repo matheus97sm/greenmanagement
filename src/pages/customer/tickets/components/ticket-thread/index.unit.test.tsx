@@ -2,6 +2,7 @@ import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it } from "vitest";
 import { USERS } from "@/auth/users";
+import { Language, setLanguage } from "@/i18n";
 import { HELENA_ID, rawData } from "@/test-data";
 import { loadStoreAs, renderWithProviders } from "@/test-utils";
 import { PAGE_SIZE } from "./constants";
@@ -114,6 +115,16 @@ describe("TicketThread", () => {
       ).toBeInTheDocument();
       expect(screen.getByText("Mensagem longa 129")).toBeInTheDocument();
       expect(screen.queryByText(ticket.descricao)).not.toBeInTheDocument();
+    });
+
+    it("says how many are left out in English", async () => {
+      await setLanguage(Language.EnUs);
+      renderThread("2026-12-01T00:00:00Z");
+      expect(
+        screen.getByRole("button", {
+          name: `Show previous messages (${1 + 5 + 130 - PAGE_SIZE})`,
+        }),
+      ).toBeInTheDocument();
     });
 
     it("shows earlier ones on demand", async () => {

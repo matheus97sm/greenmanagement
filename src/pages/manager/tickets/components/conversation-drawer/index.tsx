@@ -1,8 +1,10 @@
 import { useState } from "react";
 import { Button, Drawer } from "@mantine/core";
 import { TicketDetail } from "@/components/ticket-detail";
+import { useTranslate } from "@/i18n";
 import { isActive } from "@/domain/status";
 import { useTickets } from "@/store/useTickets";
+import { locales } from "./locales";
 import type { Props } from "./types";
 
 export function ConversationDrawer({
@@ -11,6 +13,7 @@ export function ConversationDrawer({
   onClose,
   onReassign,
 }: Props) {
+  const translate = useTranslate(locales);
   const state = useTickets();
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const ticket = ticketId ? state.tickets[ticketId] : undefined;
@@ -22,8 +25,8 @@ export function ConversationDrawer({
       position="right"
       size="min(720px, 100vw)"
       padding={0}
-      title="Conversa do chamado"
-      closeButtonProps={{ "aria-label": "Fechar conversa" }}
+      title={translate("title")}
+      closeButtonProps={{ "aria-label": translate("close") }}
       styles={{ body: { height: "calc(100% - 60px)" } }}
     >
       {ticketId && (
@@ -38,7 +41,7 @@ export function ConversationDrawer({
           extraActions={
             ticket && isActive(ticket.status) ? (
               <Button variant="default" onClick={() => onReassign(ticketId)}>
-                Redistribuir
+                {translate("reassign")}
               </Button>
             ) : undefined
           }

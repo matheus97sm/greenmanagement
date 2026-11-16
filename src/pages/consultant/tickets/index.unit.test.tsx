@@ -2,6 +2,7 @@ import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { EventType } from "@/domain/enums";
+import { Language, setLanguage } from "@/i18n";
 import { ticketsStore } from "@/store/ticketsStore";
 import { MARINA_ID, rawData } from "@/test-data";
 import { loadStoreAs, renderRoutes } from "@/test-utils";
@@ -129,5 +130,14 @@ describe("consultant tickets page", () => {
         expect(within(firstRow()).queryByText("1")).not.toBeInTheDocument(),
       );
     });
+  });
+
+  it("shows the English text after switching the language", async () => {
+    await setLanguage(Language.EnUs);
+    loadStoreAs(MARINA_ID);
+    renderPage();
+    expect(
+      screen.getByText("Select a ticket from the list."),
+    ).toBeInTheDocument();
   });
 });

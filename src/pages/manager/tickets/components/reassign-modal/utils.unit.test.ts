@@ -1,8 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { consultantsOf, workloadByConsultant } from "@/domain/workload";
+import { translatorFor } from "@/i18n";
 import { rawData } from "@/test-data";
+import { locales } from "./locales";
 import { groupsOfSelection, targetOptions } from "./utils";
 
+const translate = translatorFor(locales);
 const NOW = Date.parse(rawData.meta.agora);
 const workloads = workloadByConsultant(
   rawData.chamados,
@@ -31,7 +34,7 @@ describe("groupsOfSelection", () => {
 });
 
 describe("targetOptions", () => {
-  const options = targetOptions(workloads, apps.id);
+  const options = targetOptions(workloads, apps.id, translate);
 
   it("offers only the consultants of that group", () => {
     expect(options).toHaveLength(6);
@@ -47,6 +50,8 @@ describe("targetOptions", () => {
 
   it("uses the singular for a single ticket", () => {
     const one = workloads.map((workload) => ({ ...workload, active: 1 }));
-    expect(targetOptions(one, apps.id)[0].label).toMatch(/· 1 chamado$/);
+    expect(targetOptions(one, apps.id, translate)[0].label).toMatch(
+      /· 1 chamado$/,
+    );
   });
 });

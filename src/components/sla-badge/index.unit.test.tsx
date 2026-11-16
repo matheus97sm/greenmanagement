@@ -1,6 +1,7 @@
 import { screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { SlaClock, SlaKind } from "@/domain/enums";
+import { Language, setLanguage } from "@/i18n";
 import { renderWithProviders } from "@/test-utils";
 import { SlaBadge } from ".";
 
@@ -57,5 +58,19 @@ describe("SlaBadge", () => {
       />,
     );
     expect(screen.getByText("Encerrado")).toBeInTheDocument();
+  });
+
+  it("shows the English text when the language changes", async () => {
+    await setLanguage(Language.EnUs);
+    renderWithProviders(
+      <SlaBadge
+        sla={{
+          kind: SlaKind.Finished,
+          clock: SlaClock.Resolution,
+          remainingMs: -HOUR,
+        }}
+      />,
+    );
+    expect(screen.getByText("Finished")).toBeInTheDocument();
   });
 });

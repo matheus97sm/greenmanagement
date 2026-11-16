@@ -1,13 +1,18 @@
 import { useMemo } from "react";
 import { Alert, SimpleGrid, Stack, Text, Timeline } from "@mantine/core";
 import { useNow } from "@/hooks/useNow";
+import { useTranslate } from "@/i18n";
 import { formatDateTime } from "@/lib/format";
 import { useTickets } from "@/store/useTickets";
-import { STAGE_COLOR, STAGE_LABEL } from "../stage-badge/constants";
+import { STAGE_COLOR, STAGE_KEY } from "../stage-badge/constants";
+import { locales as stageLocales } from "../stage-badge/locales";
+import { locales } from "./locales";
 import type { Props } from "./types";
 import { expectationText, progressEvents, summaryOf } from "./utils";
 
 export function TicketSummary({ ticketId, currentUser }: Props) {
+  const translate = useTranslate(locales);
+  const translateStage = useTranslate(stageLocales);
   const state = useTickets();
   const now = useNow();
   const ticket = state.tickets[ticketId];
@@ -15,8 +20,11 @@ export function TicketSummary({ ticketId, currentUser }: Props) {
   const history = state.history[ticketId];
 
   const summary = useMemo(
-    () => (ticket ? summaryOf({ ticket, people: state.people, now }) : null),
-    [ticket, state.people, now],
+    () =>
+      ticket
+        ? summaryOf({ ticket, people: state.people, now, translate })
+        : null,
+    [ticket, state.people, now, translate],
   );
   const events = useMemo(
     () =>
@@ -26,23 +34,28 @@ export function TicketSummary({ ticketId, currentUser }: Props) {
             history,
             people: state.people,
             meId: currentUser.id,
+            translate,
           })
         : [],
-    [ticket, history, state.people, currentUser.id],
+    [ticket, history, state.people, currentUser.id, translate],
   );
 
   if (!ticket || !summary) return null;
 
   const formatDate = (iso: string) =>
     formatDateTime(iso, viewer?.zoneinfo, viewer?.locale);
-  const expectation = expectationText(summary.expectation, formatDate);
+  const expectation = expectationText(
+    summary.expectation,
+    formatDate,
+    translate,
+  );
 
   return (
     <Stack gap="md">
       <Alert
         variant="light"
         color={STAGE_COLOR[summary.stage]}
-        title={STAGE_LABEL[summary.stage]}
+        title={translateStage(STAGE_KEY[summary.stage])}
       >
         {summary.headline}
       </Alert>
@@ -50,19 +63,19 @@ export function TicketSummary({ ticketId, currentUser }: Props) {
       <SimpleGrid cols={{ base: 1, sm: 3 }} spacing="sm">
         <div>
           <Text size="xs" c="dimmed">
-            Quem está cuidando
+            {translate("handlerLabel")}
           </Text>
-          <Text size="sm">{summary.handler ?? "Ainda ninguém"}</Text>
+          <Text size="sm">{summary.handler ?? translate("handlerNone")}</Text>
         </div>
         <div>
           <Text size="xs" c="dimmed">
-            Previsão
+            {translate("expectationLabel")}
           </Text>
-          <Text size="sm">{expectation ?? "Sem previsão no momento"}</Text>
+          <Text size="sm">{expectation ?? translate("expectationNone")}</Text>
         </div>
         <div>
           <Text size="xs" c="dimmed">
-            Última atualização
+            {translate("updatedLabel")}
           </Text>
           <Text size="sm">{formatDate(ticket.atualizado_em)}</Text>
         </div>
@@ -70,7 +83,7 @@ export function TicketSummary({ ticketId, currentUser }: Props) {
 
       <div>
         <Text size="sm" fw={600} mb="xs">
-          O que já aconteceu
+          {translate("happenedTitle")}
         </Text>
         <Timeline active={events.length - 1} bulletSize={14} lineWidth={2}>
           {events.map((event) => (

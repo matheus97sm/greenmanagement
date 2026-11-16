@@ -29,6 +29,7 @@ import {
 import { useNow } from "@/hooks/useNow";
 import { homePath } from "@/paths";
 import { LoadStatus } from "@/store/enums";
+import { useTranslate } from "@/i18n";
 import { useTickets } from "@/store/useTickets";
 import { ConversationDrawer } from "./components/conversation-drawer";
 import { ReassignModal } from "./components/reassign-modal";
@@ -37,6 +38,7 @@ import { TeamBoard } from "./components/team-board";
 import { TicketQueue } from "./components/ticket-queue";
 import { ALL_GROUPS, MAX_ROWS } from "./constants";
 import { FocusKind } from "./enums";
+import { locales } from "./locales";
 import type { Focus } from "./types";
 import {
   filterByGroup,
@@ -50,6 +52,7 @@ import {
 } from "./utils";
 
 export function TicketsPage() {
+  const translate = useTranslate(locales);
   const currentUser = useCurrentUser();
   const state = useTickets();
   const now = useNow();
@@ -163,7 +166,7 @@ export function TicketsPage() {
   );
 
   if (state.status === LoadStatus.Error) {
-    return <Alert color="red">Não foi possível carregar os chamados.</Alert>;
+    return <Alert color="red">{translate("loadError")}</Alert>;
   }
 
   if (state.status !== LoadStatus.Ready) {
@@ -186,11 +189,12 @@ export function TicketsPage() {
     unassignedCount: unassigned.length,
     consultant: focusedConsultant,
     consultantCount: shown.length,
+    translate,
   });
 
   return (
     <Stack gap="md">
-      <Title order={2}>Equipe e chamados</Title>
+      <Title order={2}>{translate("title")}</Title>
       <Summary {...summary} />
       <Grid gap="md">
         <Grid.Col span={{ base: 12, md: 5 }}>
@@ -208,8 +212,8 @@ export function TicketsPage() {
             <Stack gap="xs" p="sm">
               <TextInput
                 size="xs"
-                aria-label="Buscar chamado"
-                placeholder="Buscar em todos os chamados por nº, título ou cliente"
+                aria-label={translate("searchLabel")}
+                placeholder={translate("searchPlaceholder")}
                 leftSection={<IconSearch size={14} />}
                 value={search}
                 onChange={(event) => {
@@ -230,16 +234,14 @@ export function TicketsPage() {
               />
               {searching && (
                 <Text size="xs" c="dimmed">
-                  {shown.length === 1
-                    ? "1 chamado encontrado"
-                    : `${shown.length} chamados encontrados`}
+                  {translate("found", { count: shown.length })}
                 </Text>
               )}
               <Group justify="space-between" wrap="nowrap">
                 <Select
                   size="xs"
                   w={190}
-                  aria-label="Grupo"
+                  aria-label={translate("groupLabel")}
                   allowDeselect={false}
                   value={groupFilter}
                   onChange={(value) => {
@@ -247,7 +249,7 @@ export function TicketsPage() {
                     setSelected(new Set());
                   }}
                   data={[
-                    { value: ALL_GROUPS, label: "Todos os grupos" },
+                    { value: ALL_GROUPS, label: translate("allGroups") },
                     ...groups.map((group) => ({
                       value: group.id,
                       label: group.nome,
@@ -261,7 +263,7 @@ export function TicketsPage() {
                     setReassignIds(selectedTickets.map((ticket) => ticket.id))
                   }
                 >
-                  Redistribuir ({selectedTickets.length})
+                  {translate("reassign", { count: selectedTickets.length })}
                 </Button>
               </Group>
             </Stack>
@@ -277,9 +279,7 @@ export function TicketsPage() {
                 lockedGroupId={selectedTickets[0]?.grupo_id}
                 now={now}
                 emptyText={
-                  searching
-                    ? "Nenhum chamado encontrado."
-                    : "Nenhum chamado por aqui."
+                  searching ? translate("emptySearch") : translate("emptyQueue")
                 }
                 onOpen={openTicket}
                 onToggle={toggle}

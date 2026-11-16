@@ -2,6 +2,7 @@ import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { Language, setLanguage } from "@/i18n";
 import { sendMessage } from "@/store/actions";
 import { renderWithProviders } from "@/test-utils";
 import { Composer } from ".";
@@ -162,5 +163,15 @@ describe("Composer", () => {
   it("offers the internal note switch to the team by default", () => {
     renderWithProviders(<Harness />);
     expect(screen.getByRole("switch", { name: "Nota interna" })).toBeVisible();
+  });
+
+  it("shows the English text when the language changes", async () => {
+    await setLanguage(Language.EnUs);
+    renderWithProviders(<Harness />);
+    expect(
+      screen.getByPlaceholderText("Reply to the customer (Ctrl+Enter sends)"),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Send" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Internal note")).toBeInTheDocument();
   });
 });

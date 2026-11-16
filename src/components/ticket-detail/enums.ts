@@ -7,3 +7,8 @@ export enum TimelineKind {
   Message = "msg",
   Event = "event",
 }
+
+export enum EventKind {
+  Assigned = "assigned",
+  StatusChanged = "status-changed",
+}

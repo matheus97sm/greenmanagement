@@ -1,0 +1,36 @@
+import { Language } from "@/i18n";
+
+export const locales = {
+  [Language.PtBr]: {
+    consultant: "Consultor",
+    idleTime: "Tempo sem chamado",
+    assigned: "Atribuídos",
+    resolved: "Resolvidos",
+    replies: "Respostas",
+    now: "Agora",
+    ofWorkingTime: "{{percent}} do expediente",
+    idleTimeOf: "Tempo sem chamado de {{name}}",
+    active_zero: "{{count}} chamados",
+    active_one: "{{count}} chamado",
+    active_other: "{{count}} chamados",
+    breached_zero: "{{count}} estourados",
+    breached_one: "{{count}} estourado",
+    breached_other: "{{count}} estourados",
+  },
+  [Language.EnUs]: {
+    consultant: "Consultant",
+    idleTime: "Time without tickets",
+    assigned: "Assigned",
+    resolved: "Resolved",
+    replies: "Replies",
+    now: "Now",
+    ofWorkingTime: "{{percent}} of working time",
+    idleTimeOf: "Time without tickets of {{name}}",
+    active_zero: "{{count}} tickets",
+    active_one: "{{count}} ticket",
+    active_other: "{{count}} tickets",
+    breached_zero: "{{count}} breached",
+    breached_one: "{{count}} breached",
+    breached_other: "{{count}} breached",
+  },
+};

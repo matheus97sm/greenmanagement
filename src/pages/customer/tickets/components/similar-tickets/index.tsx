@@ -1,16 +1,19 @@
 import { Alert, Button, Group, Stack, Text } from "@mantine/core";
 import { stageOf } from "@/domain/customer";
+import { useTranslate } from "@/i18n";
 import { StageBadge } from "../stage-badge";
+import { locales } from "./locales";
 import type { Props } from "./types";
-import { warningText } from "./utils";
+import { warningKey } from "./utils";
 
 export function SimilarTickets({ hits, onOpen }: Props) {
+  const translate = useTranslate(locales);
   if (hits.length === 0) return null;
 
   return (
-    <Alert color="yellow" variant="light" title="Você já abriu algo parecido">
+    <Alert color="yellow" variant="light" title={translate("title")}>
       <Stack gap="xs">
-        <Text size="sm">{warningText(hits)}</Text>
+        <Text size="sm">{translate(warningKey(hits))}</Text>
         {hits.map(({ ticket }) => (
           <Group key={ticket.id} justify="space-between" wrap="nowrap">
             <div style={{ minWidth: 0 }}>
@@ -24,7 +27,7 @@ export function SimilarTickets({ hits, onOpen }: Props) {
               variant="default"
               onClick={() => onOpen(ticket.id)}
             >
-              Abrir esse chamado
+              {translate("openTicket")}
             </Button>
           </Group>
         ))}

@@ -17,11 +17,16 @@ import {
 } from "@mantine/core";
 import { IconAlertCircle, IconLeaf } from "@tabler/icons-react";
 import { useNavigate } from "react-router";
+import { useLabels, useTranslate } from "@/i18n";
 import { useAuth } from "@/auth/auth-context";
 import { homePath } from "@/paths";
-import { DEMO_PASSWORD, ROLE_LABEL, USERS } from "@/auth/users";
+import { DEMO_PASSWORD, USERS } from "@/auth/users";
+import { ROLE_DESCRIPTION_KEY } from "./constants";
+import { locales } from "./locales";
 
 export function LoginPage() {
+  const translate = useTranslate(locales);
+  const labels = useLabels();
   const { signIn } = useAuth();
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
@@ -44,7 +49,7 @@ export function LoginPage() {
         <IconLeaf size={40} />
         <Title order={2}>Green Management</Title>
         <Text c="dimmed" size="sm">
-          Entre para acessar os chamados
+          {translate("subtitle")}
         </Text>
       </Stack>
 
@@ -53,11 +58,11 @@ export function LoginPage() {
           <Stack>
             {error && (
               <Alert color="red" icon={<IconAlertCircle size={16} />}>
-                E-mail ou senha inválidos.
+                {translate("invalidCredentials")}
               </Alert>
             )}
             <TextInput
-              label="E-mail"
+              label={translate("emailLabel")}
               type="email"
               autoComplete="username"
               required
@@ -65,21 +70,21 @@ export function LoginPage() {
               onChange={(event) => setEmail(event.currentTarget.value)}
             />
             <PasswordInput
-              label="Senha"
+              label={translate("passwordLabel")}
               autoComplete="current-password"
               required
               value={password}
               onChange={(event) => setPassword(event.currentTarget.value)}
             />
             <Button type="submit" fullWidth>
-              Entrar
+              {translate("submit")}
             </Button>
           </Stack>
         </form>
 
         <Divider
           my="lg"
-          label="Usuários de demonstração"
+          label={translate("demoUsers")}
           labelPosition="center"
         />
         <Stack gap="xs">
@@ -94,17 +99,17 @@ export function LoginPage() {
             >
               <Group justify="space-between">
                 <Text size="sm" fw={500}>
-                  {user.name} · {ROLE_LABEL[user.role]}
+                  {user.name} · {labels.role(user.role)}
                 </Text>
                 <Text size="xs" c="dimmed">
-                  {user.description}
+                  {translate(ROLE_DESCRIPTION_KEY[user.role])}
                 </Text>
               </Group>
             </UnstyledButton>
           ))}
           <Center>
             <Text size="xs" c="dimmed">
-              Senha de todos: {DEMO_PASSWORD}
+              {translate("sharedPassword", { password: DEMO_PASSWORD })}
             </Text>
           </Center>
         </Stack>

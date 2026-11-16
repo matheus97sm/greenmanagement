@@ -11,12 +11,17 @@ import {
 import { IconLeaf, IconLogout } from "@tabler/icons-react";
 import { Link, useLocation, useNavigate } from "react-router";
 import { useAuth } from "@/auth/auth-context";
-import { ROLE_LABEL } from "@/auth/users";
+import { useLabels, useTranslate } from "@/i18n";
 import { navItemsFor } from "@/paths";
 import { ColorSchemeToggle } from "../color-scheme-toggle";
+import { LanguageToggle } from "../language-toggle";
+import { NAV_PAGE_KEY } from "./constants";
+import { locales } from "./locales";
 import { isCurrentPage } from "./utils";
 
 export function AppHeader() {
+  const translate = useTranslate(locales);
+  const labels = useLabels();
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const { pathname } = useLocation();
@@ -33,7 +38,12 @@ export function AppHeader() {
         <IconLeaf size={24} />
         <Title order={4}>Green Management</Title>
         {items.length > 0 && (
-          <Group gap={4} ml="md" component="nav" aria-label="Páginas">
+          <Group
+            gap={4}
+            ml="md"
+            component="nav"
+            aria-label={translate("pages")}
+          >
             {items.map((item) => {
               const current = isCurrentPage(pathname, item.to);
               return (
@@ -46,7 +56,7 @@ export function AppHeader() {
                   color={current ? "green" : "gray"}
                   aria-current={current ? "page" : undefined}
                 >
-                  {item.label}
+                  {translate(NAV_PAGE_KEY[item.page])}
                 </Button>
               );
             })}
@@ -55,6 +65,7 @@ export function AppHeader() {
       </Group>
 
       <Group gap="sm">
+        <LanguageToggle />
         <ColorSchemeToggle />
         {user && (
           <>
@@ -66,14 +77,14 @@ export function AppHeader() {
                 {user.name}
               </Text>
               <Badge size="xs" variant="light" color="green">
-                {ROLE_LABEL[user.role]}
+                {labels.role(user.role)}
               </Badge>
             </div>
-            <Tooltip label="Sair">
+            <Tooltip label={translate("signOut")}>
               <ActionIcon
                 variant="subtle"
                 color="gray"
-                aria-label="Sair"
+                aria-label={translate("signOut")}
                 onClick={handleSignOut}
               >
                 <IconLogout size={18} />

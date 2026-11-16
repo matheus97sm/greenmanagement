@@ -1,9 +1,11 @@
 import { Status } from "@/domain/enums";
 import { matchesSearch } from "@/domain/search";
 import { compareBySla } from "@/domain/sla";
-import { isActive, STATUS_LABEL } from "@/domain/status";
+import type { Language, Translate } from "@/i18n";
+import { isActive } from "@/domain/status";
 import type { Ticket } from "@/domain/types";
 import { StatusOption, Tab } from "./enums";
+import type { locales } from "./locales";
 import type {
   SelectRowsInput,
   StatusFilter,
@@ -47,13 +49,16 @@ export function selectRows({
     .sort(compareBySla(now));
 }
 
-export function statusFilterOptions(): StatusFilterOption[] {
+export function statusFilterOptions(
+  translate: Translate<(typeof locales)[Language.PtBr]>,
+  statusLabel: (status: Status) => string,
+): StatusFilterOption[] {
   return [
-    { value: StatusOption.Active, label: "Em andamento" },
-    { value: StatusOption.All, label: "Todos" },
+    { value: StatusOption.Active, label: translate("filterActive") },
+    { value: StatusOption.All, label: translate("filterAll") },
     ...Object.values(Status).map((status) => ({
       value: status,
-      label: STATUS_LABEL[status],
+      label: statusLabel(status),
     })),
   ];
 }

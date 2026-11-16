@@ -4,37 +4,24 @@ import {
   isActive,
   isReopen,
   PRIORITY_COLOR,
-  PRIORITY_LABEL,
   STATUS_COLOR,
-  STATUS_LABEL,
   TRANSITIONS,
 } from "./status";
 
 const statuses = Object.values(Status);
 const priorities = Object.values(Priority);
 
-describe("labels and colours", () => {
-  it("name every status and give it a colour", () => {
+describe("colours", () => {
+  it("give every status a colour", () => {
     for (const status of statuses) {
-      expect(STATUS_LABEL[status]).toBeTruthy();
       expect(STATUS_COLOR[status]).toBeTruthy();
     }
   });
 
-  it("name every priority and give it a colour", () => {
+  it("give every priority a colour", () => {
     for (const priority of priorities) {
-      expect(PRIORITY_LABEL[priority]).toBeTruthy();
       expect(PRIORITY_COLOR[priority]).toBeTruthy();
     }
-  });
-
-  it("never reuse a label", () => {
-    expect(new Set(statuses.map((status) => STATUS_LABEL[status])).size).toBe(
-      statuses.length,
-    );
-    expect(
-      new Set(priorities.map((priority) => PRIORITY_LABEL[priority])).size,
-    ).toBe(priorities.length);
   });
 });
 
