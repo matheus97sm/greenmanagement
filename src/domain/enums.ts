@@ -44,3 +44,9 @@ export enum SlaClock {
   FirstResponse = "primeira_resposta",
   Resolution = "resolucao",
 }
+
+export enum LoadLevel {
+  Idle = "idle",
+  Normal = "normal",
+  Overloaded = "overloaded",
+}

@@ -6,6 +6,7 @@ import {
   assumeTicket,
   changeStatus,
   openTicket,
+  reassignTicket,
 } from "./ops";
 import { HELENA_ID, MARINA_ID, rawData, RICARDO_ID } from "@/test-data";
 import { Status, Priority, Profile, EventType } from "@/domain/enums";
@@ -69,6 +70,114 @@ describe("assumeTicket", () => {
       (t) => !t.responsavel_id && t.grupo_id !== person(MARINA_ID).grupo_id,
     );
     expect(() => assumeTicket(other.id, MARINA_ID)).toThrow(ApiError);
+  });
+});
+
+describe("reassignTicket", () => {
+  const colleagueOf = (groupId: string, except: string | null) =>
+    getDb().usuarios.find(
+      (u) =>
+        u.perfil === Profile.Consultant &&
+        u.grupo_id === groupId &&
+        u.id !== except,
+    )!;
+
+  const marinas = () =>
+    find(
+      (t) => t.responsavel_id === MARINA_ID && t.status === Status.InProgress,
+    );
+
+  it("moves a ticket to another consultant of the same group", () => {
+    const ticket = marinas();
+    const target = colleagueOf(ticket.grupo_id, MARINA_ID);
+    const events = reassignTicket({
+      ticketId: ticket.id,
+      consultantId: target.id,
+      managerId: RICARDO_ID,
+    });
+    expect(events.map((e) => e.tipo)).toEqual([EventType.TicketAssigned]);
+    expect(ticket.responsavel_id).toBe(target.id);
+    expect(ticket.status).toBe(Status.InProgress);
+    expect(getDb().historico.at(-1)).toMatchObject({
+      chamado_id: ticket.id,
+      usuario_id: target.id,
+    });
+  });
+
+  it("hands out a ticket nobody has taken, leaving its status alone", () => {
+    const queued = find((t) => !t.responsavel_id);
+    const target = colleagueOf(queued.grupo_id, null);
+    const status = queued.status;
+    reassignTicket({
+      ticketId: queued.id,
+      consultantId: target.id,
+      managerId: RICARDO_ID,
+    });
+    expect(queued.responsavel_id).toBe(target.id);
+    expect(queued.status).toBe(status);
+  });
+
+  it("does nothing when the ticket already belongs to that consultant", () => {
+    const ticket = marinas();
+    expect(
+      reassignTicket({
+        ticketId: ticket.id,
+        consultantId: MARINA_ID,
+        managerId: RICARDO_ID,
+      }),
+    ).toEqual([]);
+  });
+
+  it("refuses anyone who is not a manager", () => {
+    const ticket = marinas();
+    const target = colleagueOf(ticket.grupo_id, MARINA_ID);
+    for (const managerId of [MARINA_ID, HELENA_ID]) {
+      expect(() =>
+        reassignTicket({
+          ticketId: ticket.id,
+          consultantId: target.id,
+          managerId,
+        }),
+      ).toThrow(ApiError);
+    }
+    expect(ticket.responsavel_id).toBe(MARINA_ID);
+  });
+
+  it("refuses a consultant from another group", () => {
+    const ticket = marinas();
+    const outsider = getDb().usuarios.find(
+      (u) => u.perfil === Profile.Consultant && u.grupo_id !== ticket.grupo_id,
+    )!;
+    expect(() =>
+      reassignTicket({
+        ticketId: ticket.id,
+        consultantId: outsider.id,
+        managerId: RICARDO_ID,
+      }),
+    ).toThrow(ApiError);
+  });
+
+  it("refuses someone who is not a consultant", () => {
+    const ticket = marinas();
+    expect(() =>
+      reassignTicket({
+        ticketId: ticket.id,
+        consultantId: HELENA_ID,
+        managerId: RICARDO_ID,
+      }),
+    ).toThrow(ApiError);
+  });
+
+  it("refuses tickets that are resolved or closed", () => {
+    const done = find((t) => t.status === Status.Closed && !!t.responsavel_id);
+    const target = colleagueOf(done.grupo_id, done.responsavel_id);
+    expect(() =>
+      reassignTicket({
+        ticketId: done.id,
+        consultantId: target.id,
+        managerId: RICARDO_ID,
+      }),
+    ).toThrow(ApiError);
   });
 });
 

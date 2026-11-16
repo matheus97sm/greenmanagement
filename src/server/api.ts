@@ -28,6 +28,15 @@ export async function assumeTicket(
   return ops.assumeTicket(ticketId, consultantId);
 }
 
+export async function reassignTicket(input: {
+  ticketId: string;
+  consultantId: string;
+  managerId: string;
+}): Promise<DomainEvent[]> {
+  await latency();
+  return ops.reassignTicket(input);
+}
+
 export async function sendMessage(input: {
   ticketId: string;
   authorId: string;

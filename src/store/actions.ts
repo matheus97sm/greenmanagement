@@ -35,3 +35,50 @@ export const changeStatus = (input: {
   reason: string;
   userId: string;
 }) => run(() => api.changeStatus(input));
+
+export interface ReassignResult {
+  done: number;
+  failed: number;
+}
+
+export async function reassignTickets(input: {
+  ticketIds: string[];
+  consultantId: string;
+  managerId: string;
+}): Promise<ReassignResult> {
+  const { ticketIds, ...rest } = input;
+  const results = await Promise.allSettled(
+    ticketIds.map((ticketId) => api.reassignTicket({ ticketId, ...rest })),
+  );
+  let done = 0;
+  const errors: string[] = [];
+  for (const result of results) {
+    if (result.status === "fulfilled") {
+      result.value.forEach((e) => ticketsStore.applyEvent(e));
+      done += 1;
+    } else {
+      errors.push(
+        result.reason instanceof Error
+          ? result.reason.message
+          : "Erro inesperado.",
+      );
+    }
+  }
+  if (done > 0) {
+    notifications.show({
+      color: "green",
+      message:
+        done === 1
+          ? "1 chamado redistribuído."
+          : `${done} chamados redistribuídos.`,
+    });
+  }
+  if (errors.length > 0) {
+    notifications.show({
+      color: "red",
+      title: `${errors.length} não ${errors.length === 1 ? "foi redistribuído" : "foram redistribuídos"}`,
+      message: errors[0],
+    });
+  }
+  return { done, failed: errors.length };
+}

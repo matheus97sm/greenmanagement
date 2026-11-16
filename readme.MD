@@ -2,7 +2,7 @@
 
 Reescrita do sistema de gestão de serviços de TI (ITSM), focada na área de chamados. É um projeto de estudo: roda 100% no navegador, **sem backend**. A API e os eventos em tempo real (WebSocket) serão simulados no próprio front-end.
 
-> **Estado atual:** login, API/WebSocket simulados com o `dados.json` real e a visão da **Marina (consultora)**. As visões do Ricardo (gestor) e da Helena (cliente) ainda não foram feitas.
+> **Estado atual:** login, API/WebSocket simulados com o `dados.json` real e as visões da **Marina (consultora)** e do **Ricardo (gestor)**. A visão da Helena (cliente) ainda não foi feita.
 
 ## Tecnologias
 
@@ -86,6 +86,19 @@ Para trocar de perfil, clique no ícone de sair no cabeçalho e entre com outro 
 6. **Tempo real:** deixe a tela aberta. A cada poucos segundos chegam respostas de clientes (aparece um contador de não lidas na lista), chamados novos na fila, colegas pegando chamados da fila e notas internas. Se você tentar pegar um chamado que um colega acabou de pegar, aparece um aviso de erro.
 7. **Eventos repetidos:** o socket simulado reenvia alguns eventos; nada deve aparecer duplicado.
 
+### Visão do Ricardo (`ricardo.monteiro@suporte.example`, em `/manager/tickets`)
+
+A tela do gestor não é uma lista de chamados: ela mostra **a equipe e onde agir**. O Ricardo gere os dois grupos (Infraestrutura e Aplicações) e vê os 12 consultores.
+
+1. **Resumo:** chamados ativos, prazos estourados, chamados que vencem em menos de 4h, chamados sem responsável e consultores sem chamados;
+2. **Quadro da equipe:** um cartão por consultor, separado por grupo, com a carga (barra proporcional ao consultor mais ocupado) e os alertas dele: estourados, em risco e aguardando cliente. Quem precisa de atenção vem primeiro: quem está **sem chamados** e quem está **sobrecarregado** (a partir de 1,5x a média do próprio grupo, porque os grupos têm volumes diferentes). Chamados em "aguardando cliente" contam na carga, mas não como risco, porque o prazo está pausado;
+3. **Painel de chamados:** começa em "Em risco" (estourados e que vencem em menos de 4h, de toda a equipe, na mesma ordem da Marina). "Sem responsável" mostra a fila, e há um filtro por grupo. Clicar em um consultor no quadro mostra **tudo o que ele carrega**; clicar de novo volta;
+4. **Redistribuir:** marque um ou vários chamados (há "Selecionar todos") e clique em "Redistribuir". A lista de destinos mostra só os consultores do grupo dos chamados, do menos ao mais carregado, com a carga de cada um. Serve para cobrir quem faltou ou entregar a fila a quem está parado. Chamados de grupos diferentes não são redistribuídos juntos, e resolvidos ou fechados não podem ser movidos;
+5. **Limite da lista:** o painel mostra os 200 chamados mais urgentes e avisa quando há mais. "Selecionar todos" vale só para o que está na tela;
+6. **Tempo real:** o quadro e o resumo acompanham os eventos (chamados pegos, abertos, prazos que estouram) sem recarregar.
+
+O relatório semanal de tempo ocioso por consultor ainda não foi feito.
+
 ## Como funciona o "backend" simulado
 
 Não existe backend. O que seria o servidor fica em `src/server` e roda no navegador:
@@ -142,14 +155,14 @@ src/
   pages/         uma pasta por perfil e, dentro dela, uma pasta por página
     login/
     consultant/tickets/   visão da Marina (a página e seus components/)
-    manager/tickets/      visão do Ricardo (a fazer)
+    manager/tickets/      visão do Ricardo (resumo, quadro da equipe, painel e redistribuição)
     customer/tickets/     visão da Helena (a fazer)
   components/    cabeçalho, layout autenticado e badges (usados por mais de um perfil)
-  domain/        enums, tipos, status, SLA e regras que alteram o chamado (sem React)
+  domain/        enums, tipos, status, SLA, carga da equipe e regras que alteram o chamado (sem React)
   lib/           relógio simulado e formatação
   server/        "backend" simulado (dados, regras, API, socket, simulador)
   store/         estado da tela, ações, ligação em tempo real e o enum LoadStatus
-  integration/   testes que exercitam o app inteiro (login, resposta, troca de usuário)
+  integration/   testes que exercitam o app inteiro (login, resposta, troca de usuário, visão do gestor)
   test-*.ts(x)   configuração e utilitários de teste
 ```
 
@@ -179,7 +192,7 @@ Só entram os arquivos que o componente precisa. Quando um perfil ganhar outra p
 - **Enums no lugar de textos soltos:** todo conjunto fechado de valores (status, prioridade, perfis, tipos de evento, abas, estados de carregamento...) é um `enum`, para um erro de digitação virar erro de compilação e o editor completar o nome. Os enums de domínio ficam em `src/domain/enums.ts` e mantêm o valor que vem da API (por exemplo, `Status.InProgress` vale `"em_atendimento"`), então os dados e os eventos continuam iguais. Enums de um componente ficam no `enums.ts` dele. Por causa dos enums, o `erasableSyntaxOnly` do template do Vite está desligado no `tsconfig.app.json`.
 - **Imports:** dentro da mesma página, caminhos relativos (`./types`, `../composer`). Para qualquer outro módulo de `src/`, o alias `@/` (por exemplo, `@/domain/enums`).
 - **Testes:** ficam ao lado do que testam, com o sufixo `.unit.test.ts` (ou `.tsx`, quando renderizam). Rodam com Vitest em jsdom e Testing Library. `src/test-utils.tsx` tem `renderWithProviders`/`renderRoutes` (Mantine, autenticação e roteador) e `loadStoreAs(usuário)`, que carrega o store com os dados reais como aquele usuário os veria. Os componentes que chamam a API simulada têm `@/store/actions` substituído por um mock.
-- **Testes de integração:** ficam em `src/integration/*.integration.test.tsx` e sobem o app de verdade (roteador com guardas, login, store, API simulada, socket e filtro de visibilidade), trocando só o que atrapalharia: o simulador de atividade fica desligado, o gerador de números aleatórios é determinístico (`resetWorld`) e, nos testes de resposta, o socket entrega cada evento duas vezes, como o brief permite. Cobrem: do login até a página do perfil, a resposta a um chamado sem duplicar a mensagem, e a troca de usuário sem vazar dados. Rodam com `npm run test:integration`; levam de menos de 1 a uns 5 segundos cada, por causa da latência simulada e da espera para o socket entregar tudo (cerca de 11 segundos no total).
+- **Testes de integração:** ficam em `src/integration/*.integration.test.tsx` e sobem o app de verdade (roteador com guardas, login, store, API simulada, socket e filtro de visibilidade), trocando só o que atrapalharia: o simulador de atividade fica desligado, o gerador de números aleatórios é determinístico (`resetWorld`) e, nos testes de resposta, o socket entrega cada evento duas vezes, como o brief permite. Cobrem: do login até a página do perfil, a resposta a um chamado sem duplicar a mensagem, a troca de usuário sem vazar dados e a visão do gestor (redistribuir chamados e acompanhar o quadro em tempo real). Rodam com `npm run test:integration`; levam de menos de 1 a uns 5 segundos cada, por causa da latência simulada e da espera para o socket entregar tudo. Como esperam de verdade, têm um limite de tempo maior que o dos testes unitários.
 
 ### Rotas e guardas
 

@@ -1,4 +1,4 @@
-import { Status } from "./enums";
+import { Priority, Status } from "./enums";
 
 export const STATUS_LABEL: Record<Status, string> = {
   [Status.Open]: "Aberto",
@@ -34,3 +34,17 @@ export function isReopen(from: Status, to: Status): boolean {
 export function isActive(status: Status): boolean {
   return status !== Status.Resolved && status !== Status.Closed;
 }
+
+export const PRIORITY_LABEL: Record<Priority, string> = {
+  [Priority.Critical]: "Crítica",
+  [Priority.High]: "Alta",
+  [Priority.Medium]: "Média",
+  [Priority.Low]: "Baixa",
+};
+
+export const PRIORITY_COLOR: Record<Priority, string> = {
+  [Priority.Critical]: "red",
+  [Priority.High]: "orange",
+  [Priority.Medium]: "yellow",
+  [Priority.Low]: "gray",
+};

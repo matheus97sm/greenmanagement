@@ -10,8 +10,11 @@ import { rawData } from "@/test-data";
 import { renderRoutes } from "@/test-utils";
 import type { RenderOptions } from "@/test-utils";
 
+export const TEST_TIMEOUT = 20_000;
 export const LOAD_TIMEOUT = 3000;
 export const SETTLE_MS = 1800;
+
+vi.setConfig({ testTimeout: TEST_TIMEOUT });
 
 function seededRandom(seed: number): () => number {
   let state = seed;

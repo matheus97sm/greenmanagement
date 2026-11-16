@@ -1,8 +1,9 @@
-import { isReopen, TRANSITIONS } from "@/domain/status";
+import { isActive, isReopen, TRANSITIONS } from "@/domain/status";
 import {
   applyAssignment,
   applyMessage,
   applyStatusChange,
+  groupIdsOf,
   isStaff,
 } from "@/domain/rules";
 import type {
@@ -93,6 +94,28 @@ function commitStatus(
   });
 }
 
+function commitAssignment(ticket: Ticket, consultantId: string): DomainEvent {
+  const at = nowIso();
+  const id = crypto.randomUUID();
+  Object.assign(ticket, applyAssignment(ticket, consultantId, at));
+  getDb().historico.push({
+    id,
+    chamado_id: ticket.id,
+    tipo: HistoryType.Assignment,
+    de: null,
+    para: null,
+    usuario_id: consultantId,
+    motivo: null,
+    ocorrido_em: at,
+  });
+  return emit({
+    id,
+    tipo: EventType.TicketAssigned,
+    ocorrido_em: at,
+    payload: { chamado_id: ticket.id, consultor_id: consultantId },
+  });
+}
+
 export function openTicket(input: {
   requesterId: string;
   categoryId: string;
@@ -156,7 +179,6 @@ export function assumeTicket(
   ticketId: string,
   consultantId: string,
 ): DomainEvent[] {
-  const db = getDb();
   const ticket = findTicket(ticketId);
   const consultant = person(consultantId);
   if (consultant?.perfil !== Profile.Consultant) {
@@ -172,27 +194,7 @@ export function assumeTicket(
     throw new ApiError("Este chamado é de outro grupo de atendimento.");
   }
 
-  const at = nowIso();
-  const id = crypto.randomUUID();
-  Object.assign(ticket, applyAssignment(ticket, consultantId, at));
-  db.historico.push({
-    id,
-    chamado_id: ticket.id,
-    tipo: HistoryType.Assignment,
-    de: null,
-    para: null,
-    usuario_id: consultantId,
-    motivo: null,
-    ocorrido_em: at,
-  });
-  const events: DomainEvent[] = [
-    emit({
-      id,
-      tipo: EventType.TicketAssigned,
-      ocorrido_em: at,
-      payload: { chamado_id: ticket.id, consultor_id: consultantId },
-    }),
-  ];
+  const events: DomainEvent[] = [commitAssignment(ticket, consultantId)];
   if (ticket.status === Status.Open) {
     events.push(
       commitStatus(
@@ -204,6 +206,35 @@ export function assumeTicket(
     );
   }
   return events;
+}
+
+export function reassignTicket(input: {
+  ticketId: string;
+  consultantId: string;
+  managerId: string;
+}): DomainEvent[] {
+  const ticket = findTicket(input.ticketId);
+  const manager = person(input.managerId);
+  const consultant = person(input.consultantId);
+  if (
+    manager?.perfil !== Profile.Manager ||
+    !groupIdsOf(manager).includes(ticket.grupo_id)
+  ) {
+    throw new ApiError("Só o gestor do grupo redistribui chamados.");
+  }
+  if (consultant?.perfil !== Profile.Consultant) {
+    throw new ApiError("Só consultores recebem chamados.");
+  }
+  if (consultant.grupo_id !== ticket.grupo_id) {
+    throw new ApiError("Este consultor é de outro grupo de atendimento.");
+  }
+  if (!isActive(ticket.status)) {
+    throw new ApiError(
+      "Chamados resolvidos ou fechados não são redistribuídos.",
+    );
+  }
+  if (ticket.responsavel_id === consultant.id) return [];
+  return [commitAssignment(ticket, consultant.id)];
 }
 
 export function addMessage(input: {
