@@ -4,6 +4,8 @@ Reescrita do sistema de gestão de serviços de TI (ITSM), focada na área de ch
 
 > **Estado atual:** login, API/WebSocket simulados com o `dados.json` real e as três visões: **Marina (consultora)**, **Ricardo (gestor)**, com a página semanal da equipe, e **Helena (cliente)**, com a abertura de chamados.
 
+**Acesse online:** <https://greenmanagement-kappa.vercel.app>
+
 ## Tecnologias
 
 - [React](https://react.dev/) 19 + TypeScript
@@ -46,6 +48,27 @@ Abra o endereço mostrado no terminal (normalmente <http://localhost:5173>).
 | `npm run format:check`     | Verifica a formatação sem alterar arquivos         |
 
 Para rodar os testes uma única vez (por exemplo, em CI): `npx vitest run`.
+
+## CI/CD
+
+A publicação é feita pelo GitHub Actions (`.github/workflows/ci.yml`), e não mais pela Vercel sozinha. O deploy só acontece se tudo passar antes.
+
+| Job                  | Quando roda                   | O que faz                                                           |
+| -------------------- | ----------------------------- | ------------------------------------------------------------------- |
+| **Verify**           | Todo push e todo pull request | `tsc -b`, `oxlint`, `prettier --check`, `vitest run` e `vite build` |
+| **Deploy to Vercel** | Push na `main`, após o Verify | `vercel pull`, `vercel build` e `vercel deploy --prebuilt --prod`   |
+
+Se qualquer etapa do Verify falhar, o deploy não começa e a versão publicada continua a anterior. O resultado aparece na aba **Actions** do repositório.
+
+Para a pipeline funcionar, o repositório precisa destes segredos em _Settings → Secrets and variables → Actions_:
+
+| Segredo             | De onde vem                                                      |
+| ------------------- | ---------------------------------------------------------------- |
+| `VERCEL_TOKEN`      | Token criado em <https://vercel.com/account/tokens>              |
+| `VERCEL_ORG_ID`     | Campo `orgId` de `.vercel/project.json` (após `npx vercel link`) |
+| `VERCEL_PROJECT_ID` | Campo `projectId` do mesmo arquivo                               |
+
+O deploy automático da própria Vercel precisa ficar desligado (_Project → Settings → Git_), para não publicar sem passar pelos testes. A pasta `.vercel` não vai para o repositório.
 
 ## Como ver a tela como cada perfil
 
