@@ -12,10 +12,11 @@ Reescrita do sistema de gestão de serviços de TI (ITSM), focada na área de ch
 - [Vite](https://vite.dev/) (SPA, sem SSR)
 - [Mantine](https://mantine.dev/) (componentes de interface) + [Tabler Icons](https://tabler.io/icons)
 - [React Router](https://reactrouter.com/) (rotas)
-- [TanStack Query](https://tanstack.com/query) e [TanStack Virtual](https://tanstack.com/virtual) (dados e listas grandes — ainda não usados)
-- [idb](https://github.com/jakearchibald/idb) (IndexedDB, para a API simulada — ainda não usado)
+- [TanStack Virtual](https://tanstack.com/virtual) (listas grandes)
+- [i18next](https://www.i18next.com/) + [react-i18next](https://react.i18next.com/) (idiomas `pt-BR` e `en-US`)
 - [Vitest](https://vitest.dev/) + Testing Library (testes)
-- [oxlint](https://oxc.rs/docs/guide/usage/linter) (lint)
+- [oxlint](https://oxc.rs/docs/guide/usage/linter) (lint) e [Prettier](https://prettier.io/) (formatação)
+- GitHub Actions (CI/CD) e [Vercel](https://vercel.com/) (hospedagem)
 
 ## Pré-requisitos
 
